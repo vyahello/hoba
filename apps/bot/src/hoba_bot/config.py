@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     telegram_bot_token: str = ""
     telegram_bot_username: str = "hobagame_bot"
+    # Public HTTPS URL of the Mini App. None means the bot replies to
+    # commands with plain text only (no Web App inline buttons / menu).
     webapp_url: str | None = None
 
 

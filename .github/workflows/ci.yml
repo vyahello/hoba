@@ -36,6 +36,9 @@ jobs:
       - name: validate pyproject.toml
         working-directory: ${{ matrix.package }}
         run: python -c "import tomllib, pathlib; tomllib.loads(pathlib.Path('pyproject.toml').read_text())"
+      - name: install hoba-api (required by hoba-bot at import time)
+        if: matrix.package == 'apps/bot'
+        run: uv pip install --system -e apps/api
       - name: install package
         working-directory: ${{ matrix.package }}
         run: uv pip install --system -e ".[dev]"

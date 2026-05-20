@@ -42,16 +42,20 @@ services:
 
   bot:
     build:
-      context: ./apps/bot
+      context: .
+      dockerfile: apps/bot/Dockerfile
     restart: unless-stopped
     environment:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-hobagame_bot}
       WEBAPP_URL: ${WEBAPP_URL:-}
+      DATABASE_URL: ${DATABASE_URL:-sqlite+aiosqlite:///./data/hoba.db}
     volumes:
-      - ./apps/bot/src:/app/src
-      - ./apps/bot/tests:/app/tests
+      - ./apps/api/src:/app/api/src
+      - ./apps/bot/src:/app/bot/src
+      - ./apps/bot/tests:/app/bot/tests
+      - ./data:/app/data
     depends_on:
       - api
 
