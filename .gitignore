@@ -15,6 +15,10 @@ __pycache__/
 node_modules/
 dist/
 .turbo/
+pnpm-debug.log*
+
+# python venv at repo root (kept out of monorepo packages)
+venv/
 
 # db
 data/

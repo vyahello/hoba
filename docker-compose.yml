@@ -1,0 +1,93 @@
+name: hoba
+
+# Phase 1 dev profile (default): redis + api + bot + webapp.
+# Prod profile (`docker compose --profile prod up`): adds caddy.
+# `.env` at repo root is auto-loaded by compose for variable substitution;
+# defaults below keep `docker compose up` working before `.env` is created.
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_URL: ${DATABASE_URL:-sqlite+aiosqlite:///./data/hoba.db}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      SECRET_KEY: ${SECRET_KEY:-dev-only-change-me}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      WEBAPP_URL: ${WEBAPP_URL:-}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/api/src:/app/src
+      - ./apps/api/tests:/app/tests
+      - ./data:/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  bot:
+    build:
+      context: ./apps/bot
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-hobagame_bot}
+      WEBAPP_URL: ${WEBAPP_URL:-}
+    volumes:
+      - ./apps/bot/src:/app/src
+      - ./apps/bot/tests:/app/tests
+    depends_on:
+      - api
+
+  webapp:
+    build:
+      context: ./apps/webapp
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./apps/webapp/src:/app/src
+      - ./apps/webapp/public:/app/public
+      - ./apps/webapp/index.html:/app/index.html
+      - ./apps/webapp/vite.config.ts:/app/vite.config.ts
+      - ./apps/webapp/tsconfig.json:/app/tsconfig.json
+      - webapp-node-modules:/app/node_modules
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["prod"]
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+      - webapp
+
+volumes:
+  redis-data:
+  webapp-node-modules:
+  caddy-data:
+  caddy-config:

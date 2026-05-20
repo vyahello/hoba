@@ -1,0 +1,19 @@
+{
+  "name": "hoba",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hoba! — Telegram Mini App party game (monorepo root)",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "docker compose up",
+    "dev:down": "docker compose down",
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "i18n:check": "echo 'i18n:check — stub, wired in Phase 4'"
+  }
+}

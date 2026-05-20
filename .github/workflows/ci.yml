@@ -1,0 +1,72 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Phase 1 stub: validates config files and structure. Real lint / typecheck /
+# pytest jobs are wired up incrementally from Phase 2 onwards as each package
+# gains real code.
+
+jobs:
+  validate-compose:
+    name: validate docker-compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: docker compose config
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+
+  validate-python:
+    name: validate Python projects
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: [apps/api, apps/bot]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: install uv
+        run: pip install --no-cache-dir uv
+      - name: validate pyproject.toml
+        working-directory: ${{ matrix.package }}
+        run: python -c "import tomllib, pathlib; tomllib.loads(pathlib.Path('pyproject.toml').read_text())"
+      - name: install package
+        working-directory: ${{ matrix.package }}
+        run: uv pip install --system -e ".[dev]"
+      - name: ruff
+        working-directory: ${{ matrix.package }}
+        run: ruff check .
+      - name: mypy
+        working-directory: ${{ matrix.package }}
+        run: mypy --strict src
+      - name: pytest
+        working-directory: ${{ matrix.package }}
+        run: pytest -q
+
+  validate-webapp:
+    name: validate webapp
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: install
+        working-directory: apps/webapp
+        run: pnpm install --no-frozen-lockfile
+      - name: typecheck
+        working-directory: apps/webapp
+        run: pnpm run typecheck
+      - name: lint
+        working-directory: apps/webapp
+        run: pnpm run lint

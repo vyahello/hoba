@@ -1,0 +1,19 @@
+# Caddyfile — production reverse proxy with auto-TLS.
+#
+# Activated via the `prod` profile:   docker compose --profile prod up -d
+# Set DOMAIN in .env (or the shell)   DOMAIN=hobagame.com
+#
+# Phase 1 placeholder. Phase 12 finalises prod routing (static webapp
+# build output served by Caddy, API + Socket.IO proxied to api:8000).
+
+{$DOMAIN:localhost} {
+    encode gzip
+
+    @api path /api/* /openapi.json /docs /docs/* /redoc /redoc/*
+    reverse_proxy @api api:8000
+
+    @socketio path /socket.io/*
+    reverse_proxy @socketio api:8000
+
+    reverse_proxy webapp:5173
+}
