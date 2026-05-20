@@ -12,6 +12,8 @@ COPY pyproject.toml ./
 COPY src/ ./src/
 RUN uv pip install --system -e ".[dev]"
 
+COPY alembic/ ./alembic/
+COPY alembic.ini ./
 COPY tests/ ./tests/
 
 EXPOSE 8000
