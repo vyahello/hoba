@@ -2,6 +2,10 @@
 
 Phase 2 scope: lifespan runs Alembic migrations, structlog middleware
 binds a per-request ID, `/api/v1/me*` is mounted via the v1 router.
+
+Phase 6 adds Socket.IO realtime on the `/rooms` namespace. The ASGI
+entry point `asgi` wraps FastAPI with `socketio.ASGIApp` so HTTP
+traffic goes to FastAPI and `/socket.io/*` to the Socket.IO server.
 """
 
 from __future__ import annotations
@@ -13,6 +17,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import socketio
 import structlog
 from alembic import command
 from alembic.config import Config as AlembicConfig
@@ -22,6 +27,7 @@ from starlette.responses import Response
 from hoba_api import __version__
 from hoba_api.api.v1.router import router as v1_router
 from hoba_api.config import settings
+from hoba_api.realtime import register_handlers, sio
 
 _SQLITE_PREFIX = "sqlite+aiosqlite:///"
 _ALEMBIC_INI = Path(__file__).resolve().parent.parent.parent / "alembic.ini"
@@ -116,3 +122,8 @@ async def health() -> dict[str, str]:
 
 
 app.include_router(v1_router)
+
+# Register Socket.IO handlers and expose the combined ASGI entry point.
+# Uvicorn imports `hoba_api.main:asgi` (see Dockerfile).
+register_handlers(sio)
+asgi = socketio.ASGIApp(sio, other_asgi_app=app)

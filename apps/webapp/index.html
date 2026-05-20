@@ -5,9 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0E0B1A" />
     <title>Hoba!</title>
+    <style>
+      /* Pre-React fallback. Visible only if JS never executes — React
+         overwrites #root contents on mount. Bug-bait for cached / broken
+         WebViews. */
+      .hoba-boot {
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        background: #0E0B1A;
+        color: #B8B2D6;
+        font-family: ui-monospace, SFMono-Regular, monospace;
+        text-align: center;
+        padding: 1.5rem;
+      }
+      .hoba-boot__brand {
+        color: #FFB84D;
+        font-size: 2.5rem;
+        font-weight: 800;
+        font-family: system-ui, sans-serif;
+        letter-spacing: -0.02em;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="hoba-boot">
+        <div class="hoba-boot__brand">Hoba!</div>
+        <div>booting…</div>
+        <noscript>
+          <p style="color:#FF5C9C;margin-top:1rem;">
+            JavaScript is required. Enable it in your browser settings.
+          </p>
+        </noscript>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -93,6 +93,23 @@ export function onThemeChanged(handler: () => void): () => void {
   }
 }
 
+/**
+ * Open a `t.me/...` link via Telegram's native handler. Falls back to
+ * `window.open` outside Telegram. Returns true on success.
+ */
+export function openTelegramLink(url: string): boolean {
+  try {
+    WebApp.openTelegramLink(url);
+    return true;
+  } catch {
+    if (typeof window !== "undefined") {
+      window.open(url, "_blank");
+      return true;
+    }
+    return false;
+  }
+}
+
 /** Read `start_param` from initData (`?startapp=room_<CODE>`). */
 export function readStartParam(): string | undefined {
   try {

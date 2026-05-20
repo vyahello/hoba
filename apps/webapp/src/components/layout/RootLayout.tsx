@@ -1,8 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { Toaster } from "@/components/ds/Toast";
-import { tg } from "@/lib/telegram";
+import { readStartParam, tg } from "@/lib/telegram";
 
 /**
  * Root layout — owns Telegram BackButton binding and the document scroll
@@ -13,6 +13,21 @@ import { tg } from "@/lib/telegram";
 export function RootLayout(): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
+  const handledStartParam = useRef(false);
+
+  // Deep-link entry: if Telegram opened us with `?startapp=room_XYZ`,
+  // jump straight to that room. Runs once on first mount.
+  useEffect(() => {
+    if (handledStartParam.current) return;
+    handledStartParam.current = true;
+    const startParam = readStartParam();
+    if (startParam !== undefined && startParam.startsWith("room_")) {
+      const code = startParam.slice("room_".length);
+      if (code.length > 0) {
+        navigate(`/room/${code}`, { replace: true });
+      }
+    }
+  }, [navigate]);
 
   useEffect(() => {
     if (location.pathname === "/") {

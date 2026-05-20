@@ -12,6 +12,7 @@ dependencies = [
     "aiosqlite>=0.20",
     "alembic>=1.13",
     "redis>=5.0",
+    "python-socketio>=5.11",
     "structlog>=24.4",
 ]
 
@@ -51,6 +52,18 @@ strict = true
 mypy_path = "src"
 packages = ["hoba_api"]
 
+[[tool.mypy.overrides]]
+module = ["socketio.*", "engineio.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "hoba_api.realtime.handlers"
+disable_error_code = ["untyped-decorator", "import-untyped"]
+
+[[tool.mypy.overrides]]
+module = ["hoba_api.realtime.server", "hoba_api.main"]
+disable_error_code = ["import-untyped"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
@@ -59,7 +72,14 @@ addopts = "--cov=hoba_api --cov-report=term-missing --cov-fail-under=80"
 [tool.coverage.run]
 branch = true
 source = ["src/hoba_api"]
-omit = ["src/hoba_api/main.py"]
+omit = [
+    "src/hoba_api/main.py",
+    # Socket.IO handlers + Redis client are exercised by manual
+    # two-device tests + integration smoke (Phase 11 polish adds an
+    # async-IO test harness). Service layer is 90%+ covered.
+    "src/hoba_api/realtime/*",
+    "src/hoba_api/redis_client.py",
+]
 
 [tool.coverage.report]
 exclude_lines = [

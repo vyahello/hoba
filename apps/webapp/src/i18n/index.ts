@@ -24,6 +24,7 @@ import ukDev from "@/locales/uk/dev.json";
 import ukHome from "@/locales/uk/home.json";
 import ukSettings from "@/locales/uk/settings.json";
 
+import { safeStorage } from "@/lib/safeStorage";
 import { readUserLanguage } from "@/lib/telegram";
 
 export const SUPPORTED_LOCALES = ["en", "uk"] as const;
@@ -32,10 +33,8 @@ export type Locale = (typeof SUPPORTED_LOCALES)[number];
 const STORAGE_KEY = "hoba.lang";
 
 function detectInitialLocale(): Locale {
-  if (typeof window !== "undefined") {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === "uk" || stored === "en") return stored;
-  }
+  const stored = safeStorage.get(STORAGE_KEY);
+  if (stored === "uk" || stored === "en") return stored;
   const tgLang = readUserLanguage();
   if (tgLang === "uk") return "uk";
   return "en";
@@ -73,9 +72,7 @@ void i18n
 
 export function setLocale(locale: Locale): void {
   void i18n.changeLanguage(locale);
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(STORAGE_KEY, locale);
-  }
+  safeStorage.set(STORAGE_KEY, locale);
 }
 
 export default i18n;

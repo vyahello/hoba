@@ -5,12 +5,19 @@ import { RouterProvider } from "react-router-dom";
 import "@/i18n";
 import "@/index.css";
 
+import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { expand, ready } from "@/lib/telegram";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { router } from "@/router";
 
-ready();
-expand();
+// Wrap each side-effecting bootstrap call so a single SDK failure on
+// older iOS / macOS Telegram WebViews cannot break React mount.
+try {
+  ready();
+  expand();
+} catch (error) {
+  console.warn("Telegram WebApp init failed:", error);
+}
 
 const container = document.getElementById("root");
 if (!container) {
@@ -19,8 +26,10 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <ThemeProvider>
-      <RouterProvider router={router} />
-    </ThemeProvider>
+    <AppErrorBoundary>
+      <ThemeProvider>
+        <RouterProvider router={router} />
+      </ThemeProvider>
+    </AppErrorBoundary>
   </StrictMode>,
 );

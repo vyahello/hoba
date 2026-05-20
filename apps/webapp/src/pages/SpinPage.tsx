@@ -19,6 +19,7 @@ import {
   type WheelDef,
   type WheelState,
 } from "@/features/wheel/types";
+import { api, ApiError } from "@/lib/api";
 import { haptics } from "@/lib/haptics";
 import { useCustomWheel, useSpinHistory } from "@/stores/spinHistory";
 import { toast } from "@/stores/toast";
@@ -58,6 +59,7 @@ export function SpinPage(): JSX.Element {
 
   const [state, setState] = useState<WheelState>("idle");
   const [spin, setSpin] = useState<SpinResult | undefined>(undefined);
+  const [inviteLoading, setInviteLoading] = useState(false);
   const [resultRevealed, setResultRevealed] = useState(false);
   const wheelRef = useRef<WheelHandle>(null);
 
@@ -159,6 +161,28 @@ export function SpinPage(): JSX.Element {
     setResultRevealed(false);
   }
 
+  async function handleInviteFriends(): Promise<void> {
+    if (wheel === undefined || inviteLoading) return;
+    setInviteLoading(true);
+    haptics.medium();
+    try {
+      const state = await api.createRoom({
+        question_text: wheel.questionText,
+        segments: wheel.segments.map((s) => ({
+          label: s.label,
+          emoji: s.emoji ?? null,
+          color_seed: s.colorSeed,
+          weight: s.weight ?? 1,
+        })),
+      });
+      navigate(`/room/${state.room.code}`);
+    } catch (exc) {
+      const detail = exc instanceof ApiError ? exc.code : "create_failed";
+      toast({ title: detail, intent: "error" });
+      setInviteLoading(false);
+    }
+  }
+
   return (
     <>
       <header className="ds-glass-header px-4 py-3 pt-safe flex items-center gap-3">
@@ -216,16 +240,11 @@ export function SpinPage(): JSX.Element {
               </Button>
               <div className="grid grid-cols-2 gap-2">
                 <Button
-                  variant="secondary"
-                  onClick={() => {
-                    toast({
-                      title: t("common:status.coming_soon"),
-                      description: t("common:status.phase_label", { phase: 6 }),
-                      intent: "info",
-                    });
-                  }}
+                  variant="accent"
+                  onClick={handleInviteFriends}
+                  loading={inviteLoading}
                 >
-                  + {t("common:nav.home")}
+                  + Invite friends
                 </Button>
                 <Button
                   variant="ghost"
@@ -271,6 +290,15 @@ export function SpinPage(): JSX.Element {
                   onClick={handleSpinAgain}
                 >
                   {t("common:actions.spin")} →
+                </Button>
+                <Button
+                  variant="accent"
+                  size="lg"
+                  fullWidth
+                  onClick={handleInviteFriends}
+                  loading={inviteLoading}
+                >
+                  {t("common:nav.home")} → multiplayer
                 </Button>
                 <Button
                   variant="ghost"

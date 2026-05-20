@@ -14,6 +14,11 @@ const DEV_TUNNEL_HOSTS = [
   ".loca.lt",
 ];
 
+// API target for the dev proxy. Inside Docker the api container is
+// reachable as `http://api:8000`; bare `pnpm dev` on the host needs
+// `http://localhost:8000`. Override via `VITE_API_TARGET=...` if needed.
+const apiTarget = process.env.VITE_API_TARGET ?? "http://localhost:8000";
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -26,5 +31,16 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     allowedHosts: ["localhost", ...DEV_TUNNEL_HOSTS],
+    proxy: {
+      "/api": {
+        target: apiTarget,
+        changeOrigin: true,
+      },
+      "/socket.io": {
+        target: apiTarget,
+        changeOrigin: true,
+        ws: true,
+      },
+    },
   },
 });

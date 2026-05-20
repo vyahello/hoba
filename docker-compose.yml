@@ -30,6 +30,8 @@ services:
       SECRET_KEY: ${SECRET_KEY:-dev-only-change-me}
       SENTRY_DSN: ${SENTRY_DSN:-}
       WEBAPP_URL: ${WEBAPP_URL:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
     ports:
       - "8000:8000"
     volumes:
@@ -63,6 +65,8 @@ services:
     build:
       context: ./apps/webapp
     restart: unless-stopped
+    environment:
+      VITE_API_TARGET: ${VITE_API_TARGET:-http://api:8000}
     ports:
       - "5173:5173"
     volumes:

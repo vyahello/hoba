@@ -86,10 +86,47 @@ In dev: paste the current `https://*.trycloudflare.com` URL from the
 running `cloudflared tunnel --url http://localhost:5173` process. Note
 the trailing slash.
 
-## 8. Allow inline mode (Phase 5+ — skip for now)
+## 8. Direct Link Mini App (REQUIRED from Phase 6 — share deep links)
 
-Phase 3 does not implement inline mode. Skip until the wheel-generation
-flow lands. When ready:
+Without this, `t.me/hobagame_bot?startapp=room_<CODE>` returns "Something
+went wrong, sorry. Please try again later." in the recipient's Telegram
+client. Direct Link Mini Apps are configured via BotFather and are
+**separate** from the menu button. Run once:
+
+```
+/newapp
+@hobagame_bot
+Hoba!                                ← title (≤ 32 chars)
+🎯 Multiplayer decision wheel.
+Build a wheel, invite friends, spin together.
+Hoba! — and it's decided.
+                                     ← description (≤ 80 chars per line)
+<upload Hoba! logo PNG, 640×360>     ← photo (NOTE: 640×360 not square)
+/empty                               ← demo GIF (skip)
+<paste current public HTTPS URL>     ← e.g. https://abc.ngrok-free.app
+spin                                 ← short name (lowercase a–z + digits)
+```
+
+After this:
+- `t.me/hobagame_bot?startapp=room_K7M9X2` opens the default Direct Link
+  Mini App.
+- `t.me/hobagame_bot/spin?startapp=room_K7M9X2` opens it explicitly by
+  short name (more reliable across older clients).
+
+`WebApp.initDataUnsafe.start_param` will equal `room_K7M9X2`. The Mini
+App's `RootLayout` reads this on mount and navigates to `/room/K7M9X2`
+automatically.
+
+When the dev tunnel URL changes, update via:
+
+```
+/myapps → @hobagame_bot → @hobagame_bot/spin → Edit Web App URL
+```
+
+## 9. Allow inline mode (Phase 9+ — skip for now)
+
+Inline mode (`@hobagame_bot yesno`) needs server-side inline handlers
+which Phase 6 doesn't implement. When ready:
 
 ```
 /setinline
@@ -99,12 +136,13 @@ yesno or wheel
 
 ## Verification
 
-After steps 1–7, in any Telegram chat:
+After steps 1–8, in any Telegram chat:
 
 - Search `@hobagame_bot` → share card shows `Hoba!`, photo, About text.
 - Tap the bot → Description appears above the Start button.
 - Tap Start → bot replies (commands work).
 - The text input shows a `≡` menu button labelled "Open Hoba!" (Phase 4+
   webapp visible once you tap it).
-- `t.me/hobagame_bot?startapp=room_TEST01` → Mini App opens with
-  `window.Telegram.WebApp.initDataUnsafe.start_param === "room_TEST01"`.
+- `t.me/hobagame_bot?startapp=room_TEST01` → Mini App opens **and
+  navigates directly to `/room/TEST01`** (Phase 6+ behaviour); the
+  recipient sees the wheel pre-joined with the host.
