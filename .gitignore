@@ -1,0 +1,32 @@
+# env
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# js
+node_modules/
+dist/
+.turbo/
+
+# db
+data/
+*.db
+*.db-journal
+*.db-wal
+
+# os
+.DS_Store
+Thumbs.db
+
+# editor
+.idea/
+.vscode/
+*.swp
