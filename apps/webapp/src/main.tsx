@@ -1,7 +1,16 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { RouterProvider } from "react-router-dom";
 
-import { App } from "./App";
+import "@/i18n";
+import "@/index.css";
+
+import { expand, ready } from "@/lib/telegram";
+import { ThemeProvider } from "@/providers/ThemeProvider";
+import { router } from "@/router";
+
+ready();
+expand();
 
 const container = document.getElementById("root");
 if (!container) {
@@ -10,6 +19,8 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <App />
+    <ThemeProvider>
+      <RouterProvider router={router} />
+    </ThemeProvider>
   </StrictMode>,
 );

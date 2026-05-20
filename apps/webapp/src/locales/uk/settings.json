@@ -1,0 +1,17 @@
+{
+  "title": "Налаштування",
+  "language": {
+    "title": "Мова",
+    "en": "English",
+    "uk": "Українська"
+  },
+  "sound": "Звук",
+  "haptics": "Вібрація",
+  "anonymous": "Анонім за замовчуванням",
+  "theme": {
+    "title": "Тема",
+    "follow": "За Telegram",
+    "light": "Світла",
+    "dark": "Темна"
+  }
+}

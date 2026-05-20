@@ -1,0 +1,27 @@
+{
+  "header": {
+    "app_name": "Hoba!",
+    "settings_aria": "Open settings"
+  },
+  "quick_decide": "Quick decide",
+  "tap_to_spin": "Tap to spin",
+  "quick_wheels": {
+    "eat": "Where to eat?",
+    "pays": "Who pays?",
+    "watch": "What to watch?",
+    "truth_dare": "Truth or Dare",
+    "yes_no": "Yes or No",
+    "friday": "Friday plans"
+  },
+  "create_custom": {
+    "title": "Create custom",
+    "subtitle": "Build your own wheel — set the question, add segments, pick a mode."
+  },
+  "my_wheels": {
+    "title": "My wheels",
+    "empty": "Nothing saved yet. Build a wheel and tap Save to keep it."
+  },
+  "trending": {
+    "title": "Trending"
+  }
+}

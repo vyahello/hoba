@@ -1,0 +1,107 @@
+/* Fonts — load Latin + Cyrillic subsets only (no extended Latin / Vietnamese). */
+@import "@fontsource/inter/cyrillic-400.css";
+@import "@fontsource/inter/cyrillic-500.css";
+@import "@fontsource/inter/cyrillic-600.css";
+@import "@fontsource/inter/cyrillic-700.css";
+@import "@fontsource/inter/latin-400.css";
+@import "@fontsource/inter/latin-500.css";
+@import "@fontsource/inter/latin-600.css";
+@import "@fontsource/inter/latin-700.css";
+
+@import "@fontsource/manrope/cyrillic-700.css";
+@import "@fontsource/manrope/cyrillic-800.css";
+@import "@fontsource/manrope/latin-700.css";
+@import "@fontsource/manrope/latin-800.css";
+
+@import "@fontsource/jetbrains-mono/cyrillic-500.css";
+@import "@fontsource/jetbrains-mono/cyrillic-700.css";
+@import "@fontsource/jetbrains-mono/latin-500.css";
+@import "@fontsource/jetbrains-mono/latin-700.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --tg-bg: #FBFAFF;
+    --tg-secondary-bg: #F4F2FB;
+    --tg-text: #0E0B1A;
+    --tg-hint: #4A4560;
+    --tg-link: #7C5CFF;
+  }
+
+  html.dark {
+    color-scheme: dark;
+    --tg-bg: #0E0B1A;
+    --tg-secondary-bg: #241D3F;
+    --tg-text: #FFFFFF;
+    --tg-hint: #B8B2D6;
+    --tg-link: #FFB84D;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply font-ui antialiased bg-bg-light text-ink-light-1;
+    @apply dark:bg-bg-dark dark:text-ink-dark-1;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Mobile-native: no hover states allowed. We only style :active / focus-visible. */
+  @media (hover: hover) {
+    *:hover {
+      transition: none;
+    }
+  }
+
+  /* Focus rings respect brand color and are visible only on keyboard. */
+  *:focus-visible {
+    outline: 2px solid theme("colors.brand.accent");
+    outline-offset: 2px;
+    border-radius: theme("borderRadius.sm");
+  }
+
+  /* Selection picks up the brand accent regardless of theme. */
+  ::selection {
+    background: theme("colors.brand.accent");
+    color: theme("colors.ink.light-1");
+  }
+}
+
+@layer components {
+  /* Sticky glass header used by every top-level page. */
+  .ds-glass-header {
+    @apply sticky top-0 z-30;
+    @apply backdrop-blur-2xl bg-bg-light/70 dark:bg-bg-dark/70;
+    @apply border-b border-ink-light-2/10 dark:border-ink-dark-2/10;
+  }
+
+  /* Tactile button-press base — combine with `active:scale-95`. */
+  .ds-tactile {
+    @apply transition-transform duration-fast ease-spring;
+    @apply active:scale-95;
+  }
+
+  /* 44×44 minimum tap-target guard. Apply to icon-only controls. */
+  .ds-tap-target {
+    @apply min-w-[44px] min-h-[44px] inline-flex items-center justify-center;
+  }
+}
+
+@layer utilities {
+  /* Stable iOS safe-area padding for sticky elements. */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

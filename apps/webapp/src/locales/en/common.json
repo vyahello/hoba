@@ -1,0 +1,22 @@
+{
+  "actions": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "close": "Close",
+    "copy": "Copy",
+    "create": "Create",
+    "open": "Open",
+    "save": "Save",
+    "share": "Share",
+    "spin": "Spin"
+  },
+  "nav": {
+    "home": "Home",
+    "library": "My wheels",
+    "settings": "Settings"
+  },
+  "status": {
+    "coming_soon": "Coming soon",
+    "phase_label": "Phase {phase}"
+  }
+}

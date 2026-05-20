@@ -1,0 +1,17 @@
+{
+  "title": "Settings",
+  "language": {
+    "title": "Language",
+    "en": "English",
+    "uk": "Українська"
+  },
+  "sound": "Sound",
+  "haptics": "Haptics",
+  "anonymous": "Anonymous by default",
+  "theme": {
+    "title": "Theme",
+    "follow": "Follow Telegram",
+    "light": "Light",
+    "dark": "Dark"
+  }
+}

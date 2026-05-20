@@ -1,0 +1,14 @@
+{
+  "title": "Design System",
+  "subtitle": "Every DS component, every state. Tap the chips to flip locale.",
+  "sections": {
+    "typography": "Typography",
+    "buttons": "Buttons",
+    "inputs": "Inputs & chips",
+    "feedback": "Feedback",
+    "overlays": "Overlays",
+    "media": "Media & status",
+    "brand": "Brand moments",
+    "cards": "Cards"
+  }
+}
