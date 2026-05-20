@@ -7,12 +7,14 @@ import { HomePage } from "@/pages/HomePage";
 import { LibraryPage } from "@/pages/LibraryPage";
 import { RoomPage } from "@/pages/RoomPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { SpinPage } from "@/pages/SpinPage";
 
 export const router = createBrowserRouter([
   {
     element: <RootLayout />,
     children: [
       { path: "/", element: <HomePage /> },
+      { path: "/spin/:wheelId", element: <SpinPage /> },
       { path: "/create", element: <CreatePage /> },
       { path: "/room/:code", element: <RoomPage /> },
       { path: "/library", element: <LibraryPage /> },

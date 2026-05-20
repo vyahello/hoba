@@ -1,0 +1,12 @@
+{
+  "title": "Create wheel",
+  "question_label": "Question",
+  "question_placeholder": "What should we order?",
+  "segments_label": "Options",
+  "segment_placeholder": "Option {index}",
+  "add_segment": "Add option",
+  "remove_segment": "Remove",
+  "spin_solo": "Spin solo",
+  "too_few": "At least 2 options needed",
+  "too_many": "Up to 12 options"
+}

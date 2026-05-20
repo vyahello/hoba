@@ -73,3 +73,6 @@ jobs:
       - name: lint
         working-directory: apps/webapp
         run: pnpm run lint
+      - name: test
+        working-directory: apps/webapp
+        run: pnpm run test

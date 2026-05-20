@@ -6,7 +6,6 @@ import { EmptyState } from "@/components/ds/EmptyState";
 import { IconButton } from "@/components/ds/IconButton";
 import { QuickWheelCard } from "@/components/ds/QuickWheelCard";
 import { QUICK_WHEELS } from "@/data/quickWheels";
-import { toast } from "@/stores/toast";
 
 /**
  * Home (F2) — the screen 80% of opens land on. "Tap me, I'm fun", not
@@ -45,11 +44,7 @@ export function HomePage(): JSX.Element {
                 key={wheel.id}
                 wheel={wheel}
                 onTap={() => {
-                  toast({
-                    title: t("home:tap_to_spin"),
-                    description: t("common:status.phase_label", { phase: 5 }),
-                    intent: "info",
-                  });
+                  navigate(`/spin/${wheel.id}`);
                 }}
               />
             ))}

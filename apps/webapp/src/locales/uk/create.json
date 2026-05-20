@@ -1,0 +1,12 @@
+{
+  "title": "Створити колесо",
+  "question_label": "Питання",
+  "question_placeholder": "Що замовляємо?",
+  "segments_label": "Варіанти",
+  "segment_placeholder": "Варіант {index}",
+  "add_segment": "Додати варіант",
+  "remove_segment": "Прибрати",
+  "spin_solo": "Крутити соло",
+  "too_few": "Треба щонайменше 2",
+  "too_many": "До 12 варіантів"
+}

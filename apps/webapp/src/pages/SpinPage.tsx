@@ -1,0 +1,291 @@
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useNavigate, useParams } from "react-router-dom";
+
+import { audio } from "@/audio";
+import { Button } from "@/components/ds/Button";
+import { fireConfetti } from "@/components/ds/ConfettiBurst";
+import { HobaWord } from "@/components/ds/HobaWord";
+import { IconButton } from "@/components/ds/IconButton";
+import { ResultBanner } from "@/components/ds/ResultBanner";
+import { findQuickWheel, type QuickWheel } from "@/data/quickWheels";
+import { Wheel, type WheelHandle } from "@/features/wheel/Wheel";
+import { freshSeed } from "@/features/wheel/seededRandom";
+import { computeSpin } from "@/features/wheel/spinMath";
+import {
+  type SegmentDef,
+  type SpinResult,
+  type WheelDef,
+  type WheelState,
+} from "@/features/wheel/types";
+import { haptics } from "@/lib/haptics";
+import { useCustomWheel, useSpinHistory } from "@/stores/spinHistory";
+import { toast } from "@/stores/toast";
+import { WHEEL_PALETTE } from "../../tailwind.config";
+
+const REVEAL_DELAY_MS = 1500;
+
+function buildQuickWheelDef(
+  quick: QuickWheel,
+  t: (key: string) => string,
+): WheelDef {
+  return {
+    id: `quick:${quick.id}`,
+    source: "quick",
+    questionText: t(`home:${quick.titleKey}`),
+    segments: quick.segments.map((s) => ({
+      id: s.key,
+      label: t(`home:quick_segments.${quick.id}.${s.key}`),
+      emoji: s.emoji,
+      colorSeed: s.colorSeed,
+    })),
+  };
+}
+
+export function SpinPage(): JSX.Element {
+  const { wheelId = "" } = useParams<{ wheelId: string }>();
+  const navigate = useNavigate();
+  const { t } = useTranslation(["home", "common"]);
+  const customWheel = useCustomWheel((s) => s.current);
+  const addToHistory = useSpinHistory((s) => s.add);
+
+  const wheel = useMemo<WheelDef | undefined>(() => {
+    if (wheelId === "custom") return customWheel;
+    const quick = findQuickWheel(wheelId);
+    return quick !== undefined ? buildQuickWheelDef(quick, t) : undefined;
+  }, [wheelId, customWheel, t]);
+
+  const [state, setState] = useState<WheelState>("idle");
+  const [spin, setSpin] = useState<SpinResult | undefined>(undefined);
+  const [resultRevealed, setResultRevealed] = useState(false);
+  const wheelRef = useRef<WheelHandle>(null);
+
+  const result = useMemo(() => {
+    if (!resultRevealed || spin === undefined || wheel === undefined) return undefined;
+    const segment = wheel.segments[spin.resultSegmentIndex];
+    if (segment === undefined) return undefined;
+    return {
+      segment,
+      color: WHEEL_PALETTE[segment.colorSeed % WHEEL_PALETTE.length] ?? "#7C5CFF",
+    };
+  }, [resultRevealed, spin, wheel]);
+
+  // When a wheel changes (e.g. user backs out + into a different preset),
+  // reset state.
+  useEffect(() => {
+    setState("idle");
+    setSpin(undefined);
+    setResultRevealed(false);
+  }, [wheelId]);
+
+  // Wire the post-spin reveal sequence.
+  useEffect(() => {
+    if (spin === undefined || state !== "spinning") return undefined;
+    const settleAt = window.setTimeout(() => {
+      haptics.heavy();
+      haptics.success();
+      audio.play("result_chime");
+      setState("settled");
+    }, spin.durationMs);
+
+    const revealAt = window.setTimeout(() => {
+      audio.play("hoba_pop");
+      fireConfetti();
+      setResultRevealed(true);
+    }, spin.durationMs + REVEAL_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(settleAt);
+      window.clearTimeout(revealAt);
+    };
+  }, [spin, state]);
+
+  // Record settled spin once revealed.
+  useEffect(() => {
+    if (!resultRevealed || spin === undefined || wheel === undefined) return;
+    const segment = wheel.segments[spin.resultSegmentIndex];
+    if (segment === undefined) return;
+    addToHistory({
+      wheelId: wheel.id,
+      questionText: wheel.questionText,
+      segmentLabel: segment.label,
+      segmentEmoji: segment.emoji,
+      segmentColor:
+        WHEEL_PALETTE[segment.colorSeed % WHEEL_PALETTE.length] ?? "#7C5CFF",
+      timestamp: Date.now(),
+    });
+  }, [resultRevealed, spin, wheel, addToHistory]);
+
+  if (wheel === undefined) {
+    return (
+      <>
+        <header className="ds-glass-header px-4 py-3 pt-safe">
+          <h1 className="font-display font-bold text-xl">Hoba!</h1>
+        </header>
+        <main className="flex-1 px-4 pt-8 flex flex-col items-center text-center gap-4">
+          <p className="text-lg font-medium">Wheel not found.</p>
+          <Button
+            onClick={() => {
+              navigate("/");
+            }}
+          >
+            {t("common:nav.home")}
+          </Button>
+        </main>
+      </>
+    );
+  }
+
+  function handleSpin(): void {
+    if (state !== "idle" || wheel === undefined) return;
+    // Pass the wheel's current rotation so the new spin always travels
+    // forward at least MIN_FULL_ROTATIONS revolutions — fixes the bug
+    // where the second spin barely moved / the third reversed direction.
+    const startingAngleDeg = wheelRef.current?.getCurrentRotation() ?? 0;
+    const next = computeSpin({
+      segmentCount: wheel.segments.length,
+      seed: freshSeed(),
+      startingAngleDeg,
+    });
+    setSpin(next);
+    setResultRevealed(false);
+    setState("spinning");
+  }
+
+  function handleSpinAgain(): void {
+    setState("idle");
+    setSpin(undefined);
+    setResultRevealed(false);
+  }
+
+  return (
+    <>
+      <header className="ds-glass-header px-4 py-3 pt-safe flex items-center gap-3">
+        <IconButton
+          aria-label={t("common:actions.back")}
+          variant="ghost"
+          icon={<span aria-hidden>←</span>}
+          onClick={() => {
+            navigate(-1);
+          }}
+        />
+        <h1 className="font-display font-bold text-lg flex-1 min-w-0 truncate text-ink-light-1 dark:text-ink-dark-1">
+          {wheel.questionText}
+        </h1>
+      </header>
+
+      <main className="flex-1 px-4 pt-3 pb-6 flex flex-col gap-5 relative">
+        <Wheel
+          ref={wheelRef}
+          segments={wheel.segments as SegmentDef[]}
+          state={state}
+          spin={spin}
+          onSpinClick={handleSpin}
+          ariaLabel={wheel.questionText}
+          className="max-w-md mx-auto"
+        />
+
+        <div className="flex flex-col gap-2 mt-auto">
+          {state === "idle" ? (
+            <Button
+              variant="accent"
+              size="xl"
+              fullWidth
+              onClick={handleSpin}
+            >
+              {t("common:actions.spin").toUpperCase()}
+            </Button>
+          ) : null}
+
+          {state === "spinning" ? (
+            <Button variant="accent" size="xl" fullWidth disabled loading>
+              {t("common:actions.spin").toUpperCase()}…
+            </Button>
+          ) : null}
+
+          {state === "settled" ? (
+            <>
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                onClick={handleSpinAgain}
+              >
+                {t("common:actions.spin")} →
+              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    toast({
+                      title: t("common:status.coming_soon"),
+                      description: t("common:status.phase_label", { phase: 6 }),
+                      intent: "info",
+                    });
+                  }}
+                >
+                  + {t("common:nav.home")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    toast({
+                      title: t("common:status.coming_soon"),
+                      description: t("common:status.phase_label", { phase: 9 }),
+                      intent: "info",
+                    });
+                  }}
+                >
+                  {t("common:actions.save")}
+                </Button>
+              </div>
+            </>
+          ) : null}
+        </div>
+
+        <AnimatePresence>
+          {resultRevealed && result !== undefined ? (
+            <motion.div
+              key="result-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="absolute inset-0 z-10 px-4 pt-3 pb-6 flex flex-col items-center justify-center bg-bg-light/85 dark:bg-bg-dark/85 backdrop-blur-sm"
+              aria-live="polite"
+              role="status"
+            >
+              <HobaWord />
+              <ResultBanner
+                segmentLabel={result.segment.label}
+                segmentEmoji={result.segment.emoji}
+                segmentColor={result.color}
+                className="mt-6 w-full max-w-sm"
+              />
+              <div className="mt-6 w-full max-w-sm flex flex-col gap-2">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  onClick={handleSpinAgain}
+                >
+                  {t("common:actions.spin")} →
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setResultRevealed(false);
+                    setState("settled");
+                  }}
+                >
+                  {t("common:actions.close")}
+                </Button>
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </main>
+    </>
+  );
+}

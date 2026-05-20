@@ -1,0 +1,43 @@
+# Audio assets — sourcing + licensing
+
+Spec §11 lists 10 sounds. The audio system (`apps/webapp/src/audio/`) is
+wired in Phase 5 but ships **without** audio files — missing files fail
+silently. Drop the files into `apps/webapp/public/sounds/` and they
+light up immediately on the next reload.
+
+Use only royalty-free, license-clean sources. Recommended:
+
+- [Freesound](https://freesound.org) — filter for CC0
+- [Pixabay Sound Effects](https://pixabay.com/sound-effects/) — Pixabay license, free to use
+- [Mixkit](https://mixkit.co/free-sound-effects/) — free for commercial use
+- [Zapsplat](https://www.zapsplat.com) — free with attribution / no-attribution paid
+
+## Required files
+
+| Filename                              | Role                                                | Target length | Notes                                  |
+|---------------------------------------|-----------------------------------------------------|---------------|----------------------------------------|
+| `public/sounds/ui_tap.mp3`            | Soft tactile click on buttons/chips                 | < 100 ms      | dry, percussive                        |
+| `public/sounds/ui_swipe.mp3`          | Sheet open / close                                  | 150–250 ms    | airy, short                            |
+| `public/sounds/wheel_tick.mp3`        | Decel-phase segment crossing                        | 40–80 ms      | sub-100ms (§11), can re-fire 12×/sec   |
+| `public/sounds/wheel_launch.mp3`      | Whoosh on spin start                                | 350–500 ms    | low-to-high sweep                      |
+| `public/sounds/result_chime.mp3`      | Bright reveal chime                                 | 400–700 ms    | major triad / bell                     |
+| `public/sounds/hoba_pop.mp3`          | Signature pop sync'd with `<HobaWord />` entrance   | 200–350 ms    | single pop — same file for EN + UK     |
+| `public/sounds/confetti_burst.mp3`    | Celebratory pop layered on result                   | 300–500 ms    | paper-burst / popper                   |
+| `public/sounds/chaos_event.mp3`       | Eerie/playful sting (Phase 7)                       | 600–900 ms    | not creepy — Jackbox-ish               |
+| `public/sounds/join_ping.mp3`         | Soft join notification (Phase 6)                    | 200–400 ms    | warm, low-volume                       |
+| `public/sounds/rigged_reveal.mp3`     | Sting for the Rigged Mode reveal (Phase 8)          | 700–1000 ms   | distinct from others — table-flip vibe |
+
+## Licensing log
+
+When you drop a file in, add a line below: source URL, author, license, date.
+
+| File              | Source | Author | License | Added |
+|-------------------|--------|--------|---------|-------|
+| (none yet)        |        |        |         |       |
+
+## Why the system is silent without assets
+
+`AudioManager.play()` (in `apps/webapp/src/audio/index.ts`) creates each
+`Howl` lazily on first use and registers `onloaderror` + `onplayerror`
+handlers that swallow errors. The rest of the codebase remains
+indifferent to whether sound files are present.

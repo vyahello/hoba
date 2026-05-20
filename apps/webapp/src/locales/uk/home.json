@@ -13,6 +13,48 @@
     "yes_no": "Так чи Ні",
     "friday": "Плани на п'ятницю"
   },
+  "quick_segments": {
+    "eat": {
+      "pizza": "Піца",
+      "sushi": "Суші",
+      "burger": "Бургер",
+      "salad": "Салат",
+      "tacos": "Тако",
+      "ramen": "Рамен"
+    },
+    "pays": {
+      "you": "Ти",
+      "me": "Я",
+      "split": "Навпіл",
+      "next_time": "Наступного разу"
+    },
+    "watch": {
+      "comedy": "Комедія",
+      "thriller": "Трилер",
+      "action": "Бойовик",
+      "drama": "Драма",
+      "documentary": "Документалка",
+      "anime": "Аніме"
+    },
+    "truth_dare": {
+      "truth": "Правда",
+      "dare": "Дія",
+      "wild_card": "Сюрприз",
+      "skip": "Пропуск"
+    },
+    "yes_no": {
+      "yes": "Так",
+      "no": "Ні"
+    },
+    "friday": {
+      "movies": "Кіно",
+      "bar": "Бар",
+      "dinner": "Вечеря",
+      "stay_in": "Вдома",
+      "karaoke": "Караоке",
+      "concert": "Концерт"
+    }
+  },
   "create_custom": {
     "title": "Створити власне",
     "subtitle": "Збудуй своє колесо — питання, сегменти, режим."
