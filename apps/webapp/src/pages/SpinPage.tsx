@@ -217,14 +217,24 @@ export function SpinPage(): JSX.Element {
 
         <div className="flex flex-col gap-2 mt-auto">
           {state === "idle" ? (
-            <Button
-              variant="accent"
-              size="xl"
-              fullWidth
-              onClick={handleSpin}
-            >
-              {t("common:actions.spin").toUpperCase()}
-            </Button>
+            <>
+              <Button
+                variant="accent"
+                size="xl"
+                fullWidth
+                onClick={handleSpin}
+              >
+                {t("common:actions.spin").toUpperCase()}
+              </Button>
+              <Button
+                variant="ghost"
+                fullWidth
+                onClick={handleInviteFriends}
+                loading={inviteLoading}
+              >
+                {t("room:actions.invite_friends")}
+              </Button>
+            </>
           ) : null}
 
           {state === "spinning" ? (
