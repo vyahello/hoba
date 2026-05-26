@@ -7,10 +7,10 @@
   },
   "sound": "Звук",
   "haptics": "Вібрація",
-  "anonymous": "Анонім за замовчуванням",
+  "anonymous": "Анонімний режим",
   "theme": {
     "title": "Тема",
-    "follow": "За Telegram",
+    "follow": "Як у Telegram",
     "light": "Світла",
     "dark": "Темна"
   }

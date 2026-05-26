@@ -6,7 +6,7 @@
   "segment_placeholder": "Варіант {index}",
   "add_segment": "Додати варіант",
   "remove_segment": "Прибрати",
-  "spin_solo": "Крутити соло",
-  "too_few": "Треба щонайменше 2",
-  "too_many": "До 12 варіантів"
+  "spin_solo": "Крутити!",
+  "too_few": "Потрібно щонайменше 2 варіанти",
+  "too_many": "Максимум 12 варіантів"
 }
