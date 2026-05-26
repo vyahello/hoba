@@ -4,6 +4,7 @@ Tracked TODOs per `CLAUDE.md` rule 8 ("No TODOs without entry in `docs/TODO.md`"
 Format: `- [ ] phase:N — area — description (owner, date)`. Resolve by deleting the line.
 
 - [ ] stage:B — networking — document the ngrok dance in README (replaces cloudflared after the iPhone Safari issue). Move out of TODO once README has a clear "Dev tunnel" subsection.
+- [ ] stage:B — tests — add a focused RoomPage unit test for the host-detection branch (canSpin under host_only when snapshot.me_user_id matches a host participant). Regression guard for commit 7db1b0a.
 
 ## Resolved in Stage A (2026-05-26)
 
