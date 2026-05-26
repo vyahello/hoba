@@ -7,7 +7,7 @@ The full product + engineering specification is at **`docs/spec.md`**.
 **You MUST read it before starting any new phase.** Re-read the relevant phase section before each `go on phase N` command. If chat instructions ever conflict with `docs/spec.md`, ask which wins.
 
 ## Current phase
-> **Stage A complete (2026-05-26).** Phase 6 MVP blockers closed: share deep-link delivery, Redis `tg_id→user_id` cache, `RoomPage` + room-flow i18n parity (new `room` namespace EN+UK), `pnpm i18n:check` wired, Socket.IO + Redis test coverage (94% / 96%). Next: **Stage B — pre-launch hardening** (see `docs/roadmap.md`).
+> **Stage A complete + verified (2026-05-26).** Original 5 Phase-6 blockers closed, then hands-on Telegram testing surfaced 6 more bugs which were all fixed in the same stage (see "Stage A close-out" below). The app now runs end-to-end on real phones with EN + UK locale parity, working multiplayer share, host detection, and consistent spin UX. Next: **Stage B — pre-launch hardening** (see `docs/roadmap.md`).
 
 Owner updates this line after each `STAGE X COMPLETE` (post-MVP we run stages, not phases — stages map to spec phases per `docs/roadmap.md`).
 
@@ -47,12 +47,26 @@ Skipping any of these = future Claude opens cold and re-derives state from `git 
 - Phase 5 — `<Wheel>` + solo spin flow + audio + custom wheel editor + spin history
 - Phase 6 — Rooms REST (`/api/v1/rooms`), Socket.IO `/rooms` namespace, server-authoritative spin, presence, reactions, share-link generation (delivery broken — see blockers)
 
-## Stage A close-out (all 5 items closed, 2026-05-26)
-1. ✅ Share deep-link auto-navigate fixed in `lib/startParam.ts` (SDK → hash → query fallback) + `RoomPage.handleShare` uses `buildRoomInviteLink` with optional Direct Link short_name from `VITE_TELEGRAM_APP_SHORT_NAME`.
-2. ✅ Redis `tg_id → user_id` cache: `services/users.resolve_telegram_user` + `cache_user_after_commit`; 15 min TTL; HTTP auth dependency + WS connect both wired.
-3. ✅ New `room` namespace in EN + UK; all `RoomPage` / `SpinPage` / `ReactionsBar` hardcoded strings removed; error codes map through `room.errors.*` with fallback.
-4. ✅ `scripts/i18n-check.mjs` — EN ↔ UK key parity + referenced-key coverage; failure-on-divergence verified.
-5. ✅ Realtime + Redis tests via `FakeSocketIO` + `fakeredis.aioredis` autouse fixture; coverage gate is back to global 80% (handlers/redis no longer omitted).
+## Stage A close-out (2026-05-26)
+
+### Original roadmap items (5)
+1. ✅ Share deep-link auto-navigate fixed in `lib/startParam.ts` (SDK → hash → query fallback) + `RoomPage.handleShare` uses `buildRoomInviteLink` with optional Direct Link short_name from `VITE_TELEGRAM_APP_SHORT_NAME`. Commit `b873a00`.
+2. ✅ Redis `tg_id → user_id` cache: `services/users.resolve_telegram_user` + `cache_user_after_commit`; 15 min TTL; HTTP auth dependency + WS connect both wired. Commit `b873a00`.
+3. ✅ New `room` namespace in EN + UK; all `RoomPage` / `SpinPage` / `ReactionsBar` hardcoded strings removed; error codes map through `room.errors.*` with fallback. Commit `b873a00`.
+4. ✅ `scripts/i18n-check.mjs` — EN ↔ UK key parity + referenced-key coverage; failure-on-divergence verified. Commit `b873a00`.
+5. ✅ Realtime + Redis tests via `FakeSocketIO` + `fakeredis.aioredis` autouse fixture; coverage gate is back to global 80% (handlers/redis no longer omitted). Commit `b873a00`.
+
+### Verification-pass fixes (6, found during real-device testing)
+6. ✅ Docs split: README rewritten as a landing page; runtime composition → `docs/architecture.md`; local setup → `docs/development.md`; test layout + manual verification → `docs/testing.md`. Commit `6ef70a4`.
+7. ✅ `VITE_TELEGRAM_BOT_USERNAME` + `VITE_TELEGRAM_APP_SHORT_NAME` piped through `docker-compose.yml` to the webapp container (Stage A regression — env vars existed in `.env.example` but weren't reaching Vite at runtime). Commit `6b72946`.
+8. ✅ Host detection bug: `RoomPage` was comparing Telegram tg_id (`initDataUnsafe.user.id`, e.g. `7740882501`) against internal DB `user_id` (e.g. `1`). Added `me_user_id` to `RoomState` DTO so the client knows its own internal id. Commit `7db1b0a`.
+9. ✅ UK locale rewrite: "Куди їсти?" → "Що поїсти?", proper ICU plurals for participant count (учасник/учасники/учасників), "Господар" → "Ведучий" in spin hint, and ~15 other natural-language fixes. Commit `4efb510`.
+10. ✅ `+ Invite friends` CTA now visible on the solo idle screen (was only post-settle). Commit `bfdca38`.
+11. ✅ Wheel hub tap fully wired: works in rooms (was missing `onSpinClick` prop on `<Wheel>` in `RoomPage`) + `SPIN` label inside the hub localized via `t('common:actions.spin')` (was hardcoded English). Commit `d425a7a`.
+12. ✅ Default `spin_policy` flipped from `host_only` to `anyone` (model + service + REST schema + Alembic `0003`). Party-game social fit. Existing rows untouched. Commit `00f3c21`.
+
+### Stage A test totals (final)
+102 backend tests, 31 frontend tests, 91% backend coverage. mypy --strict, ruff, eslint, tsc, i18n:check all green.
 
 ## Languages (locked)
 EN + UK only. Brand is locale-aware per spec §0 and rule 5 below — `Hoba!` in EN/code/files/logo, `Хоба!` in UK in-app UI only. **Every user-facing string must go through `t()`. Hardcoded English in `.tsx` is a bug.**

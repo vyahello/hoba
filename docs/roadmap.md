@@ -47,6 +47,20 @@ Acceptance: `pytest --cov` shows realtime + redis_client modules at ≥80% line 
 
 **End-of-stage gate:** all five items closed, all CLAUDE.md quality gates green, two-device manual test recorded in `docs/manual-verify-stageA.md`. Then `STAGE A COMPLETE`.
 
+#### Stage A verification-pass fixes (closed in same stage, 2026-05-26)
+
+Hands-on Telegram testing after the five-item close surfaced six more bugs that block the same MVP goal. They were fixed in Stage A rather than punted to Stage B because they all fall under "make multiplayer + solo work in EN+UK on real devices" — the literal stage charter:
+
+- Docs split into `architecture.md` / `development.md` / `testing.md`; README rewritten as a landing page (`6ef70a4`).
+- `VITE_TELEGRAM_*` env vars wired through `docker-compose.yml` (`6b72946`).
+- **Host detection bug** (`7db1b0a`): RoomPage compared Telegram `tg_id` against internal DB `user_id`. Server now returns `me_user_id` on `RoomState`. Lesson: client-side state checks need server-provided identity, never `initDataUnsafe.user.id`.
+- UK locale rewrite for natural Ukrainian + proper ICU plurals (`4efb510`).
+- `+ Invite friends` CTA on solo-idle screen (was post-settle only) (`bfdca38`).
+- Wheel hub tap wired in RoomPage + `SPIN` label localized (`d425a7a`).
+- **Default `spin_policy` flipped `host_only` → `anyone`** (`00f3c21`, Alembic `0003`). Party-game social fit. Existing rows untouched. Stage B has the host-toggle UI queued.
+
+Closing rule going forward: bugs found in stage verification belong to that stage, not the next.
+
 ---
 
 ### Stage B — Pre-launch hardening (compressed Phase 11 + Phase 12 minimum)
