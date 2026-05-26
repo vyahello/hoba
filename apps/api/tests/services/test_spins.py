@@ -34,8 +34,14 @@ async def _make_user(db: AsyncSession, tg_id: int) -> int:
 async def test_trigger_spin_host_only_blocks_guest(db: AsyncSession) -> None:
     host_id = await _make_user(db, tg_id=20)
     guest_id = await _make_user(db, tg_id=21)
+    # Must opt in to host_only — the default since Stage A is `anyone`
+    # to match the party-game social dynamic.
     room = await create_room(
-        db, host_id=host_id, question_text="?", segments=_drafts(3),
+        db,
+        host_id=host_id,
+        question_text="?",
+        segments=_drafts(3),
+        spin_policy="host_only",
     )
     await join_room(db, room, guest_id)
     await db.commit()

@@ -67,7 +67,7 @@ async def create_room(
     question_text: str,
     segments: list[SegmentDraft],
     title: str | None = None,
-    spin_policy: str = "host_only",
+    spin_policy: str = "anyone",
     suggestion_policy: str = "off",
 ) -> Room:
     """Create a room + its first question + segments, marking host as Participant."""

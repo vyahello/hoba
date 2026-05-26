@@ -5,6 +5,10 @@ Format: `- [ ] phase:N — area — description (owner, date)`. Resolve by delet
 
 - [ ] stage:B — networking — document the ngrok dance in README (replaces cloudflared after the iPhone Safari issue). Move out of TODO once README has a clear "Dev tunnel" subsection.
 - [ ] stage:B — tests — add a focused RoomPage unit test for the host-detection branch (canSpin under host_only when snapshot.me_user_id matches a host participant). Regression guard for commit 7db1b0a.
+- [ ] stage:B — moderation — host toggle in Room settings sheet to flip spin_policy between anyone (default since 2026-05-26) and host_only without leaving the room. Server-side: PATCH /api/v1/rooms/{code} already accepts it; UI is missing.
+- [ ] stage:B — anti-spam — server-side cooldown on spin:trigger (1.5–2s after the previous spin:settled in the same room) so thumb-mashing the SPIN hub can't shower duplicate spins. Today the only throttle is the client-side `state !== "idle"` gate, which is bypassable.
+- [ ] stage:D — modes — finish `turn_based` spin policy. services/spins._user_can_spin currently treats it as host_only. Required by Punishment + Elimination game modes (spec §5).
+- [ ] stage:D — mode defaults — when a room is created with a non-Classic game_mode, override the default spin_policy: Elimination → host_only, Punishment → turn_based, Chaos → anyone, Rigged → host_only.
 
 ## Resolved in Stage A (2026-05-26)
 

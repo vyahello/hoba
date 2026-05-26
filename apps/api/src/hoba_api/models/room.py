@@ -61,7 +61,7 @@ class Room(Base, TimestampMixin):
         String(16), default="classic", nullable=False, server_default="classic",
     )
     spin_policy: Mapped[str] = mapped_column(
-        String(16), default="host_only", nullable=False, server_default="host_only",
+        String(16), default="anyone", nullable=False, server_default="anyone",
     )
     suggestion_policy: Mapped[str] = mapped_column(
         String(16), default="off", nullable=False, server_default="off",
