@@ -23,6 +23,54 @@ def get_redis() -> Redis:
     return _client
 
 
+def set_redis_client_for_testing(client: Redis | None) -> None:
+    """Inject a (fake) Redis client. Test-only — production has no callers."""
+    global _client
+    _client = client
+
+
+# --- tg_id → user_id cache ----------------------------------------------
+#
+# Hot-path optimization for the auth dependency and WS connect handler.
+# Both look up a user by `tg_id` on every request; with the cache a
+# subsequent request inside the TTL window skips the `SELECT FROM users
+# WHERE tg_id = ?` and the conditional upsert. Cache misses fall through
+# to the normal upsert path. See spec §6.
+
+_USER_ID_CACHE_TTL_SECONDS = 15 * 60
+
+
+def _user_id_cache_key(tg_id: int) -> str:
+    return f"user:tg:{tg_id}"
+
+
+async def user_id_cache_get(tg_id: int) -> int | None:
+    """Return the cached internal `user_id` for a Telegram id, or None."""
+    raw = await get_redis().get(_user_id_cache_key(tg_id))
+    if raw is None:
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        # Cache poisoning or a stale string entry — drop it and miss.
+        await get_redis().delete(_user_id_cache_key(tg_id))
+        return None
+
+
+async def user_id_cache_set(tg_id: int, user_id: int) -> None:
+    """Cache `tg_id → user_id` for `_USER_ID_CACHE_TTL_SECONDS`."""
+    await get_redis().set(
+        _user_id_cache_key(tg_id),
+        str(user_id),
+        ex=_USER_ID_CACHE_TTL_SECONDS,
+    )
+
+
+async def user_id_cache_invalidate(tg_id: int) -> None:
+    """Drop a cache entry (e.g. when a user is deleted in tests)."""
+    await get_redis().delete(_user_id_cache_key(tg_id))
+
+
 # --- Presence ------------------------------------------------------------
 
 _PRESENCE_TTL_SECONDS = 60

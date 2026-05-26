@@ -4,11 +4,19 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hoba_api.auth.initdata import TelegramUser
 from hoba_api.models.user import User
+from hoba_api.redis_client import (
+    user_id_cache_get,
+    user_id_cache_invalidate,
+    user_id_cache_set,
+)
+
+log = structlog.get_logger("hoba_api.services.users")
 
 _SUPPORTED_LOCALES = {"uk", "en"}
 
@@ -61,6 +69,44 @@ async def upsert_from_telegram(session: AsyncSession, tg_user: TelegramUser) -> 
     existing.photo_url = tg_user.photo_url
     existing.last_active_at = now
     return existing
+
+
+async def resolve_telegram_user(
+    session: AsyncSession, tg_user: TelegramUser,
+) -> User:
+    """Get or upsert a `User`, hitting the Redis `tg_id → user_id` cache
+    where possible.
+
+    On cache hit: fetches the User by primary key (single fast lookup,
+    no upsert, no `last_active_at` bump). Telegram-side mutable fields
+    (name, photo) propagate within the TTL window.
+
+    On cache miss: falls through to `upsert_from_telegram` and caches
+    `tg_id → user.id` post-flush. **Caller is responsible for committing
+    the session.** The cache write is deferred until commit so a failed
+    transaction does not poison the cache (this is handled by
+    `cache_user_after_commit`).
+    """
+    cached_id = await user_id_cache_get(tg_user.id)
+    if cached_id is not None:
+        user = await session.get(User, cached_id)
+        if user is not None:
+            return user
+        # Cache pointed at a deleted row — drop and fall through.
+        log.warning("user_cache.stale_pointer", tg_id=tg_user.id, cached_id=cached_id)
+        await user_id_cache_invalidate(tg_user.id)
+    return await upsert_from_telegram(session, tg_user)
+
+
+async def cache_user_after_commit(user: User) -> None:
+    """Cache `user.tg_id → user.id` after the caller's commit succeeds.
+
+    Splitting cache-set from `resolve_telegram_user` lets the caller
+    keep ownership of the commit boundary while still benefiting from
+    the cache. A no-op write here is harmless; a write before a failed
+    commit would have poisoned the cache.
+    """
+    await user_id_cache_set(user.tg_id, user.id)
 
 
 async def get_stats(session: AsyncSession, user_id: int) -> dict[str, int]:

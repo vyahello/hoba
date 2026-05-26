@@ -22,7 +22,7 @@ import {
   type WheelState,
 } from "@/features/wheel/types";
 import { haptics } from "@/lib/haptics";
-import { openTelegramLink, tg } from "@/lib/telegram";
+import { buildRoomInviteLink, openTelegramLink, tg } from "@/lib/telegram";
 import {
   startPresenceLoop,
   stopPresenceLoop,
@@ -36,7 +36,7 @@ const REVEAL_DELAY_MS = 1500;
 export function RoomPage(): JSX.Element {
   const { code = "" } = useParams<{ code: string }>();
   const navigate = useNavigate();
-  const { t } = useTranslation(["common"]);
+  const { t } = useTranslation(["room", "common"]);
 
   const connected = useRoomStore((s) => s.connected);
   const snapshot = useRoomStore((s) => s.snapshot);
@@ -90,8 +90,14 @@ export function RoomPage(): JSX.Element {
 
   useEffect(() => {
     if (lastError === null) return;
-    toast({ title: lastError, intent: "warning" });
-  }, [lastError]);
+    // `lastError` is a server-emitted machine code (e.g. "room_closed",
+    // "rate_limited"). Look it up in the room.errors namespace; fall
+    // back to a generic message so the user never sees raw enum text.
+    const key = `room:errors.${lastError}`;
+    const localized = t(key);
+    const message = localized === key ? t("room:errors.fallback") : localized;
+    toast({ title: message, intent: "warning" });
+  }, [lastError, t]);
 
   const segments: SegmentDef[] = useMemo(() => {
     if (snapshot?.active_question == null) return [];
@@ -133,23 +139,22 @@ export function RoomPage(): JSX.Element {
   async function handleShare(): Promise<void> {
     if (snapshot === null) return;
     const code = snapshot.room.code;
-    const botUsername = "hobagame_bot";
-    const inviteLink = `https://t.me/${botUsername}?startapp=room_${code}`;
-    const message = `Join my Hoba! wheel · ${code}`;
+    const inviteLink = buildRoomInviteLink(code);
+    const message = t("room:share.message", { code });
     haptics.medium();
 
-    // Telegram's native share picker: opens "Send to..." sheet.
     const shareUrl =
       `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}` +
       `&text=${encodeURIComponent(message)}`;
     if (openTelegramLink(shareUrl)) return;
 
-    // Fallback: copy the deep link.
+    // Fallback: copy the deep link (used when openTelegramLink is a
+    // no-op outside Telegram — e.g. dev in a regular browser).
     try {
       await navigator.clipboard.writeText(inviteLink);
       toast({
-        title: "Link copied",
-        description: "Paste it in any chat to invite",
+        title: t("room:share.copied_title"),
+        description: t("room:share.copied_description"),
         intent: "success",
       });
     } catch {
@@ -198,7 +203,9 @@ export function RoomPage(): JSX.Element {
           <div className="flex items-center gap-2 mt-0.5">
             <RealtimeIndicator active={connected} />
             <span className="text-xs text-ink-light-2 dark:text-ink-dark-2">
-              {snapshot.participants.length} in room
+              {t("room:header.participants_count", {
+                count: snapshot.participants.length,
+              })}
             </span>
           </div>
         </div>
@@ -221,7 +228,7 @@ export function RoomPage(): JSX.Element {
             void handleShare();
           }}
         >
-          Share
+          {t("room:actions.share")}
         </Button>
       </section>
 
@@ -230,7 +237,7 @@ export function RoomPage(): JSX.Element {
           segments={segments}
           state={wheelState}
           spin={wheelSpin}
-          ariaLabel={snapshot.active_question?.text ?? "Wheel"}
+          ariaLabel={snapshot.active_question?.text ?? t("room:header.wheel_aria")}
           className="max-w-md mx-auto"
         />
 
@@ -243,7 +250,7 @@ export function RoomPage(): JSX.Element {
           ) : null}
           {!canSpin && wheelState === "idle" ? (
             <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-3">
-              Host spins. React with the bar above.
+              {t("room:spin.host_only_hint")}
             </p>
           ) : null}
           {wheelState === "spinning" ? (

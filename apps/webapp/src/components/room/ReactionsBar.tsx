@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import { cn } from "@/lib/cn";
 import { haptics } from "@/lib/haptics";
 import { useRoomStore } from "@/stores/room";
@@ -6,6 +8,7 @@ const REACTION_EMOJIS = ["😂", "🔥", "💀", "👍", "🎉"] as const;
 
 export function ReactionsBar({ className }: { className?: string }): JSX.Element {
   const sendReaction = useRoomStore((s) => s.sendReaction);
+  const { t } = useTranslation("room");
   return (
     <div
       className={cn(
@@ -18,7 +21,7 @@ export function ReactionsBar({ className }: { className?: string }): JSX.Element
         <button
           key={emoji}
           type="button"
-          aria-label={`React ${emoji}`}
+          aria-label={t("reactions.aria_label", { emoji })}
           onClick={() => {
             haptics.light();
             sendReaction(emoji);

@@ -1,0 +1,137 @@
+# Hoba! — Execution Roadmap
+
+> Operational layer over `docs/spec.md`. The spec is the *what*; this file is the *next-N-stages order of operations*. Both live in the repo; this one rotates as we ship.
+>
+> Updated: 2026-05-26.
+
+---
+
+## Where we are right now
+
+**Code-complete through Phase 6 (MVP "ship point")**, commits `dbbf570 … 559d534`. The webapp boots, the wheel spins solo, rooms exist, the Socket.IO `/rooms` namespace fires server-authoritative spins to multiple clients, presence and reactions work. But the multiplayer *invite flow* (the thing that lets a second human actually join your room from Telegram) does not land yet, and the room screen is partly hardcoded to English.
+
+The spec calls Phase 6 the **🚢 MVP ship point** — stop, ship, validate with 10–20 real users, then start Phase 7. The plan below honors that intent.
+
+---
+
+## Stages
+
+> Each stage ends like a phase: tests green, file-tree diff, manual verify checklist, `STAGE X COMPLETE`. Owner says `go on stage X` to advance. No auto-advance.
+
+### Stage A — Close Phase 6 MVP blockers
+
+The Phase 6 commit shipped, but `docs/TODO.md` carries five unresolved items that together prevent a clean two-device demo and break UK locale parity in the room. This stage closes them and *only* them.
+
+**A1 — Multiplayer share deep-link actually delivers (TODO.md:6).**
+Repro: host taps Share → recipient taps `t.me/hobagame_bot?startapp=room_<CODE>` message → Mini App opens but does **not** auto-navigate to `/room/<CODE>`. Probable causes (in order of suspicion):
+  1. Telegram delivers `start_param` differently for Direct Link Mini Apps vs menu-button launches; `RootLayout`'s effect only reads `initDataUnsafe.start_param` and may need fallback to URL `?tgWebAppStartParam=`.
+  2. The `WEBAPP_URL` registered with BotFather drifts from the running tunnel between sessions.
+  3. The auto-navigate effect (`RootLayout.tsx:21-31`) may fire before `WebApp.ready()` settles, so `start_param` is still undefined.
+Acceptance: cold open of `t.me/hobagame_bot?startapp=room_TEST01` on a second physical device lands the user inside `/room/TEST01` with the room state painted, `room:participant_joined` fires on the host's socket, both wheels animate in sync on a manual spin.
+
+**A2 — Redis `tg_id → user_id` cache (TODO.md:5, deferred since Phase 2).**
+Every WS reconnect re-runs `upsert_from_telegram` on the hot path. Add a 15 min TTL cache keyed by `tg_id` returning `user_id`. Invalidate on profile-edit (none today; just set on hit). Hook into both `auth.dependencies.get_current_user` and `realtime.handlers._authenticate`.
+Acceptance: WS reconnect under load skips the DB upsert when the cache is warm; new tests cover hit / miss / TTL-expiry paths.
+
+**A3 — RoomPage i18n parity (audit).**
+`apps/webapp/src/pages/RoomPage.tsx` ships these untranslated strings today: `"Share"` (line 224), `"Host spins. React with the bar above."` (245), `"in room"` (202). Plus the room-flow namespace is missing from `apps/webapp/src/locales/{en,uk}/`. Add `room.json` to both locales, route every literal through `t()`, audit `SpinPage`, `RoomPage`, `CreatePage`, `LibraryPage` for the same drift. Document UK + EN strings for: share CTA, "in room" count, host-only spin notice, reactions caption, share-link toast title + description, ApiError mapping (`create_failed`, `room_not_found`, `rate_limited`, `not_host`, `room_closed`, …).
+Acceptance: `grep -RE "\"[A-Z][a-zA-Z ]{2,}\"" apps/webapp/src/pages` returns zero non-translated UI strings; manual switch EN ⇄ UK in `/settings` flips every visible string in solo and multiplayer flows.
+
+**A4 — Wire up `pnpm i18n:check` (TODO.md:9).**
+Replace the stub with `i18next-parser` configured against `apps/webapp/src/locales/{en,uk}/*.json`. CI fails when keys diverge between locales or unused keys accumulate.
+Acceptance: deleting a key from one locale fails the check; the script is wired into the package.json `lint` step.
+
+**A5 — WS handler + Redis client test coverage (TODO.md:7).**
+Today both are excluded. Add an async test harness using `fakeredis` and `python-socketio.AsyncClient` (test mode). Cover: connect with valid initData, connect rejected on bad initData, room:join happy path, room:join on closed room, spin:trigger as host (allowed) vs guest (denied under `host_only`), reaction:send rate-limited at 11th in 30s, disconnect emits `room:participant_left`.
+Acceptance: `pytest --cov` shows realtime + redis_client modules at ≥80% line coverage; `mypy --strict` still green.
+
+**End-of-stage gate:** all five items closed, all CLAUDE.md quality gates green, two-device manual test recorded in `docs/manual-verify-stageA.md`. Then `STAGE A COMPLETE`.
+
+---
+
+### Stage B — Pre-launch hardening (compressed Phase 11 + Phase 12 minimum)
+
+Goal: a real-friend can install the bot, share the link, both languages work, nothing crashes on touch. Cherry-pick the subset of Phase 11/12 work needed to invite ~20 real users without embarrassment. Bigger Phase 11/12 (full moderation toolkit, profile photos, deploy script polish) waits until after Stage D.
+
+- Aurora background, empty states for solo history, library placeholder, settings.
+- Error boundary catches unhandled WS / route errors; user sees the brand-keyed error screen, not a white page.
+- `enableClosingConfirmation` on active rooms only.
+- Audit every screen at 360px width on real Android + iPhone Safari (still ngrok in dev).
+- Server-side rate limits per spec §14 §7: spin trigger (host 1/3s), reactions (already done in handlers — verify), room creation (5/min/user).
+- `pytest`, `ruff`, `mypy --strict`, `eslint`, `tsc --noEmit`, `i18n:check` all green.
+- Production `docker-compose --profile prod up` with Caddy auto-TLS on env-driven hostnames boots cleanly against a dummy VPS (verified locally with a hosts-file trick or staging VPS).
+- BotFather: bot profile photo (Latin `Hoba!` logo from `docs/brand/`), Description + About in EN, command list per spec §6.
+
+**End-of-stage gate:** fresh-clone `docker compose up` → working bot → working webapp → joinable room from a second device → both languages flip cleanly → no console errors over a 5-minute play session.
+
+---
+
+### Stage C — Soft-launch + validation
+
+Deploy to a small VPS (Hetzner / DigitalOcean / wherever; the prod compose profile is already designed for this). Invite 10–20 friends, schedule two short play sessions, collect:
+
+- Console + Sentry errors.
+- Subjective feedback on the brand-word moment (does the Hoba! / Хоба! land?).
+- Whether anyone tries to invite a second person and fails.
+- Which game mode they ask for first (signal for prioritizing Phase 7 order vs jumping to Phase 8 Rigged).
+
+No code work in this stage — only telemetry review and a `docs/validation-notes.md` file capturing what we heard. Stage exits when we have a written go/no-go on Phase 7+.
+
+---
+
+### Stage D — Phase 7: Classic + Elimination + Punishment + Chaos modes
+
+Per spec §5 + §15 Phase 7. Implement `GameModeEngine` interface (the *first* legitimate use of the 3-use-sites threshold from CLAUDE.md rule 6 — Classic already exists, Elimination/Punishment/Chaos make 4 implementers). Mode picker at room creation, mode badge in room header, mode-specific UI:
+
+- **Elimination** — losing segment shatters animation, segment list shrinks, `room:state` mutates `active_question.segments`.
+- **Punishment** — server-owned punishment deck (3 categories × 30 cards × EN/UK), card-draw broadcast post-spin, `result:settled` payload extended with `punishment_card`.
+- **Chaos** — pre-spin "chaos event" announcement (reverse-engineered list of 8 events from spec, e.g. "swap two segments", "duplicate the winning one", "blindfold mode"), broadcast as `chaos:event` before `spin:started`.
+
+WS protocol grows but stays in `/rooms`. `docs/game-modes.md` is the source of truth for each mode's exact rules. Build the punishment-deck seed migration.
+
+**End-of-stage gate:** four modes playable end-to-end on two devices, mode badge visible, mode-specific sounds and haptics fire, `docs/game-modes.md` matches behavior, mode-engine has unit tests.
+
+---
+
+### Stage E — Phase 8: Rigged Mode 🎭
+
+The legendary feature. Per spec §5.5 + §15 Phase 8. Server-side weighted RNG (not client — host weights live in Redis, only host sees them), 1.5s long-press on the hub to reveal the weight-editor sheet, "Reveal the rig" broadcast animation. Statistical test over a 1000-spin simulation in CI proves weights stay within ±2% of declared distribution. Post-reveal ethical guard injects the 🎭 emoji into all subsequent spin announcements.
+
+**End-of-stage gate:** playtest — friends genuinely cannot detect rigging until host pulls the trigger. Reveal moment lands with the "yo wait what" energy described in the spec.
+
+---
+
+### Stage F — Phase 9 + Phase 10: Library, Saved wheels, Templates, Public + Trending + Moderation
+
+Two phases bundled because the data model + UI work overlaps heavily.
+
+- Phase 9: built-in template carousel on Home, Saved Wheels CRUD (per-user library), save-from-active-room flow.
+- Phase 10: make-public flow, profanity filter, Trending tab (categories, search, like, report), auto-hide on 3 reports, admin moderation endpoint.
+
+**End-of-stage gate:** every F10 flow in spec works in EN + UK; profanity filter rejects a curated test list; trending list paginates and sorts by an explicit signal we document in `docs/architecture.md`.
+
+---
+
+### Stage G — Phase 11 (full) + Phase 12: Host moderation + Final hardening + Launch
+
+The remaining Phase 11/12 work not pulled into Stage B: full host moderation toolkit (kick, lock, anonymous mode, mode change mid-room, room close with confirmations + anonymous nickname generator), custom SVG onboarding illustrations, result share-card PNG, fuzz tests over every API route, room cleanup cron, full deploy script, public Privacy + Terms in EN + UK, README walkthrough GIF.
+
+**End-of-stage gate:** all bullets in spec §17 "Full Done (Phases 7–12)" tick.
+
+---
+
+## What this roadmap deliberately defers
+
+- Postgres migration — SQLite is fine through Stage E; spec says we're URL-swap-ready.
+- Push notifications — out of scope (Telegram Mini App lifecycle covers most of it).
+- Internationalization beyond EN + UK — spec is explicit that those two are the launch set.
+- Web (non-Telegram) host — Mini App only.
+
+---
+
+## Open clarifications for the owner
+
+None blocking. Two things worth deciding before Stage D:
+
+1. Will host-customizable weights (Rigged Mode) be visible to the host across reconnects, or do they reset per-session? Spec doesn't say; default to Redis-only ephemeral.
+2. Punishment deck localization — same card translated, or culturally distinct cards per locale? Spec says "3 categories × 30 cards × 2 languages" which reads as the former. Default to same cards translated unless told otherwise.

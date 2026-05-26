@@ -47,7 +47,7 @@ function buildQuickWheelDef(
 export function SpinPage(): JSX.Element {
   const { wheelId = "" } = useParams<{ wheelId: string }>();
   const navigate = useNavigate();
-  const { t } = useTranslation(["home", "common"]);
+  const { t } = useTranslation(["home", "common", "brand", "room"]);
   const customWheel = useCustomWheel((s) => s.current);
   const addToHistory = useSpinHistory((s) => s.add);
 
@@ -123,10 +123,12 @@ export function SpinPage(): JSX.Element {
     return (
       <>
         <header className="ds-glass-header px-4 py-3 pt-safe">
-          <h1 className="font-display font-bold text-xl">Hoba!</h1>
+          <h1 className="font-display font-bold text-xl">
+            {t("brand:exclamation")}
+          </h1>
         </header>
         <main className="flex-1 px-4 pt-8 flex flex-col items-center text-center gap-4">
-          <p className="text-lg font-medium">Wheel not found.</p>
+          <p className="text-lg font-medium">{t("common:not_found.wheel")}</p>
           <Button
             onClick={() => {
               navigate("/");
@@ -177,8 +179,11 @@ export function SpinPage(): JSX.Element {
       });
       navigate(`/room/${state.room.code}`);
     } catch (exc) {
-      const detail = exc instanceof ApiError ? exc.code : "create_failed";
-      toast({ title: detail, intent: "error" });
+      const code = exc instanceof ApiError ? exc.code : "create_failed";
+      const key = `room:errors.${code}`;
+      const localized = t(key);
+      const message = localized === key ? t("room:errors.fallback") : localized;
+      toast({ title: message, intent: "error" });
       setInviteLoading(false);
     }
   }
@@ -244,7 +249,7 @@ export function SpinPage(): JSX.Element {
                   onClick={handleInviteFriends}
                   loading={inviteLoading}
                 >
-                  + Invite friends
+                  {t("room:actions.invite_friends")}
                 </Button>
                 <Button
                   variant="ghost"
@@ -298,7 +303,7 @@ export function SpinPage(): JSX.Element {
                   onClick={handleInviteFriends}
                   loading={inviteLoading}
                 >
-                  {t("common:nav.home")} → multiplayer
+                  {t("room:actions.go_multiplayer")}
                 </Button>
                 <Button
                   variant="ghost"

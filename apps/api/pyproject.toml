@@ -25,6 +25,7 @@ dev = [
     "pytest-cov>=5.0",
     "httpx>=0.27",
     "freezegun>=1.5",
+    "fakeredis>=2.26",
 ]
 
 [build-system]
@@ -74,11 +75,6 @@ branch = true
 source = ["src/hoba_api"]
 omit = [
     "src/hoba_api/main.py",
-    # Socket.IO handlers + Redis client are exercised by manual
-    # two-device tests + integration smoke (Phase 11 polish adds an
-    # async-IO test harness). Service layer is 90%+ covered.
-    "src/hoba_api/realtime/*",
-    "src/hoba_api/redis_client.py",
 ]
 
 [tool.coverage.report]

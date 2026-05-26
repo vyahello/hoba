@@ -13,6 +13,48 @@
     "yes_no": "Yes or No",
     "friday": "Friday plans"
   },
+  "quick_segments": {
+    "eat": {
+      "pizza": "Pizza",
+      "sushi": "Sushi",
+      "burger": "Burger",
+      "salad": "Salad",
+      "tacos": "Tacos",
+      "ramen": "Ramen"
+    },
+    "pays": {
+      "you": "You",
+      "me": "Me",
+      "split": "Split",
+      "next_time": "Next time"
+    },
+    "watch": {
+      "comedy": "Comedy",
+      "thriller": "Thriller",
+      "action": "Action",
+      "drama": "Drama",
+      "documentary": "Documentary",
+      "anime": "Anime"
+    },
+    "truth_dare": {
+      "truth": "Truth",
+      "dare": "Dare",
+      "wild_card": "Wild card",
+      "skip": "Skip"
+    },
+    "yes_no": {
+      "yes": "Yes",
+      "no": "No"
+    },
+    "friday": {
+      "movies": "Movies",
+      "bar": "Bar",
+      "dinner": "Dinner",
+      "stay_in": "Stay in",
+      "karaoke": "Karaoke",
+      "concert": "Concert"
+    }
+  },
   "create_custom": {
     "title": "Create custom",
     "subtitle": "Build your own wheel — set the question, add segments, pick a mode."

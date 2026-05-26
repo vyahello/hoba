@@ -31,7 +31,7 @@ from hoba_api.services.participants import join_room, refresh_presence
 from hoba_api.services.room_state import build_room_state
 from hoba_api.services.rooms import RoomServiceError, get_room_by_code
 from hoba_api.services.spins import trigger_spin
-from hoba_api.services.users import upsert_from_telegram
+from hoba_api.services.users import cache_user_after_commit, resolve_telegram_user
 
 log = structlog.get_logger("hoba_api.realtime")
 
@@ -83,8 +83,9 @@ async def _authenticate(environ: dict[str, Any], auth: dict[str, Any] | None) ->
         log.info("ws.auth.rejected", code=exc.code)
         return None
     async with SessionLocal() as session:
-        user = await upsert_from_telegram(session, tg_user)
+        user = await resolve_telegram_user(session, tg_user)
         await session.commit()
+        await cache_user_after_commit(user)
         return user.id
 
 

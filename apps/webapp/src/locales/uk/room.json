@@ -1,0 +1,36 @@
+{
+  "header": {
+    "participants_count": "{count, plural, one {# у кімнаті} few {# у кімнаті} many {# у кімнаті} other {# у кімнаті}}",
+    "wheel_aria": "Колесо"
+  },
+  "actions": {
+    "share": "Поділитись",
+    "invite_friends": "+ Запросити друзів",
+    "go_multiplayer": "Грати разом"
+  },
+  "share": {
+    "message": "Приєднуйся до мого колеса Хоба! · {code}",
+    "copied_title": "Посилання скопійовано",
+    "copied_description": "Вставте в будь-який чат для запрошення"
+  },
+  "spin": {
+    "host_only_hint": "Господар крутить. Реагуйте панеллю вище."
+  },
+  "reactions": {
+    "aria_label": "Реакція {emoji}"
+  },
+  "errors": {
+    "create_failed": "Не вдалося створити кімнату. Спробуйте ще.",
+    "room_not_found": "Кімнату не знайдено.",
+    "room_closed": "Цю кімнату закрито.",
+    "room_locked": "Цю кімнату заблоковано.",
+    "room_full": "Кімната заповнена.",
+    "not_host": "Це може робити лише господар.",
+    "rate_limited": "Зачекайте секунду.",
+    "kicked": "Вас прибрали з цієї кімнати.",
+    "not_in_room": "Ви не в кімнаті.",
+    "unauthenticated": "Сеанс минув. Відкрийте з Telegram.",
+    "bad_payload": "Щось пішло не так — спробуйте ще.",
+    "fallback": "Щось зламалося."
+  }
+}

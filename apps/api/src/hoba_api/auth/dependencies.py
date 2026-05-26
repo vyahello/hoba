@@ -21,7 +21,7 @@ from hoba_api.auth.initdata import (
 from hoba_api.config import settings
 from hoba_api.db import get_db
 from hoba_api.models.user import User
-from hoba_api.services.users import upsert_from_telegram
+from hoba_api.services.users import cache_user_after_commit, resolve_telegram_user
 
 log = structlog.get_logger("hoba_api.auth")
 
@@ -57,8 +57,9 @@ async def get_current_user(
             detail=exc.code,
         ) from exc
 
-    user = await upsert_from_telegram(db, tg_user)
+    user = await resolve_telegram_user(db, tg_user)
     await db.commit()
+    await cache_user_after_commit(user)
     structlog.contextvars.bind_contextvars(user_id=user.id)
     return user
 

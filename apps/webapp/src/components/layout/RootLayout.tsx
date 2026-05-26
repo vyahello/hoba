@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { Toaster } from "@/components/ds/Toast";
+import { parseRoomDeepLink } from "@/lib/startParam";
 import { readStartParam, tg } from "@/lib/telegram";
 
 /**
@@ -16,16 +17,18 @@ export function RootLayout(): JSX.Element {
   const handledStartParam = useRef(false);
 
   // Deep-link entry: if Telegram opened us with `?startapp=room_XYZ`,
-  // jump straight to that room. Runs once on first mount.
+  // jump straight to that room. Runs once on first mount. `readStartParam`
+  // reads SDK → URL hash → URL query in that order — the hash fallback
+  // is what makes Direct Link Mini App launches work on @twa-dev/sdk
+  // v7.10.1, which does not surface top-level `tgWebAppStartParam`.
   useEffect(() => {
     if (handledStartParam.current) return;
     handledStartParam.current = true;
     const startParam = readStartParam();
-    if (startParam !== undefined && startParam.startsWith("room_")) {
-      const code = startParam.slice("room_".length);
-      if (code.length > 0) {
-        navigate(`/room/${code}`, { replace: true });
-      }
+    if (startParam === undefined) return;
+    const roomCode = parseRoomDeepLink(startParam);
+    if (roomCode !== undefined) {
+      navigate(`/room/${roomCode}`, { replace: true });
     }
   }, [navigate]);
 

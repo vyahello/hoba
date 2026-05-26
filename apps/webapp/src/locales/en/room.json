@@ -1,0 +1,36 @@
+{
+  "header": {
+    "participants_count": "{count, plural, one {# in room} other {# in room}}",
+    "wheel_aria": "Wheel"
+  },
+  "actions": {
+    "share": "Share",
+    "invite_friends": "+ Invite friends",
+    "go_multiplayer": "Play together"
+  },
+  "share": {
+    "message": "Join my Hoba! wheel · {code}",
+    "copied_title": "Link copied",
+    "copied_description": "Paste it in any chat to invite"
+  },
+  "spin": {
+    "host_only_hint": "Host spins. React with the bar above."
+  },
+  "reactions": {
+    "aria_label": "React {emoji}"
+  },
+  "errors": {
+    "create_failed": "Couldn't create the room. Try again.",
+    "room_not_found": "Room not found.",
+    "room_closed": "This room is closed.",
+    "room_locked": "This room is locked.",
+    "room_full": "This room is full.",
+    "not_host": "Only the host can do that.",
+    "rate_limited": "Slow down a moment.",
+    "kicked": "You were removed from this room.",
+    "not_in_room": "Not in a room.",
+    "unauthenticated": "Sign-in expired. Reopen from Telegram.",
+    "bad_payload": "Something looked off — try again.",
+    "fallback": "Something went wrong."
+  }
+}

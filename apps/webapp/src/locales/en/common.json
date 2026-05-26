@@ -18,5 +18,8 @@
   "status": {
     "coming_soon": "Coming soon",
     "phase_label": "Phase {phase}"
+  },
+  "not_found": {
+    "wheel": "Wheel not found."
   }
 }

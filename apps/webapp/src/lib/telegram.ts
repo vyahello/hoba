@@ -10,6 +10,11 @@
 
 import WebApp from "@twa-dev/sdk";
 
+import {
+  buildRoomInviteLink as buildRoomInviteLinkPure,
+  extractStartParam,
+} from "@/lib/startParam";
+
 type ColorScheme = "light" | "dark";
 
 export const tg = WebApp;
@@ -110,13 +115,63 @@ export function openTelegramLink(url: string): boolean {
   }
 }
 
-/** Read `start_param` from initData (`?startapp=room_<CODE>`). */
+/**
+ * Read `start_param` from the launch surface, with three fallbacks so
+ * the share-deep-link lands regardless of which Telegram client + SDK
+ * version the recipient is on. See `lib/startParam.ts` for the why.
+ */
 export function readStartParam(): string | undefined {
+  let sdkValue: string | undefined;
   try {
-    return WebApp.initDataUnsafe.start_param;
+    sdkValue = WebApp.initDataUnsafe.start_param;
   } catch {
-    return undefined;
+    sdkValue = undefined;
   }
+  const hash = readWindowHash();
+  const search = readWindowSearch();
+  return extractStartParam({ sdkStartParam: sdkValue, hash, search });
+}
+
+function readWindowHash(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return window.location.hash;
+  } catch {
+    return "";
+  }
+}
+
+function readWindowSearch(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return window.location.search;
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Bot username + optional app short_name come from Vite env at build
+ * time. Defaulting to `hobagame_bot` keeps the link working when the
+ * webapp is built without `.env` (e.g. fresh clone).
+ */
+export function getBotUsername(): string {
+  const fromEnv = import.meta.env.VITE_TELEGRAM_BOT_USERNAME;
+  return typeof fromEnv === "string" && fromEnv.length > 0 ? fromEnv : "hobagame_bot";
+}
+
+export function getAppShortName(): string | undefined {
+  const fromEnv = import.meta.env.VITE_TELEGRAM_APP_SHORT_NAME;
+  return typeof fromEnv === "string" && fromEnv.length > 0 ? fromEnv : undefined;
+}
+
+/** Build a `t.me/<bot>[/<short>]?startapp=room_<CODE>` invite link. */
+export function buildRoomInviteLink(roomCode: string): string {
+  return buildRoomInviteLinkPure({
+    roomCode,
+    botUsername: getBotUsername(),
+    appShortName: getAppShortName(),
+  });
 }
 
 /** Read Telegram user's `language_code`, primary subtag only (`uk`, `en`). */

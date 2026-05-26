@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from hoba_api.models.participant import Participant
 from hoba_api.models.question import Question
-from hoba_api.models.room import Room
 from hoba_api.models.segment import Segment
 from hoba_api.services.rooms import (
     RoomServiceError,

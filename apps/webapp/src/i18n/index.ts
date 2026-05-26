@@ -16,12 +16,14 @@ import enCommon from "@/locales/en/common.json";
 import enCreate from "@/locales/en/create.json";
 import enDev from "@/locales/en/dev.json";
 import enHome from "@/locales/en/home.json";
+import enRoom from "@/locales/en/room.json";
 import enSettings from "@/locales/en/settings.json";
 import ukBrand from "@/locales/uk/brand.json";
 import ukCommon from "@/locales/uk/common.json";
 import ukCreate from "@/locales/uk/create.json";
 import ukDev from "@/locales/uk/dev.json";
 import ukHome from "@/locales/uk/home.json";
+import ukRoom from "@/locales/uk/room.json";
 import ukSettings from "@/locales/uk/settings.json";
 
 import { safeStorage } from "@/lib/safeStorage";
@@ -52,6 +54,7 @@ void i18n
         settings: enSettings,
         dev: enDev,
         create: enCreate,
+        room: enRoom,
       },
       uk: {
         common: ukCommon,
@@ -60,12 +63,13 @@ void i18n
         settings: ukSettings,
         dev: ukDev,
         create: ukCreate,
+        room: ukRoom,
       },
     },
     lng: detectInitialLocale(),
     fallbackLng: "en",
     defaultNS: "common",
-    ns: ["common", "brand", "home", "settings", "dev", "create"],
+    ns: ["common", "brand", "home", "settings", "dev", "create", "room"],
     interpolation: { escapeValue: false },
     returnNull: false,
   });
