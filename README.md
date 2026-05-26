@@ -75,7 +75,7 @@ CLAUDE.md          Operational guide for Claude Code working in this repo
 
 ```bash
 cp .env.example .env             # then fill TELEGRAM_BOT_TOKEN from @BotFather if you have one
-docker compose up                # api :8000, webapp :5173, bot, redis, sqlite volume
+docker compose up                # `api :8000, webapp :5173, redis :6379, bot (polling, no port), sqlite at ./data/hoba.db`
 ngrok http 5173                  # only when you want to test inside real Telegram
 ```
 
