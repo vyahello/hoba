@@ -22,7 +22,7 @@ import {
   type WheelState,
 } from "@/features/wheel/types";
 import { haptics } from "@/lib/haptics";
-import { buildRoomInviteLink, openTelegramLink, tg } from "@/lib/telegram";
+import { buildRoomInviteLink, openTelegramLink } from "@/lib/telegram";
 import {
   startPresenceLoop,
   stopPresenceLoop,
@@ -130,7 +130,10 @@ export function RoomPage(): JSX.Element {
       ? snapshot?.active_question?.segments[winningSegmentIndex]
       : undefined;
 
-  const myUserId = tg.initDataUnsafe?.user?.id ?? -1;
+  // `snapshot.me_user_id` is the server-issued internal user_id of THIS
+  // connection. Telegram's `initDataUnsafe.user.id` is a different number
+  // space (the tg_id) and would never match `participants[*].user_id`.
+  const myUserId = snapshot?.me_user_id ?? -1;
   const isHost =
     snapshot?.participants.find((p) => p.user_id === myUserId)?.role === "host";
   const canSpin =

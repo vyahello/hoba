@@ -170,7 +170,9 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                 return
             await session.commit()
             await session.refresh(room)
-            state = (await build_room_state(session, room)).model_dump(mode="json")
+            state = (
+                await build_room_state(session, room, current_user_id=user_id)
+            ).model_dump(mode="json")
             room_id = room.id
             room_code = room.code
 

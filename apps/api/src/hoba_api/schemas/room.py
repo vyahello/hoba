@@ -89,6 +89,10 @@ class RoomState(BaseModel):
     participants: list[ParticipantOut]
     active_question: QuestionOut | None
     last_spin: SpinOut | None
+    # Internal user_id of the request/connection — lets the client decide
+    # host vs guest without having to map Telegram's tg_id (which is what
+    # `initDataUnsafe.user.id` returns) to our DB primary key.
+    me_user_id: int
 
 
 class RoomCreateIn(BaseModel):

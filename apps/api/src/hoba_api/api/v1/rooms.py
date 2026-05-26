@@ -72,13 +72,13 @@ async def create_room_endpoint(
         raise _service_error_to_http(exc) from exc
     await db.commit()
     await db.refresh(room)
-    return await build_room_state(db, room)
+    return await build_room_state(db, room, current_user_id=user.id)
 
 
 @router.get("/{code}", response_model=RoomState)
 async def get_room_endpoint(
     code: str,
-    _user: CurrentUser,
+    user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> RoomState:
     room = await get_room_by_code(db, code)
@@ -86,7 +86,7 @@ async def get_room_endpoint(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="room_not_found",
         )
-    return await build_room_state(db, room)
+    return await build_room_state(db, room, current_user_id=user.id)
 
 
 @router.patch("/{code}", response_model=RoomState)
@@ -107,7 +107,7 @@ async def patch_room_endpoint(
     except RoomServiceError as exc:
         raise _service_error_to_http(exc) from exc
     await db.commit()
-    return await build_room_state(db, room)
+    return await build_room_state(db, room, current_user_id=user.id)
 
 
 @router.post("/{code}/close", response_model=RoomState)
@@ -126,7 +126,7 @@ async def close_room_endpoint(
     except RoomServiceError as exc:
         raise _service_error_to_http(exc) from exc
     await db.commit()
-    return await build_room_state(db, room)
+    return await build_room_state(db, room, current_user_id=user.id)
 
 
 @router.get("/{code}/spins", response_model=list[SpinOut])

@@ -114,6 +114,13 @@ export interface RoomState {
   participants: ServerParticipant[];
   active_question: ServerQuestion | null;
   last_spin: ServerSpin | null;
+  /**
+   * Internal user_id of the caller. Use this — not
+   * `tg.initDataUnsafe.user.id` (which is the Telegram tg_id, a
+   * different number space) — when comparing against
+   * `participants[*].user_id` to figure out host vs guest.
+   */
+  me_user_id: number;
 }
 
 export interface RoomCreatePayload {

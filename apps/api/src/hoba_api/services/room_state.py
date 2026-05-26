@@ -16,8 +16,15 @@ from hoba_api.services.participants import list_for_room
 from hoba_api.services.spins import list_room_spins
 
 
-async def build_room_state(session: AsyncSession, room: Room) -> RoomState:
-    """Compose the full room snapshot used by REST + Socket.IO room:state."""
+async def build_room_state(
+    session: AsyncSession, room: Room, *, current_user_id: int,
+) -> RoomState:
+    """Compose the full room snapshot used by REST + Socket.IO room:state.
+
+    `current_user_id` is the internal `users.id` of the caller — passed
+    through to the client as `me_user_id` so the UI can compare against
+    `participants[*].user_id` without knowing the Telegram tg_id.
+    """
     participants = await list_for_room(session, room.id)
     active_question = next((q for q in room.questions if q.is_active), None)
     spins = await list_room_spins(session, room.id, limit=1)
@@ -32,4 +39,5 @@ async def build_room_state(session: AsyncSession, room: Room) -> RoomState:
             else None
         ),
         last_spin=SpinOut.model_validate(last_spin) if last_spin is not None else None,
+        me_user_id=current_user_id,
     )
