@@ -14,6 +14,31 @@ Owner updates this line after each `STAGE X COMPLETE` (post-MVP we run stages, n
 ## Roadmap source
 Order of operations is **`docs/roadmap.md`** — stages A → G, each ending with `STAGE X COMPLETE`, owner approves before next `go`. The roadmap is the order; `docs/spec.md` is still the *what*. Re-read the roadmap section for the current stage before any work.
 
+## Documentation index
+- [`README.md`](README.md) — product pitch + tech stack + quick start. Read first if you're new to the repo.
+- [`docs/spec.md`](docs/spec.md) — product + engineering specification. **Source of truth.**
+- [`docs/roadmap.md`](docs/roadmap.md) — post-MVP execution order (stages A–G).
+- [`docs/architecture.md`](docs/architecture.md) — how the three services compose at runtime.
+- [`docs/development.md`](docs/development.md) — local setup, dev tunnel, debugging recipes.
+- [`docs/testing.md`](docs/testing.md) — test layout, running suites, manual verification per stage.
+- [`docs/TODO.md`](docs/TODO.md) — tracked TODOs (rule 8).
+- [`docs/botfather-setup.md`](docs/botfather-setup.md) — bot identity + menu button configuration.
+
+When you make a non-trivial change that affects something documented above, update the relevant doc in the same commit.
+
+## Stage transition workflow (read at every `STAGE X COMPLETE`)
+At the moment a stage closes, before stopping, update **all** of these so the next session is not misled:
+1. `CLAUDE.md` "Current phase" line — point at the next stage and summarise what just closed.
+2. `CLAUDE.md` Stage X close-out section — list each item closed and the files involved.
+3. `docs/roadmap.md` — if any stage's scope shifted mid-execution, edit the relevant section.
+4. `docs/TODO.md` — strike resolved items, add any carry-overs into the next stage's bucket.
+5. Memory at `/home/kali/.claude/projects/-home-kali-hoba/memory/`:
+   - Update `hoba-project-state.md` with the new current stage.
+   - Update or add stage-specific memories (e.g. `hoba-mvp-blockers.md` was rewritten when Stage A closed) with where each fix landed.
+   - Refresh `MEMORY.md` index entries if any new memories were added.
+
+Skipping any of these = future Claude opens cold and re-derives state from `git log` instead of from the documented record. Don't do that.
+
 ## What is already shipped (read this before exploring)
 - Phase 1 — monorepo + docker-compose (redis, api, bot, webapp) + .env.example
 - Phase 2 — User model, Alembic, FastAPI app, initData validation, `/api/v1/me`
