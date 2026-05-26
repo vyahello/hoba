@@ -241,6 +241,10 @@ export function RoomPage(): JSX.Element {
           state={wheelState}
           spin={wheelSpin}
           ariaLabel={snapshot.active_question?.text ?? t("room:header.wheel_aria")}
+          // Only attach the hub-tap handler when this user is actually
+          // allowed to spin (host_only policy) — otherwise the hub
+          // would invite a tap that the server then rejects.
+          onSpinClick={canSpin ? triggerSpin : undefined}
           className="max-w-md mx-auto"
         />
 

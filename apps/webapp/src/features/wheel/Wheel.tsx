@@ -1,5 +1,6 @@
 import { animate, motion, useMotionValue } from "framer-motion";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 import { audio } from "@/audio";
 import { cn } from "@/lib/cn";
@@ -126,6 +127,7 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
   { segments, state, spin, onSpinClick, ariaLabel, className },
   ref,
 ) {
+  const { t } = useTranslation("common");
   const rotation = useMotionValue(0);
   const tickWatchActive = useRef(false);
 
@@ -280,7 +282,7 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
               fontFamily="Manrope, sans-serif"
               style={{ userSelect: "none" }}
             >
-              SPIN
+              {t("actions.spin").toUpperCase()}
             </text>
           ) : null}
         </g>
