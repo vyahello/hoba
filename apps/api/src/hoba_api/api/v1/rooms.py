@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from hoba_api.auth.dependencies import CurrentUser
 from hoba_api.db import get_db
 from hoba_api.models.question import Question
+from hoba_api.redis_client import rate_limit_take
 from hoba_api.schemas.room import (
     RoomCreateIn,
     RoomState,
@@ -26,6 +27,17 @@ from hoba_api.services.rooms import (
     update_room,
 )
 from hoba_api.services.spins import list_room_spins
+
+# Per spec §14: 5 room creations / user / hour. Enforced at the REST
+# boundary so a spamming caller is turned away before the full
+# graph-insert path runs.
+ROOM_CREATE_RATE_LIMIT_MAX = 5
+ROOM_CREATE_RATE_LIMIT_WINDOW_SECONDS = 60 * 60
+
+
+def _room_create_rate_limit_key(user_id: int) -> str:
+    return f"rate:room_create:{user_id}"
+
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 
@@ -49,6 +61,14 @@ async def create_room_endpoint(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> RoomState:
+    if not await rate_limit_take(
+        _room_create_rate_limit_key(user.id),
+        max_in_window=ROOM_CREATE_RATE_LIMIT_MAX,
+        window_seconds=ROOM_CREATE_RATE_LIMIT_WINDOW_SECONDS,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="rate_limited",
+        )
     drafts = [
         SegmentDraft(
             label=s.label,

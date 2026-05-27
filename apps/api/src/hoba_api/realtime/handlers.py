@@ -23,6 +23,7 @@ from hoba_api.config import settings
 from hoba_api.db import SessionLocal
 from hoba_api.realtime.server import NAMESPACE
 from hoba_api.redis_client import (
+    cooldown_take,
     presence_remove,
     presence_set,
     rate_limit_take,
@@ -38,6 +39,20 @@ log = structlog.get_logger("hoba_api.realtime")
 REACTIONS_PER_WINDOW = 10
 REACTIONS_WINDOW_SECONDS = 30
 SPIN_ANNOUNCE_DELAY_SECONDS = 0.3
+# Per spec §14: 30 spins/room/hour + a 1.5 s per-room cooldown so the
+# SPIN hub can't be thumb-mashed. Both keyed by room_id so multiple
+# rooms don't share the same throttle.
+SPIN_COOLDOWN_MS = 1500
+SPIN_RATE_LIMIT_MAX = 30
+SPIN_RATE_LIMIT_WINDOW_SECONDS = 3600
+
+
+def _spin_cooldown_key(room_id: int) -> str:
+    return f"cooldown:spin:{room_id}"
+
+
+def _spin_rate_limit_key(room_id: int) -> str:
+    return f"rate:spins:{room_id}"
 
 _background_tasks: set[asyncio.Task[Any]] = set()
 
@@ -220,8 +235,28 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
         sess = await sio.get_session(sid, namespace=NAMESPACE)
         user_id = sess.get("user_id")
         room_code = sess.get("room_code")
-        if user_id is None or room_code is None:
+        room_id = sess.get("room_id")
+        if user_id is None or room_code is None or room_id is None:
             await sio.emit("error", {"code": "not_in_room"}, to=sid, namespace=NAMESPACE)
+            return
+
+        # Cooldown is cheaper than the hourly counter and rejects
+        # repeat-tap floods before they burn a slot in the hourly cap.
+        if not await cooldown_take(
+            _spin_cooldown_key(room_id), ttl_ms=SPIN_COOLDOWN_MS,
+        ):
+            await sio.emit(
+                "error", {"code": "rate_limited"}, to=sid, namespace=NAMESPACE,
+            )
+            return
+        if not await rate_limit_take(
+            _spin_rate_limit_key(room_id),
+            max_in_window=SPIN_RATE_LIMIT_MAX,
+            window_seconds=SPIN_RATE_LIMIT_WINDOW_SECONDS,
+        ):
+            await sio.emit(
+                "error", {"code": "rate_limited"}, to=sid, namespace=NAMESPACE,
+            )
             return
 
         async with SessionLocal() as session:

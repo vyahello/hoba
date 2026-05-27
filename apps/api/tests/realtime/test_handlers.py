@@ -24,7 +24,9 @@ import pytest
 from hoba_api.auth.initdata import sign_init_data
 from hoba_api.realtime.handlers import (
     REACTIONS_PER_WINDOW,
+    SPIN_RATE_LIMIT_MAX,
     _extract_init_data,
+    _spin_cooldown_key,
     register_handlers,
 )
 from hoba_api.realtime.server import NAMESPACE
@@ -333,6 +335,63 @@ async def test_spin_trigger_outside_room_errors(sio: FakeSocketIO) -> None:
         e[1].get("code") == "not_in_room"
         for e in sio.events_named("error")
     )
+
+
+@pytest.mark.asyncio
+async def test_spin_trigger_cooldown_blocks_rapid_repeat(
+    sio: FakeSocketIO, db: Any,
+) -> None:
+    # B1 — anti-thumb-mashing: second spin within the cooldown window
+    # (~1.5 s) must be rejected with rate_limited, never reaching the
+    # spin service. First spin still goes through.
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=110))
+    await db.commit()
+    code = await _create_room(db, host_id=host.id)
+    await _connect(sio, "sid-cd", user_id=110)
+    await sio.call("room:join", "sid-cd", {"code": code})
+    sio.emitted.clear()
+
+    await sio.call("spin:trigger", "sid-cd", {})
+    await sio.call("spin:trigger", "sid-cd", {})
+
+    started = sio.events_named("spin:started")
+    errors = sio.events_named("error")
+    assert len(started) == 1, "exactly one spin should fire"
+    assert any(e[1].get("code") == "rate_limited" for e in errors)
+
+
+@pytest.mark.asyncio
+async def test_spin_trigger_hourly_cap_blocks_after_max(
+    sio: FakeSocketIO,
+    db: Any,
+    fake_redis: Any,
+) -> None:
+    # B1 — spec §14: 30 spins/room/hour. Drop the cooldown between
+    # attempts so we can test the hourly gate in isolation; otherwise
+    # the 1.5 s cooldown is always the active throttle.
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=120))
+    await db.commit()
+    room_code = await _create_room(db, host_id=host.id)
+    await _connect(sio, "sid-hc", user_id=120)
+    await sio.call("room:join", "sid-hc", {"code": room_code})
+    sio.emitted.clear()
+
+    sess = sio.sessions[(NAMESPACE, "sid-hc")]
+    cooldown_key = _spin_cooldown_key(sess["room_id"])
+
+    for _ in range(SPIN_RATE_LIMIT_MAX):
+        await fake_redis.delete(cooldown_key)
+        await sio.call("spin:trigger", "sid-hc", {})
+
+    assert len(sio.events_named("spin:started")) == SPIN_RATE_LIMIT_MAX
+    assert sio.events_named("error") == []
+
+    await fake_redis.delete(cooldown_key)
+    await sio.call("spin:trigger", "sid-hc", {})
+    errors = sio.events_named("error")
+    assert any(e[1].get("code") == "rate_limited" for e in errors)
+    # Still only MAX spins fired — the 31st was blocked.
+    assert len(sio.events_named("spin:started")) == SPIN_RATE_LIMIT_MAX
 
 
 # ---------- reaction:send ----------------------------------------------

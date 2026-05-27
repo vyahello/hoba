@@ -111,3 +111,25 @@ async def rate_limit_take(key: str, *, max_in_window: int, window_seconds: int) 
     if count == 1:
         await r.expire(key, window_seconds)
     return int(count) <= max_in_window
+
+
+# --- Cooldown lock -------------------------------------------------------
+#
+# Short-lived "is this action locked right now?" lock. Distinct from
+# `rate_limit_take` (a fixed-window counter): cooldown is single-slot
+# and the second taker simply waits out the TTL. Used to throttle
+# `spin:trigger` per room — 1.5s between spins means thumb-mashing the
+# SPIN hub can't fan out duplicate spin events.
+
+
+async def cooldown_take(key: str, *, ttl_ms: int) -> bool:
+    """Try to claim a one-slot lock that expires in `ttl_ms`.
+
+    Returns True if the lock was claimed (caller proceeds), False if the
+    lock was already held (caller bails with `rate_limited`).
+    """
+    # `SET key 1 NX PX <ttl>` is atomic — succeeds with True only when
+    # the key didn't exist. redis-py's async client returns the same
+    # truthy/None semantics as the raw Redis reply.
+    result = await get_redis().set(key, "1", nx=True, px=ttl_ms)
+    return bool(result)
