@@ -25,7 +25,7 @@ async def trigger_spin(
     if room.status == "closed":
         raise RoomServiceError("room_closed")
 
-    if not _user_can_spin(room, user_id):
+    if not user_can_spin(room, user_id):
         raise RoomServiceError("not_allowed_to_spin")
 
     question = (
@@ -100,7 +100,7 @@ async def trigger_spin(
     return spin
 
 
-def _user_can_spin(room: Room, user_id: int) -> bool:
+def user_can_spin(room: Room, user_id: int) -> bool:
     if room.spin_policy == "anyone":
         return True
     if room.spin_policy == "host_only":

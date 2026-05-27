@@ -41,6 +41,7 @@
     "room_locked": "This room is locked.",
     "room_full": "This room is full.",
     "not_host": "Only the host can do that.",
+    "not_allowed_to_spin": "Only the host can spin right now.",
     "rate_limited": "Slow down a moment.",
     "kicked": "You were removed from this room.",
     "not_in_room": "Not in a room.",

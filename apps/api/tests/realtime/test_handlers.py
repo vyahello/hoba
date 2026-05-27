@@ -361,6 +361,41 @@ async def test_spin_trigger_cooldown_blocks_rapid_repeat(
 
 
 @pytest.mark.asyncio
+async def test_guest_rejection_does_not_burn_cooldown(
+    sio: FakeSocketIO, db: Any,
+) -> None:
+    # Stage B verification finding: a guest's `not_allowed_to_spin`
+    # tap in a `host_only` room must not consume the per-room 1.5 s
+    # cooldown. Before the reorder, the second guest tap returned
+    # `rate_limited` (cooldown hit) instead of the more accurate
+    # `not_allowed_to_spin`, AND the host couldn't spin immediately
+    # after the guest's burst because the cooldown was held.
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=200))
+    await db.commit()
+    code = await _create_room(db, host_id=host.id)
+
+    await _connect(sio, "sid-guest", user_id=201)
+    await sio.call("room:join", "sid-guest", {"code": code})
+    sio.emitted.clear()
+
+    # Guest tries twice in rapid succession — both must surface the
+    # permission error, never the cooldown error.
+    await sio.call("spin:trigger", "sid-guest", {})
+    await sio.call("spin:trigger", "sid-guest", {})
+    errors = sio.events_named("error")
+    codes = [e[1].get("code") for e in errors]
+    assert codes.count("not_allowed_to_spin") == 2
+    assert "rate_limited" not in codes
+
+    # Host can still spin immediately — cooldown wasn't consumed.
+    await _connect(sio, "sid-host", user_id=200)
+    await sio.call("room:join", "sid-host", {"code": code})
+    sio.emitted.clear()
+    await sio.call("spin:trigger", "sid-host", {})
+    assert len(sio.events_named("spin:started")) == 1
+
+
+@pytest.mark.asyncio
 async def test_spin_trigger_hourly_cap_blocks_after_max(
     sio: FakeSocketIO,
     db: Any,

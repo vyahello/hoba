@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from hoba_api.auth.dependencies import CurrentUser
 from hoba_api.db import get_db
 from hoba_api.models.question import Question
+from hoba_api.realtime.server import NAMESPACE, sio
 from hoba_api.redis_client import rate_limit_take
 from hoba_api.schemas.room import (
     RoomCreateIn,
@@ -127,6 +128,17 @@ async def patch_room_endpoint(
     except RoomServiceError as exc:
         raise _service_error_to_http(exc) from exc
     await db.commit()
+    # Broadcast the patch so connected guests' snapshots catch up
+    # without a manual refresh — without this, a guest hitting SPIN
+    # after the host flips spin_policy gets `not_allowed_to_spin`
+    # instead of seeing the SPIN button disappear from their UI.
+    if patch_dict:
+        await sio.emit(
+            "room:updated",
+            {"patch": patch_dict},
+            room=room.code,
+            namespace=NAMESPACE,
+        )
     return await build_room_state(db, room, current_user_id=user.id)
 
 

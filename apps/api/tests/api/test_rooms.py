@@ -12,9 +12,14 @@ limit only.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from typing import Any
+
+import pytest
 from fastapi.testclient import TestClient
 
 from hoba_api.api.v1.rooms import ROOM_CREATE_RATE_LIMIT_MAX
+from hoba_api.realtime import server as ws_server
 from tests.conftest import make_init_data
 
 HEADER = "X-Telegram-Init-Data"
@@ -42,6 +47,72 @@ def test_room_creation_hourly_cap_blocks_after_max(
     r = client.post("/api/v1/rooms", json=_payload(label_a="overflow"), headers=headers)
     assert r.status_code == 429
     assert r.json()["detail"] == "rate_limited"
+
+
+EmittedSioCall = tuple[str, Any, dict[str, Any]]
+
+
+@pytest.fixture
+def captured_sio_emits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[list[EmittedSioCall]]:
+    """Capture every `sio.emit` call instead of trying to deliver it.
+
+    The PATCH endpoint now broadcasts `room:updated` via the real
+    socketio singleton. Tests don't have a live WS namespace mounted,
+    so we monkeypatch the emit to a recorder.
+    """
+    emitted: list[EmittedSioCall] = []
+
+    async def fake_emit(event: str, data: Any = None, **kwargs: Any) -> None:
+        emitted.append((event, data, kwargs))
+
+    monkeypatch.setattr(ws_server.sio, "emit", fake_emit)
+    yield emitted
+
+
+def test_patch_room_broadcasts_room_updated(
+    client: TestClient,
+    init_data: str,
+    captured_sio_emits: list[EmittedSioCall],
+) -> None:
+    # Stage B verification finding: when the host PATCHes spin_policy,
+    # guests' snapshots must learn about it without a reconnect.
+    headers = {HEADER: init_data}
+    create = client.post("/api/v1/rooms", json=_payload(), headers=headers)
+    assert create.status_code == 201
+    code = create.json()["room"]["code"]
+    captured_sio_emits.clear()
+
+    patch = client.patch(
+        f"/api/v1/rooms/{code}",
+        json={"spin_policy": "host_only"},
+        headers=headers,
+    )
+    assert patch.status_code == 200
+
+    updates = [e for e in captured_sio_emits if e[0] == "room:updated"]
+    assert len(updates) == 1
+    assert updates[0][1] == {"patch": {"spin_policy": "host_only"}}
+    assert updates[0][2].get("room") == code
+    assert updates[0][2].get("namespace") == ws_server.NAMESPACE
+
+
+def test_patch_room_with_empty_payload_does_not_broadcast(
+    client: TestClient,
+    init_data: str,
+    captured_sio_emits: list[EmittedSioCall],
+) -> None:
+    # No actual fields changed → nothing to tell guests about.
+    headers = {HEADER: init_data}
+    create = client.post("/api/v1/rooms", json=_payload(), headers=headers)
+    assert create.status_code == 201
+    code = create.json()["room"]["code"]
+    captured_sio_emits.clear()
+
+    patch = client.patch(f"/api/v1/rooms/{code}", json={}, headers=headers)
+    assert patch.status_code == 200
+    assert [e for e in captured_sio_emits if e[0] == "room:updated"] == []
 
 
 def test_room_creation_cap_is_per_user(

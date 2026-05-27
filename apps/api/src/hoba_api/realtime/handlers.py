@@ -31,7 +31,7 @@ from hoba_api.redis_client import (
 from hoba_api.services.participants import join_room, refresh_presence
 from hoba_api.services.room_state import build_room_state
 from hoba_api.services.rooms import RoomServiceError, get_room_by_code
-from hoba_api.services.spins import trigger_spin
+from hoba_api.services.spins import trigger_spin, user_can_spin
 from hoba_api.services.users import cache_user_after_commit, resolve_telegram_user
 
 log = structlog.get_logger("hoba_api.realtime")
@@ -240,25 +240,6 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
             await sio.emit("error", {"code": "not_in_room"}, to=sid, namespace=NAMESPACE)
             return
 
-        # Cooldown is cheaper than the hourly counter and rejects
-        # repeat-tap floods before they burn a slot in the hourly cap.
-        if not await cooldown_take(
-            _spin_cooldown_key(room_id), ttl_ms=SPIN_COOLDOWN_MS,
-        ):
-            await sio.emit(
-                "error", {"code": "rate_limited"}, to=sid, namespace=NAMESPACE,
-            )
-            return
-        if not await rate_limit_take(
-            _spin_rate_limit_key(room_id),
-            max_in_window=SPIN_RATE_LIMIT_MAX,
-            window_seconds=SPIN_RATE_LIMIT_WINDOW_SECONDS,
-        ):
-            await sio.emit(
-                "error", {"code": "rate_limited"}, to=sid, namespace=NAMESPACE,
-            )
-            return
-
         async with SessionLocal() as session:
             room = await get_room_by_code(session, room_code)
             if room is None:
@@ -266,6 +247,41 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                     "error", {"code": "room_not_found"}, to=sid, namespace=NAMESPACE,
                 )
                 return
+            # Permission check before the throttles. A guest in a
+            # host_only room (e.g. after the host flipped policy
+            # mid-room and the guest's snapshot hasn't caught up)
+            # must NOT burn the 1.5 s cooldown slot for the room —
+            # otherwise their next tap returns rate_limited instead
+            # of the more accurate not_allowed_to_spin.
+            if not user_can_spin(room, user_id):
+                await sio.emit(
+                    "error",
+                    {"code": "not_allowed_to_spin"},
+                    to=sid,
+                    namespace=NAMESPACE,
+                )
+                return
+
+            # Permission OK — now the throttles. Cooldown is cheaper
+            # than the hourly counter and rejects repeat-tap floods
+            # before they burn a slot in the hourly cap.
+            if not await cooldown_take(
+                _spin_cooldown_key(room_id), ttl_ms=SPIN_COOLDOWN_MS,
+            ):
+                await sio.emit(
+                    "error", {"code": "rate_limited"}, to=sid, namespace=NAMESPACE,
+                )
+                return
+            if not await rate_limit_take(
+                _spin_rate_limit_key(room_id),
+                max_in_window=SPIN_RATE_LIMIT_MAX,
+                window_seconds=SPIN_RATE_LIMIT_WINDOW_SECONDS,
+            ):
+                await sio.emit(
+                    "error", {"code": "rate_limited"}, to=sid, namespace=NAMESPACE,
+                )
+                return
+
             try:
                 spin = await trigger_spin(session, room=room, user_id=user_id)
             except RoomServiceError as exc:

@@ -101,6 +101,22 @@ function wireListeners(s: Socket): void {
     setState({ snapshot: state });
   });
 
+  s.on("room:updated", (payload: { patch: Partial<ServerRoomState["room"]> }) => {
+    // Server broadcasts this on a successful PATCH /api/v1/rooms/{code}.
+    // Each connected client merges the patch into its local snapshot.room
+    // so the UI stays in sync without a reconnect — e.g. spin_policy
+    // flipping from "anyone" to "host_only" needs to hide the SPIN button
+    // for guests immediately.
+    const snap = getState().snapshot;
+    if (snap === null) return;
+    setState({
+      snapshot: {
+        ...snap,
+        room: { ...snap.room, ...payload.patch },
+      },
+    });
+  });
+
   s.on(
     "room:participant_joined",
     (payload: { user_id: number }) => {

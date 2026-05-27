@@ -3,7 +3,7 @@ import { type RoomState } from "@/lib/api";
 /**
  * Whether the calling user is allowed to spin in the current room
  * snapshot. Mirrors the server-side check in
- * `apps/api/src/hoba_api/services/spins._user_can_spin` — keep the two
+ * `apps/api/src/hoba_api/services/spins.user_can_spin` — keep the two
  * in lockstep or the hub will invite a tap the server then rejects.
  *
  * `turn_based` rooms behave like `host_only` until the per-turn rotation

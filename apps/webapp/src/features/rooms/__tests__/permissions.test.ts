@@ -157,7 +157,7 @@ describe("computeCanSpin", () => {
   });
 
   it("treats `turn_based` like `host_only` until per-turn rotation lands", () => {
-    // Server-side services/spins._user_can_spin currently treats
+    // Server-side services/spins.user_can_spin currently treats
     // turn_based as host_only (TODO docs/TODO.md stage:D). Client
     // mirrors that so the hub state matches what the server will allow.
     const hostSnap = makeSnapshot({
