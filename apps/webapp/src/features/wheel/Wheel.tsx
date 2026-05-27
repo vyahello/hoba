@@ -214,15 +214,32 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
             <stop offset="80%" stopColor="rgba(255,255,255,0)" />
             <stop offset="100%" stopColor="rgba(0,0,0,0.18)" />
           </radialGradient>
-          <filter id="hoba-ring-glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="4" />
-            <feMerge>
-              <feMergeNode />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
         </defs>
 
+        {/* Outer ring + soft glow rendered as three stacked strokes instead
+            of feGaussianBlur. iOS Safari on A11-class chips (iPhone X / iOS
+            16) falls off the GPU path for SVG filters and rasterizes them
+            on the CPU every frame the parent layer repaints — which is
+            every frame of the spin. Stacked strokes are pure compositor
+            ops and stay smooth on the same hardware. */}
+        <circle
+          cx={CX}
+          cy={CY}
+          r={OUTER_R}
+          fill="none"
+          stroke="#7C5CFF"
+          strokeWidth={18}
+          opacity={0.12}
+        />
+        <circle
+          cx={CX}
+          cy={CY}
+          r={OUTER_R}
+          fill="none"
+          stroke="#7C5CFF"
+          strokeWidth={12}
+          opacity={0.22}
+        />
         <circle
           cx={CX}
           cy={CY}
@@ -230,8 +247,7 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
           fill="none"
           stroke="#7C5CFF"
           strokeWidth={6}
-          opacity={0.75}
-          filter="url(#hoba-ring-glow)"
+          opacity={0.85}
         />
 
         <motion.g
