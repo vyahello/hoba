@@ -104,10 +104,10 @@ section with outcomes when complete.
 ## Quality gates — Stage A close-out
 
 ```text
-backend  pytest .................... 102 passed (91 % coverage)
+backend  pytest .................... 102 passed (92 % coverage)
 backend  ruff check ................ clean
 backend  mypy --strict ............. clean
-webapp   vitest .................... 43 passed (was 31; +12 from this batch)
+webapp   vitest .................... 48 passed (was 31; +17 from this batch — hubLogic, computeCanSpin, reactionLanes)
 webapp   tsc --noEmit .............. clean
 webapp   eslint --max-warnings 0 ... clean
 root     pnpm i18n:check ........... clean (EN ⇄ UK parity + key coverage)
