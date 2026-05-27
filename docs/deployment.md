@@ -176,8 +176,10 @@ Verify the chain works:
 
 ```bash
 # From your laptop:
-curl -fsI https://hoba.<your-domain>/api/v1/openapi.json
-# → HTTP/2 200, server: nginx, then proxied to uvicorn
+curl -fsI https://hoba.<your-domain>/openapi.json
+# → HTTP/2 200, server: nginx, proxied to uvicorn
+curl -sI https://hoba.<your-domain>/api/v1/me
+# → HTTP/2 401 (missing X-Telegram-Init-Data — expected, proves /api/v1 proxies)
 ```
 
 If you get a 502: the Hoba containers aren't listening on the expected
@@ -189,8 +191,14 @@ for the trace.
 
 ```bash
 # From your laptop / phone, not the server:
-curl -fsSL https://hoba.example.com/api/v1/docs/openapi.json | head -1
+curl -fsSL https://hoba.example.com/openapi.json | head -1
 # → {"openapi":"3.1.0", ...}
+# (FastAPI mounts the OpenAPI spec at root, not under /api/v1.)
+
+# Real API routes live under /api/v1/* — sanity check with a route
+# that exists but needs auth; 401 confirms the proxy chain is live.
+curl -sI https://hoba.example.com/api/v1/me | head -3
+# → HTTP/2 401, server: uvicorn
 
 # Browser: open https://hoba.example.com
 # → Hoba! webapp renders (without Telegram context the Mini App will
