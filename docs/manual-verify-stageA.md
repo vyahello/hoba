@@ -50,6 +50,8 @@ they were fixed in Stage A:
 | 15 | BotFather had two Direct Link Mini Apps (`spin` and `play`); only `play` matched `VITE_TELEGRAM_APP_SHORT_NAME`. | `0756782` — `spin` deleted in BotFather + docs aligned. |
 | 17 | Top-of-room Share Button (`Button[size=md]` with localized text) overflowed the right edge on iPhone X. Math: `RoomCodePill ~220 px + Button[UK] ~167 px + gap-3 12 px + px-4 32 px ≈ 431 px` vs 375 px viewport. | `7e21a85` — converted to `IconButton` (48×48 📤, aria-label routed through `t('room:actions.share')`). Frees ~80–100 px in every locale. |
 | 18 | Wheel animation lags on iPhone X (A11, iOS 16); smooth on iPhone 14 (A15). High-suspicion cause: `feGaussianBlur` ring-glow filter that WebKit on A11-class chips rasterizes on CPU every frame. | `33a976b` — replaced filter with three stacked solid strokes (18/12/6 px at decreasing opacity). Same visual silhouette, pure compositor path. **Pending real-device verification.** |
+| 19 | Flying reactions appeared at random horizontal positions — 🔥 didn't emerge from where the 🔥 button is in the bar. `stores/room.ts` set `x: Math.random()` on every incoming reaction. | `798788f` — new `apps/webapp/src/features/rooms/reactionLanes.ts` (`REACTION_EMOJIS` + `reactionLaneFor`) maps each emoji to a fixed lane that aligns with its button on phone widths; callers add ±2.5 % jitter so identical bursts don't pixel-stack. Five unit tests. |
+| 20 | `RoomCodePill` default (`text-3xl + tracking-[0.35em] + px-7 py-4`) rendered at ~220 px — ~58 % of an iPhone X viewport on its own. Disproportionate vs the wheel below. | `6dbfbe0` — default tightened to `text-2xl + tracking-[0.3em] + px-6 py-3` (~175 px). Still hero-prominent, no longer dominating. |
 
 ### Hands-on verification — pending owner sign-off
 
@@ -70,16 +72,26 @@ Device A (host, iPhone 14 or newer):
      the viewport on both Device A and Device B, in EN and in UK
      (the long "Поділитись" label is now in aria-label, not on
      screen, so locale should be irrelevant). (Item 17.)
+  5. Tap each reaction emoji in turn — the corresponding emoji should
+     rise from approximately above its own button (no longer random).
+     Tap 🔥 five times rapidly; the five 🔥 should cluster around the
+     🔥 lane with a small visible spread (jitter), not stack on the
+     same pixel. (Item 19.)
+  6. The room code pill at the top must look proportional next to the
+     wheel and the share button — not dominating. (Item 20.)
 
 Device B (guest in host_only room):
-  5. After Device A spins, the guest can still react. (No regression.)
+  7. After Device A spins, the guest can still react. (No regression.)
+  8. Reactions sent by Device A also emerge from their own bar lane
+     on Device B (the lane is computed client-side from the emoji,
+     so the relayed events look identical). (Item 19.)
 
 Device C (iPhone X / A11, iOS 16 — the device that surfaced item 18):
-  6. Trigger a spin. The wheel must rotate smoothly through decelerate
+  9. Trigger a spin. The wheel must rotate smoothly through decelerate
      and settle without visible stutter. Acceptable: same subjective
      feel as iPhone 14. Unacceptable: dropped frames, jank, "hangs"
      during decelerate. (Item 18.)
-  7. If item 6 still stutters: next levers — drop the inner-grad
+ 10. If step 9 still stutters: next levers — drop the inner-grad
      full-disc radial overlay inside the rotating motion.g, then drop
      wheel_tick audio rate from 12/s to 6/s. Both changes are
      local to apps/webapp/src/features/wheel/Wheel.tsx.

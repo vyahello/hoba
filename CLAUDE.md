@@ -7,7 +7,7 @@ The full product + engineering specification is at **`docs/spec.md`**.
 **You MUST read it before starting any new phase.** Re-read the relevant phase section before each `go on phase N` command. If chat instructions ever conflict with `docs/spec.md`, ask which wins.
 
 ## Current phase
-> **Stage A close-out batch (2026-05-27).** Original 5 Phase-6 blockers + 6 first-pass verification fixes + 6 close-out fixes (hub interactivity, host-detection regression test, BotFather short-name alignment, ngrok TODO cleanup, iPhone-X share-button overflow, iPhone-X wheel-spin lag) all landed. Unit + type + lint + coverage gates green (102 backend / 43 frontend tests). `docs/manual-verify-stageA.md` records what was verified on real devices on 2026-05-26 and what's pending owner sign-off for the 2026-05-27 batch. Next: **Stage B — pre-launch hardening** (see `docs/roadmap.md`).
+> **Stage A close-out batch (2026-05-27).** Original 5 Phase-6 blockers + 6 first-pass verification fixes + 8 close-out fixes (hub interactivity, host-detection regression test, BotFather short-name alignment, ngrok TODO cleanup, iPhone-X share-button overflow, iPhone-X wheel-spin lag, flying-reaction lanes, room-code pill resize) all landed. Unit + type + lint + coverage gates green (102 backend / 48 frontend tests). `docs/manual-verify-stageA.md` records what was verified on real devices on 2026-05-26 and what's pending owner sign-off for the 2026-05-27 batch. Next: **Stage B — pre-launch hardening** (see `docs/roadmap.md`).
 
 Owner updates this line after each `STAGE X COMPLETE` (post-MVP we run stages, not phases — stages map to spec phases per `docs/roadmap.md`).
 
@@ -73,9 +73,11 @@ Skipping any of these = future Claude opens cold and re-derives state from `git 
 16. ✅ `docs/manual-verify-stageA.md` backfilled — the file referenced by `docs/roadmap.md:48` and `docs/testing.md:279` finally exists with the two-device verification record for 2026-05-26 and the pending real-device pass for the 2026-05-27 batch. Plus the stale ngrok README TODO closed in `docs/TODO.md`. Commit `55b9ff3`.
 17. ✅ Top-of-room Share Button overflowed the iPhone X viewport (UK locale ~56 px off-screen; EN ~2 px). Converted to `IconButton` 📤 with the localized text moved into `aria-label`. Pill stays full brand size. Commit `7e21a85`.
 18. ✅ Wheel spin lag on iPhone X (A11, iOS 16) — replaced the `feGaussianBlur` ring-glow filter with three stacked solid strokes (18/12/6 px at decreasing opacity). Same silhouette, pure compositor path, no SVG-filter CPU rasterization. **Pending iPhone X verification.** Commit `33a976b`.
+19. ✅ Flying reactions emerged at random `Math.random()` horizontal positions. New `apps/webapp/src/features/rooms/reactionLanes.ts` (`REACTION_EMOJIS` + `reactionLaneFor`) gives each emoji a fixed lane aligned with its bar button; ±2.5 % jitter prevents pixel-stacking on bursts. 5 unit tests. Commit `798788f`.
+20. ✅ `RoomCodePill` default size tightened from `text-3xl + tracking-[0.35em] + px-7 py-4` to `text-2xl + tracking-[0.3em] + px-6 py-3` — pill now sits at ~175 px instead of ~220 px on iPhone X, proportional to the rest of the room screen. Commit `6dbfbe0`.
 
 ### Stage A test totals (final)
-102 backend tests, **43 frontend tests** (was 31; +12 from hubLogic + computeCanSpin), 92% backend coverage. mypy --strict, ruff, eslint, tsc, i18n:check all green.
+102 backend tests, **48 frontend tests** (was 31; +17 across hubLogic, computeCanSpin, reactionLanes), 92% backend coverage. mypy --strict, ruff, eslint, tsc, i18n:check all green.
 
 ## Languages (locked)
 EN + UK only. Brand is locale-aware per spec §0 and rule 5 below — `Hoba!` in EN/code/files/logo, `Хоба!` in UK in-app UI only. **Every user-facing string must go through `t()`. Hardcoded English in `.tsx` is a bug.**
