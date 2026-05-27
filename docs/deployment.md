@@ -54,8 +54,14 @@ cd ~/hoba
 Or rsync from your laptop:
 
 ```bash
-rsync -avz --exclude '.git' --exclude 'node_modules' --exclude 'venv' \
-    --exclude 'data' --exclude '.env' \
+# IMPORTANT: anchored excludes (`/data` not `data`) — without the
+# leading slash, rsync matches ANY directory named `data` in the tree,
+# including apps/webapp/src/data/ which contains source the webapp
+# can't boot without.
+rsync -avz \
+    --exclude='/.git' --exclude='node_modules' --exclude='/venv' \
+    --exclude='/data' --exclude='/.env' --exclude='/.venv' \
+    --exclude='__pycache__' --exclude='*.pyc' --exclude='/dist' \
     /home/kali/hoba/  user@hoba.example.com:~/hoba/
 ssh user@hoba.example.com
 cd ~/hoba
