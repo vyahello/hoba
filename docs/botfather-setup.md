@@ -104,13 +104,13 @@ Hoba! — and it's decided.
 <upload Hoba! logo PNG, 640×360>     ← photo (NOTE: 640×360 not square)
 /empty                               ← demo GIF (skip)
 <paste current public HTTPS URL>     ← e.g. https://abc.ngrok-free.app
-spin                                 ← short name (lowercase a–z + digits)
+play                                 ← short name (lowercase a–z + digits)
 ```
 
 After this:
 - `t.me/hobagame_bot?startapp=room_K7M9X2` opens the default Direct Link
   Mini App.
-- `t.me/hobagame_bot/spin?startapp=room_K7M9X2` opens it explicitly by
+- `t.me/hobagame_bot/play?startapp=room_K7M9X2` opens it explicitly by
   short name (more reliable across older clients).
 
 `WebApp.initDataUnsafe.start_param` will equal `room_K7M9X2`. The Mini
@@ -120,7 +120,7 @@ automatically.
 When the dev tunnel URL changes, update via:
 
 ```
-/myapps → @hobagame_bot → @hobagame_bot/spin → Edit Web App URL
+/myapps → @hobagame_bot → @hobagame_bot/play → Edit Web App URL
 ```
 
 ## 9. Allow inline mode (Phase 9+ — skip for now)
