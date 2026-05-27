@@ -7,7 +7,7 @@ The full product + engineering specification is at **`docs/spec.md`**.
 **You MUST read it before starting any new phase.** Re-read the relevant phase section before each `go on phase N` command. If chat instructions ever conflict with `docs/spec.md`, ask which wins.
 
 ## Current phase
-> **Stage A complete + verified (2026-05-26).** Original 5 Phase-6 blockers closed, then hands-on Telegram testing surfaced 6 more bugs which were all fixed in the same stage (see "Stage A close-out" below). The app now runs end-to-end on real phones with EN + UK locale parity, working multiplayer share, host detection, and consistent spin UX. Next: **Stage B — pre-launch hardening** (see `docs/roadmap.md`).
+> **Stage A close-out batch (2026-05-27).** Original 5 Phase-6 blockers + 6 first-pass verification fixes + 4 close-out fixes (hub interactivity, host-detection regression test, BotFather short-name alignment, ngrok TODO cleanup) all landed. Unit + type + lint + coverage gates green (102 backend / 43 frontend tests). `docs/manual-verify-stageA.md` records what was verified on real devices on 2026-05-26 and what's pending owner sign-off for the 2026-05-27 batch. Next: **Stage B — pre-launch hardening** (see `docs/roadmap.md`).
 
 Owner updates this line after each `STAGE X COMPLETE` (post-MVP we run stages, not phases — stages map to spec phases per `docs/roadmap.md`).
 
@@ -65,8 +65,15 @@ Skipping any of these = future Claude opens cold and re-derives state from `git 
 11. ✅ Wheel hub tap fully wired: works in rooms (was missing `onSpinClick` prop on `<Wheel>` in `RoomPage`) + `SPIN` label inside the hub localized via `t('common:actions.spin')` (was hardcoded English). Commit `d425a7a`.
 12. ✅ Default `spin_policy` flipped from `host_only` to `anyone` (model + service + REST schema + Alembic `0003`). Party-game social fit. Existing rows untouched. Commit `00f3c21`.
 
+### Close-out batch (2026-05-27, 4 items)
+
+13. ✅ Wheel hub stays tappable across the `idle → spinning → settled` cycle and respects the spin permission (no `SPIN` affordance for guests in `host_only` rooms). New `apps/webapp/src/features/wheel/hubLogic.ts` (`isHubInteractive`) with 5 unit tests; `Wheel.tsx` and `SpinPage.handleSpin` consume it. Commit `31a23e8`.
+14. ✅ `apps/webapp/src/features/rooms/permissions.ts` (`computeCanSpin`) extracted from `RoomPage` with 7 unit tests — direct regression guard for the tg_id-vs-user_id bug in commit `7db1b0a`. Resolves the carry-over previously sitting in `docs/TODO.md` as a Stage B test debt. Commit `c5334ee`.
+15. ✅ BotFather Direct Link Mini App `spin` deleted; remaining `play` already matched `VITE_TELEGRAM_APP_SHORT_NAME`. `docs/botfather-setup.md` §8 aligned. Commit `0756782`.
+16. ✅ `docs/manual-verify-stageA.md` backfilled — the file referenced by `docs/roadmap.md:48` and `docs/testing.md:279` finally exists with the two-device verification record for 2026-05-26 and the pending real-device pass for the 2026-05-27 batch. Plus the stale ngrok README TODO closed in `docs/TODO.md`. Commit `55b9ff3`.
+
 ### Stage A test totals (final)
-102 backend tests, 31 frontend tests, 91% backend coverage. mypy --strict, ruff, eslint, tsc, i18n:check all green.
+102 backend tests, **43 frontend tests** (was 31; +12 from hubLogic + computeCanSpin), 92% backend coverage. mypy --strict, ruff, eslint, tsc, i18n:check all green.
 
 ## Languages (locked)
 EN + UK only. Brand is locale-aware per spec §0 and rule 5 below — `Hoba!` in EN/code/files/logo, `Хоба!` in UK in-app UI only. **Every user-facing string must go through `t()`. Hardcoded English in `.tsx` is a bug.**
