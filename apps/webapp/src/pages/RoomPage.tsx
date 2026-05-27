@@ -15,7 +15,8 @@ import { RoomCodePill } from "@/components/ds/RoomCodePill";
 import { Skeleton } from "@/components/ds/Skeleton";
 import { FlyingReactions } from "@/components/room/FlyingReactions";
 import { ReactionsBar } from "@/components/room/ReactionsBar";
-import { computeCanSpin } from "@/features/rooms/permissions";
+import { RoomSettingsSheet } from "@/components/room/RoomSettingsSheet";
+import { computeCanSpin, isHost } from "@/features/rooms/permissions";
 import { Wheel } from "@/features/wheel/Wheel";
 import {
   type SegmentDef,
@@ -65,6 +66,7 @@ export function RoomPage(): JSX.Element {
 
   const [wheelState, setWheelState] = useState<WheelState>("idle");
   const [revealed, setRevealed] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Active rooms only — a closed swipe mid-spin would orphan everyone
   // else in the room. Lobby is fine to back out of.
@@ -148,6 +150,7 @@ export function RoomPage(): JSX.Element {
       : undefined;
 
   const canSpin = computeCanSpin(snapshot);
+  const callerIsHost = isHost(snapshot);
 
   async function handleShare(): Promise<void> {
     if (snapshot === null) return;
@@ -242,6 +245,17 @@ export function RoomPage(): JSX.Element {
             void handleShare();
           }}
         />
+        {callerIsHost ? (
+          <IconButton
+            aria-label={t("room:settings.open_aria")}
+            variant="tonal"
+            size="md"
+            icon={<span aria-hidden>⚙️</span>}
+            onClick={() => {
+              setSettingsOpen(true);
+            }}
+          />
+        ) : null}
       </section>
 
       <main className="flex-1 px-4 pt-3 pb-6 flex flex-col gap-4 relative">
@@ -282,6 +296,16 @@ export function RoomPage(): JSX.Element {
         </div>
 
         <FlyingReactions />
+
+        {callerIsHost ? (
+          <RoomSettingsSheet
+            open={settingsOpen}
+            onClose={() => {
+              setSettingsOpen(false);
+            }}
+            snapshot={snapshot}
+          />
+        ) : null}
 
         <AnimatePresence>
           {revealed && winningSegment !== undefined ? (

@@ -59,6 +59,12 @@ interface RoomStore {
   triggerSpin(): void;
   sendReaction(emoji: string): void;
   resetSpinState(): void;
+  /**
+   * Replace the snapshot with a fresh one fetched via REST (e.g. after a
+   * host-only PATCH /api/v1/rooms/{code}). Until the server broadcasts
+   * room:updated, this is how the calling client refreshes its view.
+   */
+  setSnapshot(state: ServerRoomState): void;
 }
 
 let socket: Socket | null = null;
@@ -216,6 +222,10 @@ export const useRoomStore = create<RoomStore>((_set, get) => ({
   resetSpinState(): void {
     useRoomStore.setState({ spinSettled: null });
     void get; // ergonomics: keep `get` in scope for future selectors
+  },
+
+  setSnapshot(state: ServerRoomState): void {
+    useRoomStore.setState({ snapshot: state });
   },
 }));
 

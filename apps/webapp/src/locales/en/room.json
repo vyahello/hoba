@@ -21,6 +21,16 @@
   "spin": {
     "host_only_hint": "Host spins. React with the bar above."
   },
+  "settings": {
+    "open_aria": "Room settings",
+    "title": "Room settings",
+    "spin_policy": {
+      "label": "Who can spin",
+      "anyone": "Everyone in the room",
+      "host_only": "Only me (host)"
+    },
+    "save_failed": "Couldn't save. Try again."
+  },
   "reactions": {
     "aria_label": "React {emoji}"
   },

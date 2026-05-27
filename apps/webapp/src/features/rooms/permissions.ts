@@ -22,3 +22,17 @@ export function computeCanSpin(snapshot: RoomState | null): boolean {
   );
   return myParticipant?.role === "host";
 }
+
+/**
+ * Whether the caller is the host participant in the current snapshot.
+ * Distinct from `computeCanSpin` — host-only UI affordances (settings
+ * sheet, kick controls in later phases) gate on role identity, not on
+ * whether a spin is currently allowed.
+ */
+export function isHost(snapshot: RoomState | null): boolean {
+  if (snapshot === null) return false;
+  return (
+    snapshot.participants.find((p) => p.user_id === snapshot.me_user_id)?.role
+    === "host"
+  );
+}

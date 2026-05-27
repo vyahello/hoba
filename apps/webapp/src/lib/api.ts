@@ -136,6 +136,14 @@ export interface RoomCreatePayload {
   suggestion_policy?: SuggestionPolicy;
 }
 
+export interface RoomPatchPayload {
+  title?: string;
+  spin_policy?: SpinPolicy;
+  suggestion_policy?: SuggestionPolicy;
+  is_locked?: boolean;
+  game_mode?: GameMode;
+}
+
 // --- API surface ---------------------------------------------------------
 
 export const api = {
@@ -144,6 +152,9 @@ export const api = {
 
   getRoom: (code: string): Promise<RoomState> =>
     request(`/rooms/${encodeURIComponent(code)}`),
+
+  patchRoom: (code: string, patch: RoomPatchPayload): Promise<RoomState> =>
+    request(`/rooms/${encodeURIComponent(code)}`, { method: "PATCH", body: patch }),
 
   closeRoom: (code: string): Promise<RoomState> =>
     request(`/rooms/${encodeURIComponent(code)}/close`, { method: "POST" }),

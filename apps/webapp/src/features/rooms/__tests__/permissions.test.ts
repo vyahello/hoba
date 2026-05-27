@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { type RoomState } from "@/lib/api";
 
-import { computeCanSpin } from "../permissions";
+import { computeCanSpin, isHost } from "../permissions";
 
 function makeSnapshot(args: {
   spin_policy: "anyone" | "host_only" | "turn_based";
@@ -117,6 +117,40 @@ describe("computeCanSpin", () => {
           spin_policy: "host_only",
           me_user_id: -1,
           participants: [{ user_id: 7, role: "host" }],
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("isHost: true only when caller's participant row says host", () => {
+    expect(isHost(null)).toBe(false);
+    const hostSnap = makeSnapshot({
+      spin_policy: "anyone",
+      me_user_id: 1,
+      participants: [
+        { user_id: 1, role: "host" },
+        { user_id: 2, role: "guest" },
+      ],
+    });
+    const guestSnap = makeSnapshot({
+      spin_policy: "anyone",
+      me_user_id: 2,
+      participants: [
+        { user_id: 1, role: "host" },
+        { user_id: 2, role: "guest" },
+      ],
+    });
+    expect(isHost(hostSnap)).toBe(true);
+    expect(isHost(guestSnap)).toBe(false);
+  });
+
+  it("isHost: false when me_user_id doesn't appear in participants", () => {
+    expect(
+      isHost(
+        makeSnapshot({
+          spin_policy: "anyone",
+          me_user_id: 99,
+          participants: [{ user_id: 1, role: "host" }],
         }),
       ),
     ).toBe(false);
