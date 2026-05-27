@@ -64,6 +64,7 @@ services:
   webapp:
     build:
       context: ./apps/webapp
+      target: dev      # multi-stage; `prod` target is selected via compose.shared.yaml
     restart: unless-stopped
     environment:
       VITE_API_TARGET: ${VITE_API_TARGET:-http://api:8000}
