@@ -117,11 +117,18 @@ flexes around `gap-3 + px-4`.
 > Manual, owner-side via [@BotFather](https://t.me/BotFather). All
 > strings are pinned in `docs/spec.md` §6 — copy them verbatim.
 
+### 7a. Default (English) — required first
+
 ```text
 /setname            @hobagame_bot                 → Hoba!
 /setuserpic         @hobagame_bot                 → upload Latin Hoba! logo PNG (640×640, brand-amber on dark purple). docs/brand/ should hold this asset.
 /setabouttext       @hobagame_bot                 → "Spin the wheel with friends. Hoba! — and you're done. 🎯"
-/setdescription     @hobagame_bot                 → spec §6 paragraph (5 modes, ≤512 chars)
+/setdescription     @hobagame_bot                 → soft-launch variant (Classic-only honest):
+                                                    "🎯 Multiplayer decision wheel for Telegram.
+                                                     Build a wheel, invite friends, spin together in real time.
+                                                     Hoba! — and it's decided.
+
+                                                     More game modes coming soon."
 /setcommands        @hobagame_bot                 → start | new | help | lang | about
 /setmenubutton      @hobagame_bot                 → production URL + label "Open Hoba!"
                                                     (or current ngrok URL while in dev)
@@ -129,11 +136,49 @@ flexes around `gap-3 + px-4`.
                                                     (Direct Link Mini App for share deep-links)
 ```
 
+### 7b. Ukrainian (optional, recommended for UA soft-launch)
+
+Per spec §6 the **default is EN**, but Telegram falls back to it for any
+locale that's not explicitly set — so without these steps Ukrainian
+users see the English wrapper around the Mini App while the Mini App
+itself is in Ukrainian. The most reliable BotFather path goes via
+`/mybots`, which always shows a language picker:
+
+```
+/mybots → @hobagame_bot → Edit Bot → Edit <thing> → pick Ukrainian → paste
+```
+
+Repeat for each of: **Name**, **About**, **Description**, **Commands**.
+Strings to paste (all in `docs/spec.md` §6 / `docs/botfather-setup.md`):
+
+```text
+Name           → Хоба!
+About          → "Крутіть колесо з друзями. Хоба! — і готово. 🎯"
+Description    → "🎯 Колесо рішень у Telegram — для компанії друзів.
+                  Створіть колесо, запросіть друзів, крутіть разом у реальному часі.
+                  Хоба! — і рішення ухвалено.
+
+                  Більше ігрових режимів — скоро."
+Commands       → start - Запустити Хобу!
+                 new - Створити нове колесо
+                 help - Допомога
+                 lang - Змінити мову
+                 about - Про Хобу!
+```
+
+The bot itself doesn't render commands; Telegram does, picking the
+locale from the user's client language. A `language_code = uk`
+Telegram client sees the Cyrillic surfaces; everyone else gets the
+EN defaults from 7a.
+
+### 7c. Verification
+
 After each change, in any Telegram chat type `@hobagame_bot` —
-the share card must render with the Latin Hoba! logo, "Hoba!"
-display name, and the About text. Tap the bot → Description shows
-above the Start button. Tap Start → bot responds; `/lang` works;
-menu button (`≡ Open Hoba!`) launches the Mini App.
+the share card must render with the Latin Hoba! logo, the locale-
+appropriate name (`Hoba!` / `Хоба!`), and the About text in the
+user's client language. Tap the bot → Description shows above the
+Start button. Tap Start → bot responds; `/lang` works; menu button
+(`≡ Open Hoba!`) launches the Mini App.
 
 ## End-of-Stage-B gate
 
