@@ -7,6 +7,8 @@ Format: `- [ ] phase:N — area — description (owner, date)`. Resolve by delet
 - [ ] stage:B — anti-spam — server-side cooldown on spin:trigger (1.5–2s after the previous spin:settled in the same room) so thumb-mashing the SPIN hub can't shower duplicate spins. Today the only throttle is the client-side `state !== "spinning"` gate (relaxed from `!== "idle"` in commit 31a23e8), which is bypassable. Surfaced during Stage A verification; folded into Stage B because it shares scope with the broader rate-limit work already listed there (spec §14 §7).
 - [ ] stage:D — modes — finish `turn_based` spin policy. services/spins._user_can_spin currently treats it as host_only. Required by Punishment + Elimination game modes (spec §5).
 - [ ] stage:D — mode defaults — when a room is created with a non-Classic game_mode, override the default spin_policy: Elimination → host_only, Punishment → turn_based, Chaos → anyone, Rigged → host_only.
+- [ ] stage:G — deploy — replace `apps/webapp/Dockerfile` `CMD ["pnpm", "dev"]` with a multi-stage build that emits a static bundle into `/srv` and have Caddy serve it directly (`root * /srv` + `file_server`) instead of reverse-proxying Vite. Current prod profile boots but runs the dev server — fine for the Stage C soft-launch (≤20 users), wrong for any serious traffic. Spec §15 Phase 12.
+- [ ] stage:C → stage:B — broadcast — emit a `room:updated` Socket.IO event from `PATCH /api/v1/rooms/{code}` so guests pick up host policy changes without a reconnect. Today only the host's local snapshot refreshes after they flip `spin_policy` via the new settings sheet (see commit `ac7dab2`).
 
 ## Resolved in Stage A (2026-05-26)
 
