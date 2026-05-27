@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import { cn } from "@/lib/cn";
 import { haptics } from "@/lib/haptics";
 import { toast } from "@/stores/toast";
@@ -18,15 +20,16 @@ export function RoomCodePill({
   onCopied,
   className,
 }: RoomCodePillProps): JSX.Element {
+  const { t } = useTranslation("room");
   const handleCopy = async (): Promise<void> => {
     try {
       await navigator.clipboard.writeText(code);
       haptics.success();
-      toast({ title: "Code copied", intent: "success" });
+      toast({ title: t("code_pill.copied_title"), intent: "success" });
       onCopied?.();
     } catch {
       haptics.error();
-      toast({ title: "Copy failed", intent: "error" });
+      toast({ title: t("code_pill.copy_failed_title"), intent: "error" });
     }
   };
 
@@ -36,7 +39,7 @@ export function RoomCodePill({
       onClick={() => {
         void handleCopy();
       }}
-      aria-label={`Copy room code ${code}`}
+      aria-label={t("code_pill.aria_label", { code })}
       className={cn(
         "ds-tactile inline-flex items-center justify-center",
         "font-mono font-bold text-2xl tracking-[0.3em] uppercase",

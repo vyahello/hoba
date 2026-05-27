@@ -13,6 +13,11 @@
     "copied_title": "Link copied",
     "copied_description": "Paste it in any chat to invite"
   },
+  "code_pill": {
+    "aria_label": "Copy room code {code}",
+    "copied_title": "Code copied",
+    "copy_failed_title": "Copy failed"
+  },
   "spin": {
     "host_only_hint": "Host spins. React with the bar above."
   },

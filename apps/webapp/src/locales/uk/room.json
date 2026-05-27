@@ -13,6 +13,11 @@
     "copied_title": "Посилання скопійовано",
     "copied_description": "Вставте в чат, щоб запросити"
   },
+  "code_pill": {
+    "aria_label": "Скопіювати код {code}",
+    "copied_title": "Код скопійовано",
+    "copy_failed_title": "Не вдалося скопіювати"
+  },
   "spin": {
     "host_only_hint": "Крутить ведучий. Реагуйте панеллю вище."
   },
