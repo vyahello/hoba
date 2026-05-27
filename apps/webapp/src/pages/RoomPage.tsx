@@ -217,16 +217,15 @@ export function RoomPage(): JSX.Element {
 
       <section className="px-4 pt-3 flex items-center gap-3">
         <RoomCodePill code={snapshot.room.code} />
-        <Button
-          variant="primary"
+        <IconButton
+          aria-label={t("room:actions.share")}
+          variant="filled"
           size="md"
           icon={<span aria-hidden>📤</span>}
           onClick={() => {
             void handleShare();
           }}
-        >
-          {t("room:actions.share")}
-        </Button>
+        />
       </section>
 
       <main className="flex-1 px-4 pt-3 pb-6 flex flex-col gap-4 relative">
