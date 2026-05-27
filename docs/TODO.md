@@ -3,10 +3,8 @@
 Tracked TODOs per `CLAUDE.md` rule 8 ("No TODOs without entry in `docs/TODO.md`").
 Format: `- [ ] phase:N — area — description (owner, date)`. Resolve by deleting the line.
 
-- [ ] stage:B — networking — document the ngrok dance in README (replaces cloudflared after the iPhone Safari issue). Move out of TODO once README has a clear "Dev tunnel" subsection.
-- [ ] stage:B — tests — add a focused RoomPage unit test for the host-detection branch (canSpin under host_only when snapshot.me_user_id matches a host participant). Regression guard for commit 7db1b0a.
 - [ ] stage:B — moderation — host toggle in Room settings sheet to flip spin_policy between anyone (default since 2026-05-26) and host_only without leaving the room. Server-side: PATCH /api/v1/rooms/{code} already accepts it; UI is missing.
-- [ ] stage:B — anti-spam — server-side cooldown on spin:trigger (1.5–2s after the previous spin:settled in the same room) so thumb-mashing the SPIN hub can't shower duplicate spins. Today the only throttle is the client-side `state !== "idle"` gate, which is bypassable.
+- [ ] stage:B — anti-spam — server-side cooldown on spin:trigger (1.5–2s after the previous spin:settled in the same room) so thumb-mashing the SPIN hub can't shower duplicate spins. Today the only throttle is the client-side `state !== "spinning"` gate (relaxed from `!== "idle"` in commit 31a23e8), which is bypassable. Surfaced during Stage A verification; folded into Stage B because it shares scope with the broader rate-limit work already listed there (spec §14 §7).
 - [ ] stage:D — modes — finish `turn_based` spin policy. services/spins._user_can_spin currently treats it as host_only. Required by Punishment + Elimination game modes (spec §5).
 - [ ] stage:D — mode defaults — when a room is created with a non-Classic game_mode, override the default spin_policy: Elimination → host_only, Punishment → turn_based, Chaos → anyone, Rigged → host_only.
 
@@ -16,3 +14,10 @@ Format: `- [ ] phase:N — area — description (owner, date)`. Resolve by delet
 - [x] phase:6 → phase:2 — auth — Redis `tg_id → user_id` cache (15 min TTL) wired into the auth dependency + WS connect.
 - [x] phase:6 — tests — Socket.IO handlers + Redis client now covered (94% / 96%) via a `FakeSocketIO` test double in `tests/realtime/test_handlers.py` and `fakeredis` autouse fixture.
 - [x] phase:11 → stage:A — i18n — `pnpm i18n:check` now enforces EN ↔ UK parity + referenced-key coverage (`scripts/i18n-check.mjs`).
+
+## Resolved in Stage A close-out (2026-05-27)
+
+- [x] stage:A — wheel — hub button now stays tappable across the idle → spinning → settled cycle and respects the spin permission (no SPIN affordance for guests in host_only rooms). Pure `isHubInteractive()` helper with five unit tests. Commit `31a23e8`.
+- [x] stage:A — rooms — `computeCanSpin(snapshot)` extracted from `RoomPage` with seven unit tests covering anyone / host_only / turn_based / -1 sentinel / unknown user_id. Regression guard for the tg_id-vs-user_id bug fixed in `7db1b0a`. Commit `c5334ee`.
+- [x] stage:A — docs — BotFather short_name aligned to `play` (the `spin` Direct Link Mini App was deleted to remove the duplicate). Commit `0756782`.
+- [x] stage:B → stage:A — networking — README delegates the ngrok walkthrough to `docs/development.md` "Dev tunnel for real Telegram testing"; the original TODO line is now stale and removed in this entry.
