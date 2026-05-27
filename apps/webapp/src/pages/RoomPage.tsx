@@ -24,6 +24,7 @@ import {
   type WheelState,
 } from "@/features/wheel/types";
 import { haptics } from "@/lib/haptics";
+import { safeNavigateBack } from "@/lib/navigation";
 import {
   buildRoomInviteLink,
   disableClosingConfirmation,
@@ -187,7 +188,7 @@ export function RoomPage(): JSX.Element {
             variant="ghost"
             icon={<span aria-hidden>←</span>}
             onClick={() => {
-              navigate(-1);
+              safeNavigateBack(navigate);
             }}
           />
           <RoomCodePill code={upperCode} className="text-base px-4 py-2" />
@@ -209,7 +210,7 @@ export function RoomPage(): JSX.Element {
           variant="ghost"
           icon={<span aria-hidden>←</span>}
           onClick={() => {
-            navigate(-1);
+            safeNavigateBack(navigate);
           }}
         />
         <div className="flex-1 min-w-0">

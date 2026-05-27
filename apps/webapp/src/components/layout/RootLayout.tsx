@@ -3,14 +3,15 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { AuroraBackground } from "@/components/ds/AuroraBackground";
 import { Toaster } from "@/components/ds/Toast";
+import { safeNavigateBack } from "@/lib/navigation";
 import { parseRoomDeepLink } from "@/lib/startParam";
 import { readStartParam, tg } from "@/lib/telegram";
 
 /**
  * Root layout — owns Telegram BackButton binding and the document scroll
  * container. Every page renders inside the `<Outlet />`. BackButton shows
- * on non-root routes only and calls `navigate(-1)` on press, matching the
- * native back gesture users expect.
+ * on non-root routes only and pops one history entry on press, or goes
+ * home for deep-link entrants who have no history (see `safeNavigateBack`).
  */
 export function RootLayout(): JSX.Element {
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ export function RootLayout(): JSX.Element {
 
   useEffect(() => {
     const handler = (): void => {
-      navigate(-1);
+      safeNavigateBack(navigate);
     };
     tg.BackButton?.onClick?.(handler);
     return () => {

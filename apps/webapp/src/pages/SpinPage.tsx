@@ -21,6 +21,7 @@ import {
 } from "@/features/wheel/types";
 import { api, ApiError } from "@/lib/api";
 import { haptics } from "@/lib/haptics";
+import { safeNavigateBack } from "@/lib/navigation";
 import { useCustomWheel, useSpinHistory } from "@/stores/spinHistory";
 import { toast } from "@/stores/toast";
 import { WHEEL_PALETTE } from "../../tailwind.config";
@@ -199,7 +200,7 @@ export function SpinPage(): JSX.Element {
           variant="ghost"
           icon={<span aria-hidden>←</span>}
           onClick={() => {
-            navigate(-1);
+            safeNavigateBack(navigate);
           }}
         />
         <h1 className="font-display font-bold text-lg flex-1 min-w-0 truncate text-ink-light-1 dark:text-ink-dark-1">

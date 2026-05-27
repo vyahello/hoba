@@ -6,6 +6,7 @@ import { Button } from "@/components/ds/Button";
 import { IconButton } from "@/components/ds/IconButton";
 import { Input, Textarea } from "@/components/ds/Input";
 import { haptics } from "@/lib/haptics";
+import { safeNavigateBack } from "@/lib/navigation";
 import { useCustomWheel } from "@/stores/spinHistory";
 
 const MIN_SEGMENTS = 2;
@@ -87,7 +88,7 @@ export function CreatePage(): JSX.Element {
           variant="ghost"
           icon={<span aria-hidden>←</span>}
           onClick={() => {
-            navigate(-1);
+            safeNavigateBack(navigate);
           }}
         />
         <h1 className="font-display font-bold text-xl flex-1 truncate text-ink-light-1 dark:text-ink-dark-1">
