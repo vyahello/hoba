@@ -23,6 +23,8 @@ Order of operations is **`docs/roadmap.md`** — stages A → G, each ending wit
 - [`docs/testing.md`](docs/testing.md) — test layout, running suites, manual verification per stage.
 - [`docs/TODO.md`](docs/TODO.md) — tracked TODOs (rule 8).
 - [`docs/botfather-setup.md`](docs/botfather-setup.md) — bot identity + menu button configuration.
+- [`docs/deployment.md`](docs/deployment.md) — Stage C / production deploy walkthrough.
+- [`docs/privacy.md`](docs/privacy.md) — Privacy Policy hosted via BotFather.
 
 When you make a non-trivial change that affects something documented above, update the relevant doc in the same commit.
 
