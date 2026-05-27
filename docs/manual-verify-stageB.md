@@ -90,6 +90,21 @@ Device A (host) + Device B (guest), iPhone 14 + iPhone X:
    guest tap doesn't burn the room cooldown).
 ```
 
+## 5b. Back-button safety for deep-link entrants
+
+```text
+1. From Device B (guest), receive a share link and open
+   t.me/hobagame_bot?startapp=room_<CODE>.
+2. You should land directly in /room/<CODE> (Stage A item 1 fix).
+3. Tap the ← IconButton in the room header → should land on
+   Home (/). Pre-150b323 this was a no-op because the auto-navigate
+   used replace:true and window.history.length === 1.
+4. Same expectation for the Telegram native BackButton (the ‹
+   chevron in the top-left of the Mini App chrome).
+5. Hosts who reached /room via Home → Create still get the normal
+   pop-history behaviour (back to the previous page).
+```
+
 ## 6. 360 px width audit (B7)
 
 ```text
