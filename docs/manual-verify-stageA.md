@@ -52,6 +52,7 @@ they were fixed in Stage A:
 | 18 | Wheel animation lags on iPhone X (A11, iOS 16); smooth on iPhone 14 (A15). High-suspicion cause: `feGaussianBlur` ring-glow filter that WebKit on A11-class chips rasterizes on CPU every frame. | `33a976b` — replaced filter with three stacked solid strokes (18/12/6 px at decreasing opacity). Same visual silhouette, pure compositor path. **Pending real-device verification.** |
 | 19 | Flying reactions appeared at random horizontal positions — 🔥 didn't emerge from where the 🔥 button is in the bar. `stores/room.ts` set `x: Math.random()` on every incoming reaction. | `798788f` — new `apps/webapp/src/features/rooms/reactionLanes.ts` (`REACTION_EMOJIS` + `reactionLaneFor`) maps each emoji to a fixed lane that aligns with its button on phone widths; callers add ±2.5 % jitter so identical bursts don't pixel-stack. Five unit tests. |
 | 20 | `RoomCodePill` default (`text-3xl + tracking-[0.35em] + px-7 py-4`) rendered at ~220 px — ~58 % of an iPhone X viewport on its own. Disproportionate vs the wheel below. | `6dbfbe0` — default tightened to `text-2xl + tracking-[0.3em] + px-6 py-3` (~175 px). Still hero-prominent, no longer dominating. |
+| 21 | Three hardcoded EN strings remained in `RoomCodePill` (toast titles + aria-label) — the same class of i18n gap closed elsewhere in Stage A's first wave. | `0fb392c` — `room.code_pill.{aria_label,copied_title,copy_failed_title}` added in EN + UK; component reads them via `useTranslation("room")`. `pnpm i18n:check` parity verified. |
 
 ### Hands-on verification — pending owner sign-off
 

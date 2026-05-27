@@ -7,7 +7,7 @@ The full product + engineering specification is at **`docs/spec.md`**.
 **You MUST read it before starting any new phase.** Re-read the relevant phase section before each `go on phase N` command. If chat instructions ever conflict with `docs/spec.md`, ask which wins.
 
 ## Current phase
-> **Stage A close-out batch (2026-05-27).** Original 5 Phase-6 blockers + 6 first-pass verification fixes + 8 close-out fixes (hub interactivity, host-detection regression test, BotFather short-name alignment, ngrok TODO cleanup, iPhone-X share-button overflow, iPhone-X wheel-spin lag, flying-reaction lanes, room-code pill resize) all landed. Unit + type + lint + coverage gates green (102 backend / 48 frontend tests). `docs/manual-verify-stageA.md` records what was verified on real devices on 2026-05-26 and what's pending owner sign-off for the 2026-05-27 batch. Next: **Stage B — pre-launch hardening** (see `docs/roadmap.md`).
+> **Stage A close-out batch (2026-05-27).** Original 5 Phase-6 blockers + 6 first-pass verification fixes + 9 close-out fixes (hub interactivity, host-detection regression test, BotFather short-name alignment, ngrok TODO cleanup, iPhone-X share-button overflow, iPhone-X wheel-spin lag, flying-reaction lanes, room-code pill resize, RoomCodePill i18n) all landed. Unit + type + lint + coverage + `pnpm i18n:check` gates green (102 backend / 48 frontend tests). `docs/manual-verify-stageA.md` records what was verified on real devices on 2026-05-26 and what's pending owner sign-off for the 2026-05-27 batch. Next: **Stage B — pre-launch hardening** (see `docs/roadmap.md`).
 
 Owner updates this line after each `STAGE X COMPLETE` (post-MVP we run stages, not phases — stages map to spec phases per `docs/roadmap.md`).
 
@@ -75,6 +75,7 @@ Skipping any of these = future Claude opens cold and re-derives state from `git 
 18. ✅ Wheel spin lag on iPhone X (A11, iOS 16) — replaced the `feGaussianBlur` ring-glow filter with three stacked solid strokes (18/12/6 px at decreasing opacity). Same silhouette, pure compositor path, no SVG-filter CPU rasterization. **Pending iPhone X verification.** Commit `33a976b`.
 19. ✅ Flying reactions emerged at random `Math.random()` horizontal positions. New `apps/webapp/src/features/rooms/reactionLanes.ts` (`REACTION_EMOJIS` + `reactionLaneFor`) gives each emoji a fixed lane aligned with its bar button; ±2.5 % jitter prevents pixel-stacking on bursts. 5 unit tests. Commit `798788f`.
 20. ✅ `RoomCodePill` default size tightened from `text-3xl + tracking-[0.35em] + px-7 py-4` to `text-2xl + tracking-[0.3em] + px-6 py-3` — pill now sits at ~175 px instead of ~220 px on iPhone X, proportional to the rest of the room screen. Commit `6dbfbe0`.
+21. ✅ Three hardcoded EN strings in `RoomCodePill` (toast titles + aria-label) localized through `room.code_pill.*` (EN + UK). Closes the i18n gap surfaced while inspecting the pill for item 20. Commit `0fb392c`.
 
 ### Stage A test totals (final)
 102 backend tests, **48 frontend tests** (was 31; +17 across hubLogic, computeCanSpin, reactionLanes), 92% backend coverage. mypy --strict, ruff, eslint, tsc, i18n:check all green.
