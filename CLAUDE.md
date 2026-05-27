@@ -7,7 +7,7 @@ The full product + engineering specification is at **`docs/spec.md`**.
 **You MUST read it before starting any new phase.** Re-read the relevant phase section before each `go on phase N` command. If chat instructions ever conflict with `docs/spec.md`, ask which wins.
 
 ## Current phase
-> **Stage A close-out batch (2026-05-27).** Original 5 Phase-6 blockers + 6 first-pass verification fixes + 4 close-out fixes (hub interactivity, host-detection regression test, BotFather short-name alignment, ngrok TODO cleanup) all landed. Unit + type + lint + coverage gates green (102 backend / 43 frontend tests). `docs/manual-verify-stageA.md` records what was verified on real devices on 2026-05-26 and what's pending owner sign-off for the 2026-05-27 batch. Next: **Stage B — pre-launch hardening** (see `docs/roadmap.md`).
+> **Stage A close-out batch (2026-05-27).** Original 5 Phase-6 blockers + 6 first-pass verification fixes + 6 close-out fixes (hub interactivity, host-detection regression test, BotFather short-name alignment, ngrok TODO cleanup, iPhone-X share-button overflow, iPhone-X wheel-spin lag) all landed. Unit + type + lint + coverage gates green (102 backend / 43 frontend tests). `docs/manual-verify-stageA.md` records what was verified on real devices on 2026-05-26 and what's pending owner sign-off for the 2026-05-27 batch. Next: **Stage B — pre-launch hardening** (see `docs/roadmap.md`).
 
 Owner updates this line after each `STAGE X COMPLETE` (post-MVP we run stages, not phases — stages map to spec phases per `docs/roadmap.md`).
 
@@ -71,6 +71,8 @@ Skipping any of these = future Claude opens cold and re-derives state from `git 
 14. ✅ `apps/webapp/src/features/rooms/permissions.ts` (`computeCanSpin`) extracted from `RoomPage` with 7 unit tests — direct regression guard for the tg_id-vs-user_id bug in commit `7db1b0a`. Resolves the carry-over previously sitting in `docs/TODO.md` as a Stage B test debt. Commit `c5334ee`.
 15. ✅ BotFather Direct Link Mini App `spin` deleted; remaining `play` already matched `VITE_TELEGRAM_APP_SHORT_NAME`. `docs/botfather-setup.md` §8 aligned. Commit `0756782`.
 16. ✅ `docs/manual-verify-stageA.md` backfilled — the file referenced by `docs/roadmap.md:48` and `docs/testing.md:279` finally exists with the two-device verification record for 2026-05-26 and the pending real-device pass for the 2026-05-27 batch. Plus the stale ngrok README TODO closed in `docs/TODO.md`. Commit `55b9ff3`.
+17. ✅ Top-of-room Share Button overflowed the iPhone X viewport (UK locale ~56 px off-screen; EN ~2 px). Converted to `IconButton` 📤 with the localized text moved into `aria-label`. Pill stays full brand size. Commit `7e21a85`.
+18. ✅ Wheel spin lag on iPhone X (A11, iOS 16) — replaced the `feGaussianBlur` ring-glow filter with three stacked solid strokes (18/12/6 px at decreasing opacity). Same silhouette, pure compositor path, no SVG-filter CPU rasterization. **Pending iPhone X verification.** Commit `33a976b`.
 
 ### Stage A test totals (final)
 102 backend tests, **43 frontend tests** (was 31; +12 from hubLogic + computeCanSpin), 92% backend coverage. mypy --strict, ruff, eslint, tsc, i18n:check all green.

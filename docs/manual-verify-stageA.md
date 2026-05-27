@@ -48,26 +48,41 @@ they were fixed in Stage A:
 | 13 | In `host_only` rooms, the hub kept the `SPIN` label + breath animation for non-host guests because `Wheel.tsx` ignored whether `onSpinClick` was wired. | Same commit — `hasHandler` check in `isHubInteractive`. |
 | 14 | `RoomPage`'s host-detection logic had no direct test guarding the regression fixed in `7db1b0a`. A future refactor could silently re-break it. | `c5334ee` — extracted `computeCanSpin(snapshot)` with seven cases (anyone, host_only host, host_only guest, unknown user_id, `-1` sentinel, turn_based host, turn_based guest). |
 | 15 | BotFather had two Direct Link Mini Apps (`spin` and `play`); only `play` matched `VITE_TELEGRAM_APP_SHORT_NAME`. | `0756782` — `spin` deleted in BotFather + docs aligned. |
+| 17 | Top-of-room Share Button (`Button[size=md]` with localized text) overflowed the right edge on iPhone X. Math: `RoomCodePill ~220 px + Button[UK] ~167 px + gap-3 12 px + px-4 32 px ≈ 431 px` vs 375 px viewport. | `7e21a85` — converted to `IconButton` (48×48 📤, aria-label routed through `t('room:actions.share')`). Frees ~80–100 px in every locale. |
+| 18 | Wheel animation lags on iPhone X (A11, iOS 16); smooth on iPhone 14 (A15). High-suspicion cause: `feGaussianBlur` ring-glow filter that WebKit on A11-class chips rasterizes on CPU every frame. | `33a976b` — replaced filter with three stacked solid strokes (18/12/6 px at decreasing opacity). Same visual silhouette, pure compositor path. **Pending real-device verification.** |
 
 ### Hands-on verification — pending owner sign-off
 
-The unit tests for items 12–15 pass (43 frontend / 102 backend, all gates
-green). What still needs a real-device pass before this batch can claim
-parity with the 2026-05-26 record:
+The unit tests for items 12–15, 17–18 pass (43 frontend / 102 backend,
+all gates green). What still needs a real-device pass:
 
 ```
-Device A (host):
-  1. Quick Wheel → spin. After settle, the hub itself should still glow
-     and show SPIN — a tap should kick off a fresh spin without going
-     through the lower button. (Item 12.)
-  2. Close the result overlay. The hub should remain interactive in the
-     same way. (Item 12.)
+Device A (host, iPhone 14 or newer):
+  1. Quick Wheel → spin. After settle, the hub itself should still
+     glow and show SPIN — a tap should kick off a fresh spin without
+     going through the lower button. (Item 12.)
+  2. Close the result overlay. The hub should remain interactive in
+     the same way. (Item 12.)
   3. Create a room, change spin_policy back to host_only via the API
      (no UI yet — Stage B). On Device B (guest), the hub should not
      show SPIN, should not glow, should not be tappable. (Item 13.)
+  4. Enter /room/<CODE>. The 📤 share button MUST sit fully inside
+     the viewport on both Device A and Device B, in EN and in UK
+     (the long "Поділитись" label is now in aria-label, not on
+     screen, so locale should be irrelevant). (Item 17.)
 
 Device B (guest in host_only room):
-  4. After Device A spins, the guest can still react. (No regression.)
+  5. After Device A spins, the guest can still react. (No regression.)
+
+Device C (iPhone X / A11, iOS 16 — the device that surfaced item 18):
+  6. Trigger a spin. The wheel must rotate smoothly through decelerate
+     and settle without visible stutter. Acceptable: same subjective
+     feel as iPhone 14. Unacceptable: dropped frames, jank, "hangs"
+     during decelerate. (Item 18.)
+  7. If item 6 still stutters: next levers — drop the inner-grad
+     full-disc radial overlay inside the rotating motion.g, then drop
+     wheel_tick audio rate from 12/s to 6/s. Both changes are
+     local to apps/webapp/src/features/wheel/Wheel.tsx.
 ```
 
 Status: **awaiting owner verification on real Telegram.** Update this
