@@ -84,6 +84,27 @@ export function expand(): void {
   }
 }
 
+/**
+ * Ask Telegram to prompt before the user swipes the Mini App closed —
+ * called when the user enters an active room so accidental swipes
+ * during a spin don't kill the session for everyone.
+ */
+export function enableClosingConfirmation(): void {
+  try {
+    WebApp.enableClosingConfirmation();
+  } catch {
+    /* non-Telegram context */
+  }
+}
+
+export function disableClosingConfirmation(): void {
+  try {
+    WebApp.disableClosingConfirmation();
+  } catch {
+    /* non-Telegram context */
+  }
+}
+
 /** Subscribe to Telegram's `themeChanged` event; returns an unsubscriber. */
 export function onThemeChanged(handler: () => void): () => void {
   try {

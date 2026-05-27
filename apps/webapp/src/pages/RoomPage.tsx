@@ -23,7 +23,12 @@ import {
   type WheelState,
 } from "@/features/wheel/types";
 import { haptics } from "@/lib/haptics";
-import { buildRoomInviteLink, openTelegramLink } from "@/lib/telegram";
+import {
+  buildRoomInviteLink,
+  disableClosingConfirmation,
+  enableClosingConfirmation,
+  openTelegramLink,
+} from "@/lib/telegram";
 import {
   startPresenceLoop,
   stopPresenceLoop,
@@ -60,6 +65,17 @@ export function RoomPage(): JSX.Element {
 
   const [wheelState, setWheelState] = useState<WheelState>("idle");
   const [revealed, setRevealed] = useState(false);
+
+  // Active rooms only — a closed swipe mid-spin would orphan everyone
+  // else in the room. Lobby is fine to back out of.
+  const roomStatus = snapshot?.room.status;
+  useEffect(() => {
+    if (roomStatus !== "active") return undefined;
+    enableClosingConfirmation();
+    return () => {
+      disableClosingConfirmation();
+    };
+  }, [roomStatus]);
 
   useEffect(() => {
     if (currentSpin === null) {
