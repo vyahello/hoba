@@ -138,8 +138,9 @@ docker compose logs -f caddy api bot
 
 ## 4b. Shared-VPS deploy
 
-If the box already runs another site on 80/443 (e.g. cyberalertx.com on
-an existing nginx), let that nginx be Hoba's TLS terminator too.
+If the box already runs another site on 80/443 (an existing nginx
+terminating TLS for some other vhost), let that nginx be Hoba's TLS
+terminator too.
 
 **One-time host prep** (existing nginx must support TLS already):
 

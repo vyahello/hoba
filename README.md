@@ -1,43 +1,51 @@
 # Hoba!
 
-> A Telegram Mini App party game. Tap a wheel, the wheel spins, it stops — **Hoba!** — and the decision is made. Built for the moment four people are arguing about where to eat.
+> A Telegram Mini App party game. Tap the wheel. It spins. It stops. **Hoba!** — and the argument's over.
 
-`Hoba!` (Latin) is the brand in English / code / logo / bot identity. `Хоба!` (Cyrillic) is the same brand inside the Ukrainian locale. Both renderings are first-class.
+<p align="center">
+  <img src="docs/brand/hoba-mini-app-640x360.png" alt="Hoba! brand banner" width="480" />
+</p>
 
-- **Bot:** [@hobagame_bot](https://t.me/hobagame_bot)
-- **Spec (the source of truth):** [`docs/spec.md`](docs/spec.md)
-- **Where we are right now:** see `CLAUDE.md` → "Current phase" and [`docs/roadmap.md`](docs/roadmap.md)
+For the moment four people are stuck choosing where to eat, who pays, who's first.
+Spin together, share a single source of truth, settle it in five seconds.
+
+`Hoba!` is the brand in English. `Хоба!` is the same brand in Ukrainian. Both ship first-class.
 
 ---
 
-## What it does
+## Status
 
-- **Solo mode.** Pick a Quick Wheel ("Where to eat?", "Truth or Dare", "Who pays?", …) or build a custom one in `/create`. Spin → branded `Hoba!` / `Хоба!` reveal → confetti, haptics, sound.
+**Stage C — soft launch (May 2026).** Invite-only validation with a small friend group; not yet public. Once Stages D–G land (more game modes, polish, hardening), the bot opens to everyone.
+
+The bot lives at [@hobagame_bot](https://t.me/hobagame_bot). The Mini App URL is private during the soft-launch phase.
+
+---
+
+## What's in it today
+
+- **Solo mode.** Pick a Quick Wheel ("Where to eat?", "Who pays?", "Truth or Dare", …) or build your own in `/create`. Spin → branded `Hoba!` / `Хоба!` reveal → confetti + haptics + sound.
 - **Multiplayer rooms.** Server-authoritative spin. Two phones, one room, identical animation within ±50 ms. Reactions fly across every connected client during the spin. Share via Telegram's native picker.
-- **Five game modes** (Classic available today; Elimination, Punishment, Chaos, and the legendary **Rigged 🎭** mode are scheduled for Stage D–E — see [`docs/roadmap.md`](docs/roadmap.md)).
-- **EN and UK locales only.** Every user-facing string goes through `t()`; CI enforces parity via `pnpm i18n:check`.
-- **Mobile-native UI.** No hover states, 44×44 px tap targets, sheets instead of modals. If a screen looks at home on a desktop browser, the spec considers it a bug.
+- **Host controls.** Live spin-policy toggle, in-flight `room:updated` broadcasts so guests see policy changes without a reconnect.
+- **Two languages, full parity.** EN + UK end-to-end; CI enforces locale parity via `pnpm i18n:check`. Brand word flips with the locale.
+- **Mobile-native.** No hover states, 44×44 px tap targets, sheets instead of modals. If a screen looks at home on a desktop browser, the spec considers it a bug.
+
+Coming in Stages D–E: **five game modes** (Classic, Elimination, Punishment, Chaos, and the legendary **Rigged 🎭**).
 
 ---
 
 ## Tech stack
 
-| Layer | Choice | Why it's locked in |
+| Layer | Choice | Why |
 |---|---|---|
-| Backend framework | **FastAPI** (Python 3.12, async) | Speedy DX, OpenAPI for free, plugs into Socket.IO via ASGI. |
-| Realtime | **python-socketio** on the `/rooms` namespace | Server-authoritative spin announcements, presence, reactions. |
-| Bot | **aiogram 3** | Idiomatic async, type-friendly, modern Telegram API surface. |
-| Persistence | **SQLAlchemy 2.0 async** + **SQLite** (`aiosqlite`) — swap to Postgres by URL | SQLite is enough through Stage E per spec. Migrations: **Alembic**. |
-| Ephemeral state | **Redis 7** (presence, rate limits, `tg_id → user_id` cache) | Required from day one; everything ephemeral lives here. |
-| Frontend | **React 18** + **Vite 5** + **TypeScript 5 strict** | Familiar, fast HMR, strict typing across boundaries. |
-| Styling | **Tailwind** + **Framer Motion** | Utility CSS for mobile-native rules; Motion for the wheel + reveal. |
-| State | **Zustand** | One store for the realtime room snapshot, no Redux boilerplate. |
-| Telegram | **@twa-dev/sdk** | Theme + viewport + share + back-button bindings. |
-| i18n | **react-i18next** + **ICU** | Plural rules + interpolation in EN and UK; parity enforced by `scripts/i18n-check.mjs`. |
-| Sound | **Howler** | Cross-platform mobile audio with predictable iOS behavior. |
-| Tooling | `uv` (Python), `pnpm` (Node), `docker compose`, `ruff`, `mypy --strict`, `eslint`, `vitest`, `pytest` | Locked versions, zero "works on my machine." |
+| Backend | **FastAPI** + **python-socketio** + **aiogram 3** | Async Python; one ASGI app serves REST, WebSocket, and the bot polls. |
+| Persistence | **SQLAlchemy 2.0** + **SQLite** (`aiosqlite`); Redis 7 for ephemeral state | URL-swap-ready for Postgres at scale. Redis owns presence + rate limits + cache. |
+| Frontend | **React 18** + **Vite 5** + **TypeScript 5 strict** + **Tailwind** + **Framer Motion** + **Zustand** | Familiar stack; HMR for dev, static bundle for prod. |
+| Telegram | **@twa-dev/sdk** + Direct Link Mini App | Theme, viewport, share, BackButton, haptics — all native. |
+| i18n | **react-i18next** + **ICU** | Plural rules + interpolation in EN/UK; parity enforced by `scripts/i18n-check.mjs`. |
+| Quality | **pytest**, **ruff**, **mypy --strict**, **eslint**, **tsc --noEmit**, **vitest** | Every gate green at every stage close. |
+| Deploy | Docker Compose; Caddy auto-TLS in the bundled prod profile, or host nginx in shared-VPS mode | One command up, both flavours documented. |
 
-Production deploy uses **Caddy** for auto-TLS in the `prod` compose profile. Dev tunnel is **ngrok** (cloudflared had an iPhone Safari reachability issue — see [`docs/development.md`](docs/development.md)).
+113 backend tests + 53 frontend tests at Stage C entry, 91 % backend coverage.
 
 ---
 
@@ -45,68 +53,55 @@ Production deploy uses **Caddy** for auto-TLS in the `prod` compose profile. Dev
 
 ```
 apps/
-  api/             FastAPI + Socket.IO  (Python package: hoba_api)
-  bot/             aiogram bot          (Python package: hoba_bot)
-  webapp/          React + Vite + TS Mini App
-packages/
-  shared-types/    TS types generated from OpenAPI (filled in Stage D+)
+  api/            FastAPI + Socket.IO    (python package: hoba_api)
+  bot/            aiogram bot            (python package: hoba_bot)
+  webapp/         React + Vite + TS Mini App
 docs/
-  spec.md          Product + engineering spec — source of truth
-  roadmap.md       Post-MVP execution order, stage by stage
-  architecture.md  How the services compose at runtime
-  development.md   Local setup, dev tunnel, debugging
-  testing.md       Running tests + manual verification per stage
-  TODO.md          Tracked TODOs (CLAUDE.md rule 8)
-  botfather-setup.md  Bot identity + menu button configuration
-  audio-licenses.md   Sound asset attribution
-  brand/           Brand assets
+  spec.md         Product + engineering spec — source of truth
+  roadmap.md      Stages A → G post-MVP execution order
+  architecture.md How the services compose at runtime
+  development.md  Local setup + dev tunnel + debugging
+  deployment.md   Production deploy walkthrough (dedicated + shared VPS)
+  testing.md      Test layout + manual verification per stage
+  spec.md, …      Several more — see CLAUDE.md for the full index
 infra/
-  caddy/           Caddyfile (prod profile only)
+  caddy/          Caddyfile for the bundled prod profile
+  nginx/          Server block for the shared-VPS flavour
 scripts/
-  i18n-check.mjs   EN ↔ UK locale parity + referenced-key coverage
-CLAUDE.md          Operational guide for Claude Code working in this repo
+  i18n-check.mjs  EN ↔ UK locale parity + referenced-key coverage
+CLAUDE.md         Operational guide (this file is for humans + AI assistants alike)
 ```
 
 ---
 
 ## Quick start
 
-> Three commands for a working local environment. The bot runs in **idle mode** with no token, which is fine for everything except the actual Telegram launch.
+Three commands for a working local environment. The bot runs in **idle mode** with no token, which is fine for everything except real Telegram launches.
 
 ```bash
-cp .env.example .env             # then fill TELEGRAM_BOT_TOKEN from @BotFather if you have one
-docker compose up                # `api :8000, webapp :5173, redis :6379, bot (polling, no port), sqlite at ./data/hoba.db`
+cp .env.example .env             # then fill TELEGRAM_BOT_TOKEN if you have one
+docker compose up                # api :8000, webapp :5173, redis :6379, bot polling
 ngrok http 5173                  # only when you want to test inside real Telegram
 ```
 
-Then:
+- **Webapp:** http://localhost:5173
+- **API docs:** http://localhost:8000/docs
+- **Design-system showcase:** http://localhost:5173/dev/ds
 
-- **Webapp:** <http://localhost:5173>
-- **API docs (Swagger):** <http://localhost:8000/docs>
-- **Telegram:** open `@hobagame_bot`, `/start`, tap the menu button (requires the tunnel above + a configured BotFather menu button — see [`docs/botfather-setup.md`](docs/botfather-setup.md))
-
-For the full local setup (running services without Docker, environment variables, dev tunnel walkthrough), see [`docs/development.md`](docs/development.md).
-For automated tests and the manual two-device verification checklist, see [`docs/testing.md`](docs/testing.md).
+Full setup, tunnel walkthrough, and debugging recipes live in [`docs/development.md`](docs/development.md). Production deploy is in [`docs/deployment.md`](docs/deployment.md). Tests + manual verification per stage in [`docs/testing.md`](docs/testing.md).
 
 ---
 
 ## Quality gates
 
-Each gate is required before a stage closes — none of them are optional.
+Every stage closes with all of these green:
 
 ```bash
 # Backend
-cd apps/api
-source ../../venv/bin/activate
-pytest                          # tests + coverage gate (≥ 80%)
-mypy --strict src/hoba_api
-ruff check src tests
+cd apps/api && pytest && ruff check src tests && mypy --strict src/hoba_api
 
 # Frontend
-cd ../webapp
-pnpm typecheck                  # tsc --noEmit
-pnpm lint                       # eslint, --max-warnings 0
-pnpm test                       # vitest
+cd apps/webapp && pnpm typecheck && pnpm lint && pnpm test
 
 # Locale parity (run from repo root)
 pnpm i18n:check
@@ -114,15 +109,9 @@ pnpm i18n:check
 
 ---
 
-## Status
+## Author
 
-**Stage A complete (2026-05-26).** MVP code is shipping-ready: Phase 6 carry-overs closed (share deep-link delivery, Redis `tg_id` cache, EN + UK room namespace parity, WS + Redis test coverage, `pnpm i18n:check`).
-
-Next: **Stage B — pre-launch hardening** (see [`docs/roadmap.md`](docs/roadmap.md)).
-
-The bot is **disabled (idle)** when `TELEGRAM_BOT_TOKEN` is empty. Set the token in `.env` and `docker compose restart bot` to enable polling.
-
----
+Built solo by **[Volodymyr Yahello](mailto:vyahello@gmail.com)** as a side project, in the open(-ish): the code's here so I remember how it works, the spec's here so future-me knows why I made the calls I made, and the roadmap's here because shipping a five-mode party game in one go is how you ship nothing.
 
 ## License
 

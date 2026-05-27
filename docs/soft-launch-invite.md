@@ -66,8 +66,8 @@ batch up to 20.
 In a second terminal, tail the live logs:
 
 ```bash
-ssh cax@178.105.143.68
-cd /home/cax/hoba
+ssh <user>@<your-vps>
+cd ~/hoba
 docker compose -f docker-compose.yml -f compose.shared.yaml logs -f api bot
 ```
 

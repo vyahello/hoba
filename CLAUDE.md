@@ -7,7 +7,7 @@ The full product + engineering specification is at **`docs/spec.md`**.
 **You MUST read it before starting any new phase.** Re-read the relevant phase section before each `go on phase N` command. If chat instructions ever conflict with `docs/spec.md`, ask which wins.
 
 ## Current phase
-> **Stage C in progress — soft-launch live (2026-05-27).** Stage B closed (11 items inc. 2 verification-pass fixes); production deploy on shared Hetzner VPS (`hobagame.duckdns.org`, behind cyberalertx's nginx as TLS terminator, Hoba containers on `127.0.0.1:8800/5800/6800`); webapp container rewritten as a multi-stage build serving a static bundle via in-container nginx (the Vite-dev-in-prod path was unreliable and pulled the Stage G TODO forward). BotFather menu button + Direct Link Mini App URL switched to prod. `docs/validation-notes.md` is the running session log; `docs/soft-launch-invite.md` has the friend invite copy. Test totals at code freeze: 113 backend / 53 frontend, 91 % coverage. **No code work in Stage C** — only telemetry + feedback. Stage exits with a written go/no-go on Phase 7+.
+> **Stage C in progress — soft-launch live (2026-05-27).** Stage B closed (11 items inc. 2 verification-pass fixes); production deploy on a shared VPS (`hobagame.duckdns.org`, host nginx as TLS terminator, Hoba containers on `127.0.0.1:8800/5800/6800`); webapp container rewritten as a multi-stage build serving a static bundle via in-container nginx (the Vite-dev-in-prod path was unreliable and pulled the Stage G TODO forward). BotFather menu button + Direct Link Mini App URL switched to prod. `docs/validation-notes.md` is the running session log; `docs/soft-launch-invite.md` has the friend invite copy. Test totals at code freeze: 113 backend / 53 frontend, 91 % coverage. **No code work in Stage C** — only telemetry + feedback. Stage exits with a written go/no-go on Phase 7+.
 
 Owner updates this line after each `STAGE X COMPLETE` (post-MVP we run stages, not phases — stages map to spec phases per `docs/roadmap.md`).
 
@@ -108,7 +108,7 @@ Pre-launch hardening, 9 items across 9 commits:
 
 ## Stage C deploy chain (2026-05-27)
 
-Production deploy hit the chosen shared Hetzner VPS (`178.105.143.68`, already running cyberalertx.com on nginx). Soft-launch path landed across 7 commits, several of which were on-the-fly fixes to the deploy walkthrough as friction surfaced:
+Production deploy hit a shared VPS that already ran an unrelated site on its public-facing nginx. Soft-launch path landed across 7 commits, several of which were on-the-fly fixes to the deploy walkthrough as friction surfaced:
 
 - `0756782 → 75bd608` — shared-VPS deployment groundwork: `compose.shared.yaml` with `!override` ports + Caddy disabled, `infra/nginx/hoba.conf` server block (proxy_pass to `127.0.0.1:8800` for `/api/`, `/socket.io/`, `/openapi.json`; `127.0.0.1:5800` for the SPA), `docs/deployment.md` rewritten with both dedicated- and shared-VPS flavours.
 - `a6ce1af` — Vite `allowedHosts` extended to cover `.duckdns.org` + a `VITE_ALLOWED_HOSTS` env hook for future custom domains. First-deploy Vite quirk: 403 on the new hostname.

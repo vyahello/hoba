@@ -13,5 +13,12 @@
     "follow": "Follow Telegram",
     "light": "Light",
     "dark": "Dark"
+  },
+  "about": {
+    "title": "About",
+    "tagline": "Spin the wheel, settle it.",
+    "built_by": "Made by",
+    "author": "Volodymyr Yahello",
+    "copyright": "© 2026 — all rights reserved"
   }
 }

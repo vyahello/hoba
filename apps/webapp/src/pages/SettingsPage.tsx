@@ -42,7 +42,7 @@ function ToggleRow({ label, on, onToggle }: ToggleRowProps): JSX.Element {
 }
 
 export function SettingsPage(): JSX.Element {
-  const { t, i18n } = useTranslation(["settings", "common"]);
+  const { t, i18n } = useTranslation(["settings", "common", "brand"]);
   const currentLocale = (i18n.resolvedLanguage ?? "en") as Locale;
   const [sound, setSound] = useState(true);
   const [hapticsOn, setHapticsOn] = useState(true);
@@ -107,6 +107,29 @@ export function SettingsPage(): JSX.Element {
                 setAnon((v) => !v);
               }}
             />
+          </Card>
+        </section>
+
+        <section className="pt-2">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-ink-light-2 dark:text-ink-dark-2 mb-2 px-1">
+            {t("settings:about.title")}
+          </h2>
+          <Card padding="md" className="text-center">
+            <p className="font-display font-bold text-lg text-brand-accent">
+              {t("brand:exclamation")}
+            </p>
+            <p className="text-sm text-ink-light-2 dark:text-ink-dark-2 mt-1 italic">
+              {t("settings:about.tagline")}
+            </p>
+            <p className="text-base text-ink-light-1 dark:text-ink-dark-1 mt-3">
+              {t("settings:about.built_by")}{" "}
+              <span className="font-semibold">
+                {t("settings:about.author")}
+              </span>
+            </p>
+            <p className="text-xs text-ink-light-2 dark:text-ink-dark-2 mt-2 opacity-70">
+              {t("settings:about.copyright")}
+            </p>
           </Card>
         </section>
       </div>
