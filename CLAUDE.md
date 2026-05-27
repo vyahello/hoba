@@ -7,7 +7,7 @@ The full product + engineering specification is at **`docs/spec.md`**.
 **You MUST read it before starting any new phase.** Re-read the relevant phase section before each `go on phase N` command. If chat instructions ever conflict with `docs/spec.md`, ask which wins.
 
 ## Current phase
-> **Stage A close-out batch (2026-05-27).** Original 5 Phase-6 blockers + 6 first-pass verification fixes + 9 close-out fixes (hub interactivity, host-detection regression test, BotFather short-name alignment, ngrok TODO cleanup, iPhone-X share-button overflow, iPhone-X wheel-spin lag, flying-reaction lanes, room-code pill resize, RoomCodePill i18n) all landed. Unit + type + lint + coverage + `pnpm i18n:check` gates green (102 backend / 48 frontend tests). `docs/manual-verify-stageA.md` records what was verified on real devices on 2026-05-26 and what's pending owner sign-off for the 2026-05-27 batch. Next: **Stage B — pre-launch hardening** (see `docs/roadmap.md`).
+> **Stage B code-complete (2026-05-27).** Pre-launch hardening landed in 9 commits covering all 9 charter items (B1–B9). Server-side rate limits + spin cooldown (110 backend tests, 93 % coverage); brand-keyed crash screen via `AppErrorBoundary` + `CrashScreen`; `enableClosingConfirmation` in active rooms; Aurora background mounted globally; host settings sheet with `spin_policy` toggle; `docker compose --profile prod config` validates clean; real-device verification protocol scripted in `docs/manual-verify-stageB.md`. All quality gates green (110 backend / 50 frontend tests, mypy --strict / ruff / eslint / tsc / i18n:check clean). **Pending: owner-side BotFather configuration + hands-on real-device pass on the items in `docs/manual-verify-stageB.md`** before Stage C (soft-launch).
 
 Owner updates this line after each `STAGE X COMPLETE` (post-MVP we run stages, not phases — stages map to spec phases per `docs/roadmap.md`).
 
@@ -79,6 +79,23 @@ Skipping any of these = future Claude opens cold and re-derives state from `git 
 
 ### Stage A test totals (final)
 102 backend tests, **48 frontend tests** (was 31; +17 across hubLogic, computeCanSpin, reactionLanes), 92% backend coverage. mypy --strict, ruff, eslint, tsc, i18n:check all green.
+
+## Stage B close-out (2026-05-27)
+
+Pre-launch hardening, 9 items across 9 commits:
+
+1. ✅ **B1 — server rate limits + spin cooldown.** New `cooldown_take(key, ttl_ms)` Redis primitive (SET NX PX); `on_spin_trigger` enforces 1.5 s/room cooldown + 30 spins/room/hour; `POST /api/v1/rooms` enforces 5/user/hour. +8 backend tests (`tests/services/test_cooldown.py`, `tests/api/test_rooms.py`, `tests/realtime/test_handlers.py`). Commit `f723a0f`.
+2. ✅ **B2 — brand-keyed crash screen.** `AppErrorBoundary` reduced to React boundary plumbing; visible UI moved to functional `CrashScreen` with locale-aware copy + reload CTA + collapsible technical details. New `common.crash.{title,description,reload,details_label}` (EN + UK). Commit `d87371b`.
+3. ✅ **B3 — enableClosingConfirmation in active rooms.** New `enableClosingConfirmation` / `disableClosingConfirmation` helpers in `lib/telegram.ts`; `RoomPage` wires them on `snapshot.room.status === "active"` only (lobby + closed are fine to swipe away). Commit `e1c16d0`.
+4. ✅ **B4 — empty states.** Audit showed `HomePage` `my_wheels`, `LibraryPage` (via `StubPage`), and the `EmptyState` DS component already cover the charter; no new work needed. Closed without a code commit.
+5. ✅ **B5 — Aurora background.** Mounted globally in `RootLayout`. `fixed inset-0 -z-10`, pure CSS — no per-page boilerplate. Commit `e6916bd`.
+6. ✅ **B6 — host settings sheet.** New `RoomSettingsSheet` (bottom sheet) + `isHost(snapshot)` helper (+2 tests) + `api.patchRoom` + `useRoomStore.setSnapshot`. Host-only ⚙️ button next to share. Toggle "Everyone in the room" / "Only me (host)". REST PATCH refreshes calling host's snapshot; guest broadcast queued for Stage C (`docs/TODO.md`). Commit `ac7dab2`.
+7. ✅ **B7 — 360 px audit.** Static review surfaced no fixed widths that breach 360 px; checklist for real-device pass in `docs/manual-verify-stageB.md` §6. Commit `c02cc64`.
+8. ✅ **B8 — prod compose boot check.** `docker compose --profile prod config` parses cleanly; the webapp dev-server-as-prod limitation deferred to Stage G via `docs/TODO.md`. Commit `544fa6d`.
+9. ✅ **B9 — BotFather pre-launch checklist.** Owner-driven steps scripted in `docs/manual-verify-stageB.md` §7 (name, photo, about, description, commands, menu button, Direct Link Mini App URL). Commit `c02cc64`.
+
+### Stage B test totals
+**110 backend tests** (was 102; +8 across cooldown / spin-rate-limit / room-create-rate-limit), **50 frontend tests** (was 48; +2 in isHost). 93 % backend coverage. mypy --strict, ruff, eslint, tsc, i18n:check all green.
 
 ## Languages (locked)
 EN + UK only. Brand is locale-aware per spec §0 and rule 5 below — `Hoba!` in EN/code/files/logo, `Хоба!` in UK in-app UI only. **Every user-facing string must go through `t()`. Hardcoded English in `.tsx` is a bug.**
