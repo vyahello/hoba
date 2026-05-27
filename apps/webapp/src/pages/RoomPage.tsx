@@ -15,6 +15,7 @@ import { RoomCodePill } from "@/components/ds/RoomCodePill";
 import { Skeleton } from "@/components/ds/Skeleton";
 import { FlyingReactions } from "@/components/room/FlyingReactions";
 import { ReactionsBar } from "@/components/room/ReactionsBar";
+import { computeCanSpin } from "@/features/rooms/permissions";
 import { Wheel } from "@/features/wheel/Wheel";
 import {
   type SegmentDef,
@@ -130,14 +131,7 @@ export function RoomPage(): JSX.Element {
       ? snapshot?.active_question?.segments[winningSegmentIndex]
       : undefined;
 
-  // `snapshot.me_user_id` is the server-issued internal user_id of THIS
-  // connection. Telegram's `initDataUnsafe.user.id` is a different number
-  // space (the tg_id) and would never match `participants[*].user_id`.
-  const myUserId = snapshot?.me_user_id ?? -1;
-  const isHost =
-    snapshot?.participants.find((p) => p.user_id === myUserId)?.role === "host";
-  const canSpin =
-    snapshot?.room.spin_policy === "anyone" || Boolean(isHost);
+  const canSpin = computeCanSpin(snapshot);
 
   async function handleShare(): Promise<void> {
     if (snapshot === null) return;
