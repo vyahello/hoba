@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
+import { AuroraBackground } from "@/components/ds/AuroraBackground";
 import { Toaster } from "@/components/ds/Toast";
 import { parseRoomDeepLink } from "@/lib/startParam";
 import { readStartParam, tg } from "@/lib/telegram";
@@ -52,6 +53,7 @@ export function RootLayout(): JSX.Element {
 
   return (
     <div className="min-h-[100dvh] flex flex-col">
+      <AuroraBackground />
       <Outlet />
       <Toaster />
     </div>
