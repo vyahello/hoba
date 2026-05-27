@@ -1,10 +1,9 @@
 import { useTranslation } from "react-i18next";
 
+import { REACTION_EMOJIS } from "@/features/rooms/reactionLanes";
 import { cn } from "@/lib/cn";
 import { haptics } from "@/lib/haptics";
 import { useRoomStore } from "@/stores/room";
-
-const REACTION_EMOJIS = ["😂", "🔥", "💀", "👍", "🎉"] as const;
 
 export function ReactionsBar({ className }: { className?: string }): JSX.Element {
   const sendReaction = useRoomStore((s) => s.sendReaction);

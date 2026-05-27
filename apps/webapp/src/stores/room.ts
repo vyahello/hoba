@@ -13,6 +13,7 @@ import WebApp from "@twa-dev/sdk";
 import { type Socket, io } from "socket.io-client";
 import { create } from "zustand";
 
+import { reactionLaneFor } from "@/features/rooms/reactionLanes";
 import { type RoomState as ServerRoomState } from "@/lib/api";
 
 const NAMESPACE = "/rooms";
@@ -151,7 +152,15 @@ function wireListeners(s: Socket): void {
     "reaction:received",
     (payload: { emoji: string; user_id: number; at: string }) => {
       const id = `${payload.at}-${payload.user_id}-${Math.random().toString(36).slice(2, 8)}`;
-      const next: FlyingReaction = { ...payload, id, x: Math.random() };
+      // Lane = horizontal position of the emoji's button in the bar
+      // (deterministic). Jitter is a small ±2.5% wobble so a burst of
+      // identical reactions doesn't pixel-stack.
+      const jitter = (Math.random() - 0.5) * 0.05;
+      const next: FlyingReaction = {
+        ...payload,
+        id,
+        x: reactionLaneFor(payload.emoji, jitter),
+      };
       setState((state) => ({
         reactions: [...state.reactions, next],
       }));
