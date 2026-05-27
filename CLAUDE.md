@@ -94,8 +94,12 @@ Pre-launch hardening, 9 items across 9 commits:
 8. ✅ **B8 — prod compose boot check.** `docker compose --profile prod config` parses cleanly; the webapp dev-server-as-prod limitation deferred to Stage G via `docs/TODO.md`. Commit `544fa6d`.
 9. ✅ **B9 — BotFather pre-launch checklist.** Owner-driven steps scripted in `docs/manual-verify-stageB.md` §7 (name, photo, about, description, commands, menu button, Direct Link Mini App URL). Commit `c02cc64`.
 
+### Stage B verification-pass fix (2026-05-27)
+
+10. ✅ **B6 follow-up — stale guest UI on policy change.** Real-device test of the host settings sheet surfaced three coupled bugs: server emitted `not_allowed_to_spin` but the locale was missing it; the cooldown check ran before the permission check so a guest's rejected tap burned the per-room cooldown; and connected guests' UIs never learned about the host's `PATCH` because the REST endpoint didn't broadcast. Fix: localized error (EN+UK), reordered `on_spin_trigger` (permission first, throttles second), `PATCH /api/v1/rooms/{code}` now emits `room:updated { patch }` to the room namespace, client store merges into `snapshot.room`. Closes the Stage C carry-over from commit `544fa6d`. Commit `3f4dbeb`.
+
 ### Stage B test totals
-**110 backend tests** (was 102; +8 across cooldown / spin-rate-limit / room-create-rate-limit), **50 frontend tests** (was 48; +2 in isHost). 93 % backend coverage. mypy --strict, ruff, eslint, tsc, i18n:check all green.
+**113 backend tests** (was 110; +3 from cooldown-no-burn-on-guest-rejection and room:updated broadcast), 50 frontend tests, 91 % backend coverage. mypy --strict, ruff, eslint, tsc, i18n:check all green.
 
 ## Languages (locked)
 EN + UK only. Brand is locale-aware per spec §0 and rule 5 below — `Hoba!` in EN/code/files/logo, `Хоба!` in UK in-app UI only. **Every user-facing string must go through `t()`. Hardcoded English in `.tsx` is a bug.**

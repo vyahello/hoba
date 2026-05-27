@@ -77,12 +77,17 @@ Device A (host) + Device B (guest), iPhone 14 + iPhone X:
 4. Tap "Only me (host)". The option shows a loading spinner briefly,
    then a checkmark. No toast.
 5. Device B (guest) — the SPIN button below the wheel disappears
-   (replaced by "Host spins..." hint). NOTE: until the server emits
-   `room:updated` (docs/TODO.md stage:C item), the guest needs a
-   page refresh to see the change. Server-broadcast follow-up
-   tracked.
+   (replaced by "Host spins..." hint) **without** a manual refresh:
+   commit 3f4dbeb wired the server-side `room:updated` broadcast
+   that the client merges into its snapshot.
 6. Flip back to "Everyone in the room" on Device A → SPIN returns on
-   Device B after refresh.
+   Device B automatically.
+7. (Regression guard) If a guest taps SPIN before the broadcast
+   arrives (rare race), they should see "Only the host can spin
+   right now." / "Зараз крутити може лише ведучий." — never the
+   raw `errors.not_allowed_to_spin` key, never the rate-limit toast.
+   The host can still spin immediately afterwards (the rejected
+   guest tap doesn't burn the room cooldown).
 ```
 
 ## 6. 360 px width audit (B7)
