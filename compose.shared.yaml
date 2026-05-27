@@ -13,19 +13,26 @@
 #     from the public internet, only from the host's reverse proxy.
 #   * `caddy` is disabled (the existing reverse proxy handles TLS).
 #   * `redis` keeps its localhost-only bind from the dev profile.
+#
+# The `!override` tag is critical — without it, Compose APPENDS the
+# host bindings here to the base file's "8000:8000" / "5173:5173" /
+# "6379:6379" entries instead of replacing them, and the containers
+# end up bound on both 0.0.0.0 and 127.0.0.1. The double bind
+# defeats the security intent and conflicts with any other service
+# already on those ports on the host.
 
 services:
   api:
-    ports:
-      - "127.0.0.1:8000:8000"
+    ports: !override
+      - "127.0.0.1:8800:8000"
 
   webapp:
-    ports:
-      - "127.0.0.1:5173:5173"
+    ports: !override
+      - "127.0.0.1:5800:5173"
 
   redis:
-    ports:
-      - "127.0.0.1:6379:6379"
+    ports: !override
+      - "127.0.0.1:6800:6379"
 
   # Disable the bundled Caddy — the host's existing reverse proxy
   # is doing TLS termination. `replicas: 0` keeps the service
