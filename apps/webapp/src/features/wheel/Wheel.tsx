@@ -6,6 +6,7 @@ import { audio } from "@/audio";
 import { cn } from "@/lib/cn";
 import { haptics } from "@/lib/haptics";
 
+import { isHubInteractive } from "./hubLogic";
 import { segmentUnderPointer } from "./spinMath";
 import { type SegmentDef, type SpinResult, type WheelState } from "./types";
 import { WHEEL_PALETTE } from "../../../tailwind.config";
@@ -189,7 +190,11 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
   }, [state, spin, rotation, segments.length]);
 
   const segmentCount = segments.length;
-  const canSpin = state === "idle" && segmentCount >= 2;
+  const canSpin = isHubInteractive({
+    state,
+    segmentCount,
+    hasHandler: onSpinClick !== undefined,
+  });
 
   return (
     <div className={cn("relative w-full aspect-square", className)}>
@@ -258,7 +263,7 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
         </g>
 
         <g
-          onClick={canSpin && onSpinClick !== undefined ? onSpinClick : undefined}
+          onClick={canSpin ? onSpinClick : undefined}
           style={{ cursor: canSpin ? "pointer" : "default" }}
           className={canSpin ? "animate-spinner-breath" : undefined}
           aria-hidden={!canSpin}

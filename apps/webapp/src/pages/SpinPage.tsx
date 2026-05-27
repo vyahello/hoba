@@ -142,7 +142,10 @@ export function SpinPage(): JSX.Element {
   }
 
   function handleSpin(): void {
-    if (state !== "idle" || wheel === undefined) return;
+    // Allow re-spin directly from `settled` (the hub stays tappable after
+    // a result lands per hubLogic). Only block while the animation is
+    // already mid-flight.
+    if (state === "spinning" || wheel === undefined) return;
     // Pass the wheel's current rotation so the new spin always travels
     // forward at least MIN_FULL_ROTATIONS revolutions — fixes the bug
     // where the second spin barely moved / the third reversed direction.
