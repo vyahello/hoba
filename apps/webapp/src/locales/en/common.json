@@ -21,5 +21,11 @@
   },
   "not_found": {
     "wheel": "Wheel not found."
+  },
+  "crash": {
+    "title": "Something went sideways",
+    "description": "Reload the app to try again. If it keeps happening, screenshot the details below.",
+    "reload": "Reload",
+    "details_label": "Technical details"
   }
 }
