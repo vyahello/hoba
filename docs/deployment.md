@@ -97,6 +97,16 @@ openssl rand -hex 32
 
 ## 4. Boot the prod profile
 
+> **Two flavours** — pick one before running anything.
+>
+> - **Dedicated box (default):** Caddy bundled inside Hoba takes 80/443
+>   and auto-issues a Let's Encrypt cert. Use the command below as-is.
+> - **Shared box (your VPS already runs another site on 80/443):** Hoba's
+>   containers bind to 127.0.0.1 only; the host's existing nginx
+>   terminates TLS and reverse-proxies the Hoba subdomain. See
+>   [§4b. Shared-VPS deploy](#4b-shared-vps-deploy) for the override
+>   command + nginx config.
+
 ```bash
 docker compose --profile prod up -d
 docker compose ps
@@ -119,6 +129,61 @@ Tail logs to watch the boot:
 ```bash
 docker compose logs -f caddy api bot
 ```
+
+## 4b. Shared-VPS deploy
+
+If the box already runs another site on 80/443 (e.g. cyberalertx.com on
+an existing nginx), let that nginx be Hoba's TLS terminator too.
+
+**One-time host prep** (existing nginx must support TLS already):
+
+```bash
+# 1. DNS A-record for hoba.<your-domain> → VPS public IP. Verify:
+dig +short hoba.<your-domain>
+
+# 2. Issue a Let's Encrypt cert for the subdomain
+sudo certbot --nginx -d hoba.<your-domain>
+
+# 3. Drop in Hoba's nginx server block
+sudo cp ~/hoba/infra/nginx/hoba.conf /etc/nginx/sites-available/hoba
+sudo sed -i 's/hoba\.example\.com/hoba.<your-domain>/g' /etc/nginx/sites-available/hoba
+sudo ln -s /etc/nginx/sites-available/hoba /etc/nginx/sites-enabled/hoba
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+**Boot Hoba with the shared override:**
+
+```bash
+cd ~/hoba
+docker compose -f docker-compose.yml -f compose.shared.yaml up -d
+docker compose ps
+```
+
+The override:
+- Binds `api` → `127.0.0.1:8000`, `webapp` → `127.0.0.1:5173`,
+  `redis` → `127.0.0.1:6379` (not reachable from the public
+  internet — only from the host).
+- Disables the bundled Caddy (your nginx is doing TLS termination).
+
+In `.env` for this flavour:
+
+```ini
+WEBAPP_URL=https://hoba.<your-domain>
+# DOMAIN is unused under shared-VPS — Caddy isn't running.
+```
+
+Verify the chain works:
+
+```bash
+# From your laptop:
+curl -fsI https://hoba.<your-domain>/api/v1/openapi.json
+# → HTTP/2 200, server: nginx, then proxied to uvicorn
+```
+
+If you get a 502: the Hoba containers aren't listening on the expected
+loopback ports. `docker compose ps` to confirm `127.0.0.1:8000` and
+`127.0.0.1:5173` are bound; `docker compose logs api webapp --tail 50`
+for the trace.
 
 ## 5. Smoke test
 

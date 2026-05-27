@@ -1,0 +1,34 @@
+# Production override for SHARED VPS deployment.
+#
+# Use this when the box already has a public-facing reverse proxy
+# (nginx, Caddy, Traefik) terminating TLS for other sites, and you
+# want Hoba to slot in behind it on a subdomain rather than taking
+# ports 80/443.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f compose.shared.yaml up -d
+#
+# Effects:
+#   * `api` + `webapp` ports bind to 127.0.0.1 only — not reachable
+#     from the public internet, only from the host's reverse proxy.
+#   * `caddy` is disabled (the existing reverse proxy handles TLS).
+#   * `redis` keeps its localhost-only bind from the dev profile.
+
+services:
+  api:
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  webapp:
+    ports:
+      - "127.0.0.1:5173:5173"
+
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  # Disable the bundled Caddy — the host's existing reverse proxy
+  # is doing TLS termination. `replicas: 0` keeps the service
+  # defined (so compose validates) but never starts it.
+  caddy:
+    profiles: ["disabled"]
