@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from hoba_api.models.participant import Participant
 from hoba_api.models.question import Question
 from hoba_api.models.room import (
+    GAME_MODES,
     SPIN_POLICIES,
     SUGGESTION_POLICIES,
     Room,
@@ -87,11 +88,15 @@ async def create_room(
     question_text: str,
     segments: list[SegmentDraft],
     title: str | None = None,
-    spin_policy: str = "anyone",
+    spin_policy: str | None = None,
     suggestion_policy: str = "off",
+    game_mode: str = "classic",
 ) -> Room:
     """Create a room + its first question + segments, marking host as Participant."""
-    if spin_policy not in SPIN_POLICIES:
+    if game_mode not in GAME_MODES:
+        raise RoomServiceError("bad_game_mode")
+    effective_spin_policy = _derive_spin_policy(spin_policy, game_mode)
+    if effective_spin_policy not in SPIN_POLICIES:
         raise RoomServiceError("bad_spin_policy")
     if suggestion_policy not in SUGGESTION_POLICIES:
         raise RoomServiceError("bad_suggestion_policy")
@@ -106,7 +111,8 @@ async def create_room(
         host_id=host_id,
         title=title,
         status="lobby",
-        spin_policy=spin_policy,
+        game_mode=game_mode,
+        spin_policy=effective_spin_policy,
         suggestion_policy=suggestion_policy,
     )
     session.add(room)

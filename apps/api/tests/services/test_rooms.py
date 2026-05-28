@@ -191,3 +191,71 @@ def test_derive_spin_policy_default_for_chaos() -> None:
 
 def test_derive_spin_policy_default_for_rigged() -> None:
     assert _derive_spin_policy(None, "rigged") == "host_only"
+
+
+# --- create_room with game_mode --------------------------------------------
+
+
+async def test_create_room_with_game_mode_persists_field(db: AsyncSession) -> None:
+    host_id = await _make_user(db, tg_id=101)
+    room = await create_room(
+        db,
+        host_id=host_id,
+        question_text="Q?",
+        segments=_drafts(2),
+        game_mode="elimination",
+    )
+    assert room.game_mode == "elimination"
+
+
+async def test_create_room_punishment_defaults_to_turn_based(db: AsyncSession) -> None:
+    host_id = await _make_user(db, tg_id=102)
+    room = await create_room(
+        db,
+        host_id=host_id,
+        question_text="Q?",
+        segments=_drafts(2),
+        game_mode="punishment",
+    )
+    assert room.spin_policy == "turn_based"
+
+
+async def test_create_room_explicit_spin_policy_wins_over_mode(
+    db: AsyncSession,
+) -> None:
+    host_id = await _make_user(db, tg_id=103)
+    room = await create_room(
+        db,
+        host_id=host_id,
+        question_text="Q?",
+        segments=_drafts(2),
+        game_mode="punishment",
+        spin_policy="anyone",
+    )
+    assert room.spin_policy == "anyone"
+    assert room.game_mode == "punishment"
+
+
+async def test_create_room_classic_default_unchanged(db: AsyncSession) -> None:
+    host_id = await _make_user(db, tg_id=104)
+    room = await create_room(
+        db,
+        host_id=host_id,
+        question_text="Q?",
+        segments=_drafts(2),
+    )
+    assert room.game_mode == "classic"
+    assert room.spin_policy == "anyone"
+
+
+async def test_create_room_rejects_unknown_game_mode(db: AsyncSession) -> None:
+    host_id = await _make_user(db, tg_id=105)
+    with pytest.raises(RoomServiceError) as exc:
+        await create_room(
+            db,
+            host_id=host_id,
+            question_text="Q?",
+            segments=_drafts(2),
+            game_mode="not_a_mode",
+        )
+    assert exc.value.code == "bad_game_mode"
