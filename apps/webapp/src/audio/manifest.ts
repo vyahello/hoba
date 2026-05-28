@@ -22,7 +22,7 @@ export const AUDIO_NAMES = [
 
 export type AudioName = (typeof AUDIO_NAMES)[number];
 
-export interface AudioDef {
+interface AudioDef {
   src: string;
   /** Relative volume in [0, 1]; multiplied by master volume at playback. */
   volume?: number;

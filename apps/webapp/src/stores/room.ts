@@ -247,11 +247,6 @@ export const useRoomStore = create<RoomStore>((_set, get) => ({
 
 // --- Lifecycle helpers ---------------------------------------------------
 
-export function disconnectRoomSocket(): void {
-  socket?.disconnect();
-  socket = null;
-}
-
 const PRESENCE_PING_INTERVAL_MS = 20_000;
 let presenceTimer: number | null = null;
 

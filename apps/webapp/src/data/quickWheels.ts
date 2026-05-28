@@ -7,7 +7,7 @@
  * namespace (`quick_segments.<wheel_id>.<segment_key>`).
  */
 
-export interface QuickWheelSegmentDef {
+interface QuickWheelSegmentDef {
   /** Slug used to build the i18n key — must be unique within the wheel. */
   key: string;
   emoji?: string;

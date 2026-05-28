@@ -104,7 +104,7 @@ export function parseRoomDeepLink(startParam: string): string | undefined {
   return code.length > 0 ? code.toUpperCase() : undefined;
 }
 
-export interface RoomInviteLinkOptions {
+interface RoomInviteLinkOptions {
   roomCode: string;
   botUsername: string;
   /**
