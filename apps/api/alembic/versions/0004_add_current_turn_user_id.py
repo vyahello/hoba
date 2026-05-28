@@ -22,17 +22,21 @@ depends_on: Sequence[str] | str | None = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table("rooms") as batch_op:
-        batch_op.add_column(
-            sa.Column(
-                "current_turn_user_id",
-                sa.Integer(),
-                sa.ForeignKey("users.id", ondelete="SET NULL"),
-                nullable=True,
-            ),
-        )
+    # SQLite supports `ALTER TABLE ADD COLUMN` with an inline FK reference
+    # natively; using `op.add_column` directly avoids the batch_alter_table
+    # path which requires *named* constraints to be copied to the rebuilt
+    # table (see alembic/operations/batch.py — raises
+    # `ValueError: Constraint must have a name` for anonymous FKs).
+    op.add_column(
+        "rooms",
+        sa.Column(
+            "current_turn_user_id",
+            sa.Integer(),
+            sa.ForeignKey("users.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+    )
 
 
 def downgrade() -> None:
-    with op.batch_alter_table("rooms") as batch_op:
-        batch_op.drop_column("current_turn_user_id")
+    op.drop_column("rooms", "current_turn_user_id")
