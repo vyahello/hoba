@@ -26,6 +26,13 @@
 
 services:
   api:
+    # Override the Dockerfile's dev CMD (which uses `--reload`).
+    # On a shared-VPS deploy the source tree isn't a live HMR target —
+    # `--reload` makes uvicorn's watchfiles scan the in-container
+    # `.venv` (~tens of thousands of files) and triggers a restart
+    # loop that prevents the server from ever serving a single request
+    # (502 Bad Gateway visible at the host nginx).
+    command: ["uvicorn", "hoba_api.main:asgi", "--host", "0.0.0.0", "--port", "8000"]
     ports: !override
       - "127.0.0.1:8800:8000"
 
