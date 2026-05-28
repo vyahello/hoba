@@ -11,7 +11,6 @@ import { EmptyState } from "@/components/ds/EmptyState";
 import { HobaWord } from "@/components/ds/HobaWord";
 import { IconButton } from "@/components/ds/IconButton";
 import { Input, Textarea } from "@/components/ds/Input";
-import { Modal } from "@/components/ds/Modal";
 import { QuickWheelCard } from "@/components/ds/QuickWheelCard";
 import { RealtimeIndicator } from "@/components/ds/RealtimeIndicator";
 import { ResultBanner } from "@/components/ds/ResultBanner";
@@ -59,7 +58,6 @@ export function DevDSPage(): JSX.Element {
   const { t, i18n } = useTranslation(["dev", "common"]);
   const currentLocale = (i18n.resolvedLanguage ?? "en") as Locale;
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [segments, setSegments] = useState([
     { label: "Pizza", emoji: "🍕", seed: 0 },
@@ -334,14 +332,6 @@ export function DevDSPage(): JSX.Element {
             >
               Open Sheet
             </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setModalOpen(true);
-              }}
-            >
-              Open Modal
-            </Button>
           </Row>
           <Sheet
             open={sheetOpen}
@@ -359,28 +349,6 @@ export function DevDSPage(): JSX.Element {
               <SegmentChip label="Burger" emoji="🍔" colorSeed={2} editable />
             </div>
           </Sheet>
-          <Modal
-            open={modalOpen}
-            onClose={() => {
-              setModalOpen(false);
-            }}
-            title="Close this room?"
-            description="All guests will be disconnected. This can't be undone."
-            primaryAction={{
-              label: "Close room",
-              destructive: true,
-              onClick: () => {
-                setModalOpen(false);
-                toast({ title: "Room closed", intent: "warning" });
-              },
-            }}
-            secondaryAction={{
-              label: "Cancel",
-              onClick: () => {
-                setModalOpen(false);
-              },
-            }}
-          />
         </Section>
 
         <Section title="Result banner" id="result">
