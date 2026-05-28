@@ -13,6 +13,7 @@ import { RealtimeIndicator } from "@/components/ds/RealtimeIndicator";
 import { ResultBanner } from "@/components/ds/ResultBanner";
 import { RoomCodePill } from "@/components/ds/RoomCodePill";
 import { Skeleton } from "@/components/ds/Skeleton";
+import { GameModeBadge } from "@/components/room/GameModeBadge";
 import { FlyingReactions } from "@/components/room/FlyingReactions";
 import { ReactionsBar } from "@/components/room/ReactionsBar";
 import { RoomSettingsSheet } from "@/components/room/RoomSettingsSheet";
@@ -239,6 +240,7 @@ export function RoomPage(): JSX.Element {
 
       <section className="px-4 pt-3 flex items-center gap-3">
         <RoomCodePill code={snapshot.room.code} />
+        <GameModeBadge mode={snapshot.room.game_mode} />
         <IconButton
           aria-label={t("room:actions.share")}
           variant="filled"
