@@ -40,7 +40,41 @@ No rule-8 violations. No inline tags require migration or deletion.
 _Append entries as fixes land. Format:_
 _`path:lineRange — observation — recommendation — commit <hash>`._
 
+### Category: Hardcoded English in .tsx
+
+_No fixes needed. Stage A acceptance grep clean across user-facing pages/features/components/layouts. Two false positives (event.key match + JSDoc reference); DevDSPage exempted per below._
+
+### Category: Debug console.* leftovers
+
+_No fixes needed. Single match at `apps/webapp/src/main.tsx:19` is a `console.warn` inside the try/catch that wraps Telegram SDK init — legitimate error-path fallback, intentional. No debug `console.log` / `console.debug` / `console.info` leftovers found in webapp source._
+
+### Category: `// removed` / backcompat shims
+
+_Zero matches. Rule from CLAUDE.md system prompt ("Avoid backwards-compatibility hacks") is being respected._
+
+### Category: Stale comments referencing closed work
+
+- `apps/webapp/src/features/rooms/permissions.ts:11-15` — doc comment referenced commit `7db1b0a` as "the entire point" of the check. Reference removed; the constraint (tg_id vs user_id are different number spaces) is now stated without naming the fix-commit. Commit `d98fc0d`.
+- `apps/webapp/src/components/room/RoomSettingsSheet.tsx:16-23` — doc comment claimed "server-side broadcast of `room:updated` is queued for a later stage", but that broadcast shipped in Stage B verification-pass fix (commit `3f4dbeb`). Comment updated to reflect the broadcast being live. Commit `d98fc0d`.
+- `apps/api/src/hoba_api/schemas/room.py:102-104` — comment said "see docs/roadmap.md Stage B for the host-toggle" implying the toggle was still upcoming work. Stage B is closed and the toggle shipped; comment now references the actual `RoomSettingsSheet` component. Commit `d98fc0d`.
+
+### Category: Half-implementations
+
+_No fixes needed. Frontend `return null` patterns (6 sites) all serve legitimate purposes: SSR portal guards, side-effect-only components (`ConfettiBurst`), and conditional-render no-op cases. Backend handler branches all carry action bodies — no empty `pass`-only branches found in `realtime/handlers.py`. Scaffolds that aren't yet wired (e.g. `LibraryPage` stub for Phase 9, `disconnectRoomSocket` lifecycle helper) are intentional pre-work or designed-but-not-yet-needed API surface, surfaced separately in the "needs owner decision" section above._
+
 ## Lane 3 — Codebase findings (needs owner decision)
 
 _Append uncertain findings. Format:_
 _`path:lineRange — observation — recommendation`._
+
+- `apps/webapp/src/pages/DevDSPage.tsx:65-417` — design-system showcase route at `/dev/ds` contains ~40+ hardcoded English literals (sample labels like "Pizza"/"Sushi", toast titles like "Saved"/"Heads up"/"Room created", aria-labels like "Settings"/"Share"/"Close", segment names). Whether CLAUDE.md rule "Every user-facing string must go through t()" applies to dev-only routes is ambiguous. The page is reachable in production builds but is not linked from the main app shell — it's a dev tool. Recommendation: explicitly exempt `/dev/ds` from the i18n rule (add a one-line clarification in CLAUDE.md rule 5 or in `docs/development.md`), OR localize the showcase strings if you want strict rule adherence. My pick: exempt — showcases benefit from stable English labels and the strings are fixtures simulating user input rather than UI copy.
+
+### Category: Dead exports
+
+_Scope note: the frontend has ~133 top-level exports across `features/`, `lib/`, `components/`, `pages/`, `layouts/`, `stores/`, `providers/`, `audio/`, `data/`. Exhaustive cross-reference is beyond this cleanup pass's inline budget; the entries below are spot-checks from smaller dirs. A complete dead-export audit could be a future micro-task (~30 min with `knip` or `ts-prune`)._
+
+- `apps/webapp/src/stores/room.ts:250` (`disconnectRoomSocket`) — zero static callers across `apps/webapp/src` including tests. Sits in a "Lifecycle helpers" section next to alive `startPresenceLoop`/`stopPresenceLoop`, suggesting intentional API surface. Recommendation: either wire a caller (e.g. on logout / on auth failure handler) or delete. Not auto-fixed because the surrounding section reads as designed-but-not-yet-needed surface.
+- `apps/webapp/src/audio/manifest.ts:10` (`AUDIO_NAMES`), `apps/webapp/src/audio/manifest.ts:25` (`AudioDef`) — exported but consumed only internally inside `manifest.ts` (to derive `AudioName` and to type `AUDIO_MANIFEST`'s value shape). Recommendation: drop the `export` keyword to shrink the module's public surface. Not auto-fixed because it's a 2-line refactor with no behavioural impact and the call is opinionated.
+- `apps/webapp/src/data/quickWheels.ts:10` (`QuickWheelSegmentDef`) — same pattern: exported, consumed only inside `quickWheels.ts` as the type of `QuickWheel.segments`. Recommendation: same as above (drop `export`).
+- `apps/webapp/src/lib/startParam.ts:107` (`RoomInviteLinkOptions`) — exported as the parameter type of `buildRoomInviteLink` but no external imports. Recommendation: keep export if the API contract should expose the param type; otherwise drop. Borderline.
+- `apps/webapp/src/components/ds/Modal.tsx` (`Modal`, `ModalAction`, `ModalProps`) — only imported by `DevDSPage` (the showcase). Production code uses `Sheet` per CLAUDE.md rule 4 ("Sheets, not modals"). Modal is alive via the showcase, but consider whether the DS should ship a component that's deliberately not used in production. Owner call.
