@@ -5,10 +5,13 @@
 > you control (or a subdomain you can point) is required for Caddy's
 > auto-TLS via Let's Encrypt.
 
-This doc bakes in the **dev-server-as-prod** choice for the soft launch
-(per `docs/TODO.md` Stage G). The webapp container runs `pnpm dev` behind
-Caddy. Acceptable for ≤ 20 simultaneous users; the static-build
-replacement is filed for Stage G.
+The webapp container is a **multi-stage build** (commit `2050774`,
+pulled forward from Stage G during the Stage C deploy chain when the
+Vite-dev-in-prod path proved unreliable): a Node builder stage runs
+`pnpm build` to emit the static bundle, then an `nginx:1.27-alpine`
+runtime stage serves it with SPA fallback + immutable-asset cache
+headers (see `apps/webapp/nginx.conf`). The dev workflow is unchanged
+— `docker-compose.yml` pins the dev target explicitly for local use.
 
 ---
 
