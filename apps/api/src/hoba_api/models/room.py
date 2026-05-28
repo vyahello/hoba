@@ -68,10 +68,14 @@ class Room(Base, TimestampMixin):
     )
     is_locked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_anonymous: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    current_turn_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    host: Mapped[User] = relationship(lazy="joined")
+    host: Mapped[User] = relationship(foreign_keys=[host_id], lazy="joined")
     participants: Mapped[list[Participant]] = relationship(
         back_populates="room",
         cascade="all, delete-orphan",
