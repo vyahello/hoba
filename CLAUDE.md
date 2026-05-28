@@ -119,7 +119,7 @@ Production deploy hit a shared VPS that already ran an unrelated site on its pub
 - BotFather (manual, owner-side) — name `Hoba!`, About + Description in EN, command list, profile pic, Direct Link Mini App `play` URL, Privacy Policy URL — all set against `https://hobagame.duckdns.org/`.
 
 ## Languages (locked)
-EN + UK only. Brand is locale-aware per spec §0 and rule 5 below — `Hoba!` in EN/code/files/logo, `Хоба!` in UK in-app UI only. **Every user-facing string must go through `t()`. Hardcoded English in `.tsx` is a bug.**
+EN + UK only. Brand is locale-aware per spec §0 and rule 5 below — `Hoba!` in EN/code/files/logo, `Хоба!` in UK in-app UI only. **Every user-facing string must go through `t()`. Hardcoded English in `.tsx` is a bug.** *Exception:* `apps/webapp/src/pages/DevDSPage.tsx` (the design-system showcase at `/dev/ds`) is exempt — its strings are fixtures simulating user input, not production UI copy.
 
 ## Non-negotiable rules
 
