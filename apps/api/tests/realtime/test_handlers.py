@@ -25,6 +25,7 @@ from hoba_api.auth.initdata import sign_init_data
 from hoba_api.realtime.handlers import (
     REACTIONS_PER_WINDOW,
     SPIN_RATE_LIMIT_MAX,
+    _emit_settled,
     _extract_init_data,
     _spin_cooldown_key,
     register_handlers,
@@ -325,6 +326,105 @@ async def test_spin_trigger_host_emits_announced_started(
     assert "spin_id" in payload
     assert "duration_ms" in payload
     assert "result_segment_id" in payload
+
+
+# ---------- turn_based: _emit_settled cursor advance + room:updated ------
+
+
+async def _create_turn_based_room_with_guest(db: Any, host_id: int, guest_id: int) -> str:
+    """Create a turn_based room in active status with cursor=host. Returns code."""
+    from hoba_api.models.participant import Participant
+    from hoba_api.redis_client import presence_set
+
+    room = await create_room(
+        db,
+        host_id=host_id,
+        question_text="Q?",
+        segments=[
+            SegmentDraft(label="a", color_seed=0, weight=1),
+            SegmentDraft(label="b", color_seed=1, weight=1),
+        ],
+        spin_policy="turn_based",
+    )
+    db.add(Participant(room_id=room.id, user_id=guest_id, role="guest"))
+    await db.flush()
+    room.status = "active"
+    room.current_turn_user_id = host_id
+    await db.commit()
+    await presence_set(room.id, host_id)
+    await presence_set(room.id, guest_id)
+    return room.code
+
+
+@pytest.mark.asyncio
+async def test_emit_settled_turn_based_advances_cursor_and_broadcasts(
+    sio: FakeSocketIO, db: Any,
+) -> None:
+    """After spin:settled, advance_turn fires and room:updated emits the new cursor."""
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=400))
+    guest = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=401))
+    code = await _create_turn_based_room_with_guest(db, host.id, guest.id)
+    # Look up the room.id for direct _emit_settled call.
+    from hoba_api.services.rooms import get_room_by_code
+
+    room = await get_room_by_code(db, code)
+    assert room is not None
+    sio.emitted.clear()
+
+    # duration_ms=0 keeps the test fast — asyncio.sleep(0) yields immediately.
+    await _emit_settled(sio, code, room.id, spin_id=1, result_segment_id=1, duration_ms=0)  # type: ignore[arg-type]
+
+    settled = sio.events_named("spin:settled")
+    assert len(settled) == 1
+    updates = sio.events_named("room:updated")
+    assert len(updates) == 1
+    assert updates[0][1] == {"patch": {"current_turn_user_id": guest.id}}
+    assert updates[0][2].get("room") == code
+    assert updates[0][2].get("namespace") == NAMESPACE
+
+
+@pytest.mark.asyncio
+async def test_spin_trigger_turn_based_rejects_off_turn_user(
+    sio: FakeSocketIO, db: Any,
+) -> None:
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=410))
+    guest = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=411))
+    code = await _create_turn_based_room_with_guest(db, host.id, guest.id)
+
+    await _connect(sio, "sid-grb", user_id=411)
+    await sio.call("room:join", "sid-grb", {"code": code})
+    sio.emitted.clear()
+
+    await sio.call("spin:trigger", "sid-grb", {})
+    errors = sio.events_named("error")
+    assert any(e[1].get("code") == "not_allowed_to_spin" for e in errors)
+    assert sio.events_named("spin:started") == []
+
+
+@pytest.mark.asyncio
+async def test_emit_settled_skips_advance_when_policy_changed_mid_spin(
+    sio: FakeSocketIO, db: Any,
+) -> None:
+    """If host PATCHed away from turn_based during the spin, advance is skipped."""
+    from hoba_api.services.rooms import get_room_by_code
+
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=420))
+    guest = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=421))
+    code = await _create_turn_based_room_with_guest(db, host.id, guest.id)
+    room = await get_room_by_code(db, code)
+    assert room is not None
+    # Simulate policy flip while the settle timer is pending — happens before
+    # _emit_settled re-fetches the room.
+    room.spin_policy = "anyone"
+    room.current_turn_user_id = None
+    await db.commit()
+    sio.emitted.clear()
+
+    await _emit_settled(sio, code, room.id, spin_id=2, result_segment_id=1, duration_ms=0)  # type: ignore[arg-type]
+
+    assert len(sio.events_named("spin:settled")) == 1
+    # No room:updated for cursor — policy is no longer turn_based.
+    assert sio.events_named("room:updated") == []
 
 
 @pytest.mark.asyncio

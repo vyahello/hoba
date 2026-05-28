@@ -21,6 +21,7 @@ from hoba_api.auth.initdata import (
 )
 from hoba_api.config import settings
 from hoba_api.db import SessionLocal
+from hoba_api.models.room import Room
 from hoba_api.realtime.server import NAMESPACE
 from hoba_api.redis_client import (
     cooldown_take,
@@ -31,7 +32,7 @@ from hoba_api.redis_client import (
 from hoba_api.services.participants import join_room, refresh_presence
 from hoba_api.services.room_state import build_room_state
 from hoba_api.services.rooms import RoomServiceError, get_room_by_code
-from hoba_api.services.spins import trigger_spin, user_can_spin
+from hoba_api.services.spins import advance_turn, trigger_spin, user_can_spin
 from hoba_api.services.users import cache_user_after_commit, resolve_telegram_user
 
 log = structlog.get_logger("hoba_api.realtime")
@@ -107,6 +108,7 @@ async def _authenticate(environ: dict[str, Any], auth: dict[str, Any] | None) ->
 async def _emit_settled(
     sio: socketio.AsyncServer,
     room_code: str,
+    room_id: int,
     spin_id: int,
     result_segment_id: int,
     duration_ms: int,
@@ -119,6 +121,21 @@ async def _emit_settled(
             "result_segment_id": result_segment_id,
             "mode_aftereffects": {},
         },
+        room=room_code,
+        namespace=NAMESPACE,
+    )
+    # Turn-based: advance the cursor and broadcast the new value so all
+    # clients see whose turn it is now. Re-fetch the room because policy
+    # may have changed during the spin animation; skip advance if so.
+    async with SessionLocal() as session:
+        room = await session.get(Room, room_id)
+        if room is None or room.spin_policy != "turn_based":
+            return
+        new_cursor = await advance_turn(session, room)
+        await session.commit()
+    await sio.emit(
+        "room:updated",
+        {"patch": {"current_turn_user_id": new_cursor}},
         room=room_code,
         namespace=NAMESPACE,
     )
@@ -316,7 +333,9 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
         await asyncio.sleep(SPIN_ANNOUNCE_DELAY_SECONDS)
         await sio.emit("spin:started", spin_payload, room=room_code, namespace=NAMESPACE)
         _schedule(
-            _emit_settled(sio, room_code, spin_id, result_segment_id, duration_ms),
+            _emit_settled(
+                sio, room_code, room_id, spin_id, result_segment_id, duration_ms,
+            ),
         )
 
     @sio.on("reaction:send", namespace=NAMESPACE)
