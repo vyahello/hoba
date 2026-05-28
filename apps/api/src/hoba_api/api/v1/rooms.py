@@ -124,19 +124,23 @@ async def patch_room_endpoint(
             status_code=status.HTTP_404_NOT_FOUND, detail="room_not_found",
         )
     patch_dict = payload.model_dump(exclude_unset=True)
+    cursor_before = room.current_turn_user_id
     try:
         await update_room(db, room, user_id=user.id, patch=patch_dict)
     except RoomServiceError as exc:
         raise _service_error_to_http(exc) from exc
     await db.commit()
     # Broadcast the patch so connected guests' snapshots catch up
-    # without a manual refresh — without this, a guest hitting SPIN
-    # after the host flips spin_policy gets `not_allowed_to_spin`
-    # instead of seeing the SPIN button disappear from their UI.
-    if patch_dict:
+    # without a manual refresh. Also include current_turn_user_id when
+    # the service-layer side-effect changed it (spin_policy flip to/from
+    # turn_based seeds or clears the cursor — guests need both fields).
+    broadcast_patch: dict[str, object] = dict(patch_dict)
+    if room.current_turn_user_id != cursor_before:
+        broadcast_patch["current_turn_user_id"] = room.current_turn_user_id
+    if broadcast_patch:
         await sio.emit(
             "room:updated",
-            {"patch": patch_dict},
+            {"patch": broadcast_patch},
             room=room.code,
             namespace=NAMESPACE,
         )

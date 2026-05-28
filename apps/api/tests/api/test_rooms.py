@@ -168,3 +168,50 @@ def test_post_room_explicit_spin_policy_wins_over_mode(
     body = resp.json()
     assert body["room"]["game_mode"] == "punishment"
     assert body["room"]["spin_policy"] == "anyone"
+
+
+def test_patch_room_to_turn_based_active_broadcasts_cursor(
+    client: TestClient,
+    init_data: str,
+    captured_sio_emits: list[EmittedSioCall],
+) -> None:
+    """When host flips spin_policy to turn_based on an active room, the
+    `room:updated` broadcast must carry BOTH spin_policy AND the new
+    current_turn_user_id so guests see both updates without reconnect."""
+    headers = {HEADER: init_data}
+    create = client.post("/api/v1/rooms", json=_payload(), headers=headers)
+    assert create.status_code == 201, create.text
+    body = create.json()
+    code = body["room"]["code"]
+    host_id = body["room"]["host_id"]
+
+    # Trip the room into active status directly (simpler than running a
+    # real spin through the WS handler — we're testing the broadcast
+    # logic, not the lobby→active transition).
+    import asyncio
+
+    from hoba_api.db import SessionLocal
+    from hoba_api.services.rooms import get_room_by_code
+
+    async def set_active() -> None:
+        async with SessionLocal() as s:
+            room = await get_room_by_code(s, code)
+            assert room is not None
+            room.status = "active"
+            await s.commit()
+
+    asyncio.get_event_loop().run_until_complete(set_active())
+
+    captured_sio_emits.clear()
+    patch = client.patch(
+        f"/api/v1/rooms/{code}",
+        json={"spin_policy": "turn_based"},
+        headers=headers,
+    )
+    assert patch.status_code == 200, patch.text
+
+    updates = [e for e in captured_sio_emits if e[0] == "room:updated"]
+    assert len(updates) == 1, "expected exactly one room:updated"
+    payload = updates[0][1]["patch"]
+    assert payload["spin_policy"] == "turn_based"
+    assert payload["current_turn_user_id"] == host_id
