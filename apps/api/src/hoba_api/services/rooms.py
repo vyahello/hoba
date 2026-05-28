@@ -172,10 +172,26 @@ async def update_room(
         "is_locked",
         "game_mode",
     }
+    new_spin_policy = patch.get("spin_policy") if "spin_policy" in patch else None
     for key, value in patch.items():
         if key not in allowed:
             continue
         setattr(room, key, value)
+
+    # Cursor lifecycle: only meaningful for turn_based.
+    # - PATCH away from turn_based → clear cursor.
+    # - PATCH to turn_based while status=active → treat as fresh
+    #   lobby→active and seed cursor with host_id.
+    # - PATCH to turn_based while status=lobby → leave cursor null;
+    #   trigger_spin's first-spin path seeds it on lobby→active.
+    # - game_mode PATCH alone does NOT touch the cursor (stale cursor
+    #   on the same participant set is still valid).
+    if new_spin_policy is not None:
+        if new_spin_policy != "turn_based":
+            room.current_turn_user_id = None
+        elif room.status == "active" and room.current_turn_user_id is None:
+            room.current_turn_user_id = room.host_id
+
     return room
 
 

@@ -160,6 +160,79 @@ async def test_update_room_host_only(db: AsyncSession) -> None:
     assert room.spin_policy == "anyone"
 
 
+# --- update_room cursor lifecycle ------------------------------------------
+
+
+async def test_update_room_to_turn_based_while_active_sets_cursor_to_host(
+    db: AsyncSession,
+) -> None:
+    host_id = await _make_user(db, tg_id=201)
+    room = await create_room(
+        db, host_id=host_id, question_text="Q?", segments=_drafts(2),
+        spin_policy="anyone",
+    )
+    room.status = "active"
+    await db.flush()
+    assert room.current_turn_user_id is None
+    await update_room(
+        db, room, user_id=host_id, patch={"spin_policy": "turn_based"},
+    )
+    assert room.spin_policy == "turn_based"
+    assert room.current_turn_user_id == host_id
+
+
+async def test_update_room_to_turn_based_while_in_lobby_leaves_cursor_null(
+    db: AsyncSession,
+) -> None:
+    host_id = await _make_user(db, tg_id=202)
+    room = await create_room(
+        db, host_id=host_id, question_text="Q?", segments=_drafts(2),
+        spin_policy="anyone",
+    )
+    # status stays "lobby" — first spin will seed cursor on lobby→active.
+    await update_room(
+        db, room, user_id=host_id, patch={"spin_policy": "turn_based"},
+    )
+    assert room.spin_policy == "turn_based"
+    assert room.current_turn_user_id is None
+
+
+async def test_update_room_away_from_turn_based_clears_cursor(
+    db: AsyncSession,
+) -> None:
+    host_id = await _make_user(db, tg_id=203)
+    room = await create_room(
+        db, host_id=host_id, question_text="Q?", segments=_drafts(2),
+        spin_policy="turn_based",
+    )
+    room.status = "active"
+    room.current_turn_user_id = host_id
+    await db.flush()
+    await update_room(
+        db, room, user_id=host_id, patch={"spin_policy": "anyone"},
+    )
+    assert room.spin_policy == "anyone"
+    assert room.current_turn_user_id is None
+
+
+async def test_update_room_game_mode_does_not_touch_cursor(
+    db: AsyncSession,
+) -> None:
+    host_id = await _make_user(db, tg_id=204)
+    room = await create_room(
+        db, host_id=host_id, question_text="Q?", segments=_drafts(2),
+        spin_policy="turn_based",
+    )
+    room.status = "active"
+    room.current_turn_user_id = host_id
+    await db.flush()
+    await update_room(
+        db, room, user_id=host_id, patch={"game_mode": "elimination"},
+    )
+    assert room.game_mode == "elimination"
+    assert room.current_turn_user_id == host_id
+
+
 # --- _derive_spin_policy ----------------------------------------------------
 
 
