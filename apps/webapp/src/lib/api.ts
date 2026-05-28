@@ -135,6 +135,7 @@ export interface RoomCreatePayload {
   title?: string;
   spin_policy?: SpinPolicy;
   suggestion_policy?: SuggestionPolicy;
+  game_mode?: GameMode;
 }
 
 export interface RoomPatchPayload {
