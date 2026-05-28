@@ -27,6 +27,16 @@ async def trigger_spin(
     if room.status == "closed":
         raise RoomServiceError("room_closed")
 
+    # In turn_based rooms, the very first spin (still in lobby) sets the
+    # cursor to host_id so the host can kick things off. After that the
+    # cursor advances on each spin:settled.
+    if (
+        room.spin_policy == "turn_based"
+        and room.status == "lobby"
+        and room.current_turn_user_id is None
+    ):
+        room.current_turn_user_id = room.host_id
+
     if not user_can_spin(room, user_id):
         raise RoomServiceError("not_allowed_to_spin")
 

@@ -180,3 +180,22 @@ def test_user_can_spin_turn_based_cursor_null_denies_everyone() -> None:
 def test_user_can_spin_unknown_policy_denies() -> None:
     room = _make_room("not_a_policy", host_id=1)
     assert user_can_spin(room, user_id=1) is False
+
+
+async def test_trigger_spin_sets_initial_cursor_on_lobby_to_active_turn_based(
+    db: AsyncSession,
+) -> None:
+    """Host's first spin in a turn_based room sets cursor = host_id."""
+    host_id = await _make_user(db, tg_id=51)
+    room = await create_room(
+        db,
+        host_id=host_id,
+        question_text="Q?",
+        segments=_drafts(2),
+        spin_policy="turn_based",
+    )
+    assert room.status == "lobby"
+    assert room.current_turn_user_id is None
+    await trigger_spin(db, room=room, user_id=host_id)
+    assert room.status == "active"
+    assert room.current_turn_user_id == host_id
