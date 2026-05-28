@@ -20,9 +20,12 @@ export function GameModeBadge({
   className,
 }: GameModeBadgeProps): JSX.Element | null {
   const { t } = useTranslation(["room"]);
-  if (!shouldShowBadge(mode)) return null;
+  // getGameModeMeta returns undefined for any mode not in
+  // PICKABLE_GAME_MODES (currently only "rigged"). shouldShowBadge
+  // additionally hides classic — the default has no badge. Both
+  // checks are real type-level information, not defensive fallbacks.
   const meta = getGameModeMeta(mode);
-  if (meta === undefined) return null;
+  if (meta === undefined || !shouldShowBadge(mode)) return null;
   return (
     <span
       className={cn(
