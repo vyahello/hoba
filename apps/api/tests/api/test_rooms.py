@@ -131,3 +131,40 @@ def test_room_creation_cap_is_per_user(
         "/api/v1/rooms", json=_payload(label_a="B0"), headers=headers_user_b,
     )
     assert r.status_code == 201
+
+
+def test_post_room_with_game_mode_field_round_trips(
+    client: TestClient, init_data: str,
+) -> None:
+    payload = {**_payload(), "game_mode": "elimination"}
+    resp = client.post("/api/v1/rooms", json=payload, headers={HEADER: init_data})
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["room"]["game_mode"] == "elimination"
+    # Mode-default derivation: elimination → host_only.
+    assert body["room"]["spin_policy"] == "host_only"
+    # New field surfaces on the snapshot.
+    assert body["room"]["current_turn_user_id"] is None
+
+
+def test_post_room_without_game_mode_defaults_to_classic_anyone(
+    client: TestClient, init_data: str,
+) -> None:
+    resp = client.post(
+        "/api/v1/rooms", json=_payload(), headers={HEADER: init_data},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["room"]["game_mode"] == "classic"
+    assert body["room"]["spin_policy"] == "anyone"
+
+
+def test_post_room_explicit_spin_policy_wins_over_mode(
+    client: TestClient, init_data: str,
+) -> None:
+    payload = {**_payload(), "game_mode": "punishment", "spin_policy": "anyone"}
+    resp = client.post("/api/v1/rooms", json=payload, headers={HEADER: init_data})
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["room"]["game_mode"] == "punishment"
+    assert body["room"]["spin_policy"] == "anyone"
