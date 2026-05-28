@@ -68,21 +68,48 @@ From the roadmap Stage C charter, the questions worth answering:
 
 ---
 
-## Cross-session synthesis (filled in after 2+ sessions)
+## Cross-session synthesis
+
+> **Status: no sessions ran during the Stage C window.** The
+> session log above is empty; the synthesis below reflects that
+> absence, not a finding.
 
 ### What's working
-- ...
+- Unknown — no real-user signal collected. Pre-launch hardening
+  (Stage B) is green on synthetic tests (113 backend / 53 frontend,
+  91 % coverage) and on owner-side real-device verification, but
+  that's not the same as third-party validation.
 
 ### What needs fixing before public launch
-- ...
+- Unknown — the six learning questions at the top of this doc
+  remain unanswered. Specifically: brand-word moment landing,
+  onboarding friction, multiplayer invite path clarity, locale
+  quality (UK), Android + non-iPhone-X device coverage, and slow-
+  network behaviour.
 
 ### Stage D priority signal
-- Which game mode is the strongest pull from friends:
-- Recommended Stage D order:
+- Which game mode is the strongest pull from friends: **no signal**.
+- Recommended Stage D order: defer until Stage C actually produces
+  signal. Falling back to spec order (Elimination → Punishment →
+  Chaos → Rigged) is a guess, not a decision.
 
 ### Stage F/G priorities surfaced
-- ...
+- None surfaced beyond what was already known going into Stage C
+  (the Stage G static-build TODO was pulled forward and resolved
+  in commit `2050774`; no new items).
 
 ### Go / no-go on Phase 7+
-- Decision:
-- Rationale:
+
+- **Decision: NO-GO.**
+- Rationale: Stage C's exit criterion is a verdict grounded in
+  soft-launch evidence. No play sessions were logged, so there is
+  no evidence to ground the verdict. Advancing to Phase 7+ on the
+  strength of pre-launch hardening alone would convert "we believe
+  it works" into "we shipped it" without the intermediate step
+  the roadmap explicitly requires.
+- Required to convert this to a GO: at minimum two play sessions
+  on real devices (mix of iOS + Android, EN + UK speakers),
+  written into the Session log above, with the six learning
+  questions answered. Then re-run this synthesis.
+- Until that happens, Stage C stays open. No Stage D scoping, no
+  Phase 7+ work.
