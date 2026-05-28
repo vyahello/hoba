@@ -17,6 +17,7 @@ import { FlyingReactions } from "@/components/room/FlyingReactions";
 import { ReactionsBar } from "@/components/room/ReactionsBar";
 import { RoomSettingsSheet } from "@/components/room/RoomSettingsSheet";
 import { computeCanSpin, isHost } from "@/features/rooms/permissions";
+import { computeTurnState } from "@/features/rooms/turnState";
 import { Wheel } from "@/features/wheel/Wheel";
 import {
   type SegmentDef,
@@ -152,6 +153,7 @@ export function RoomPage(): JSX.Element {
 
   const canSpin = computeCanSpin(snapshot);
   const callerIsHost = isHost(snapshot);
+  const turnState = computeTurnState(snapshot);
 
   async function handleShare(): Promise<void> {
     if (snapshot === null) return;
@@ -279,9 +281,26 @@ export function RoomPage(): JSX.Element {
               {t("common:actions.spin").toUpperCase()}
             </Button>
           ) : null}
-          {!canSpin && wheelState === "idle" ? (
+          {!canSpin && wheelState === "idle" && turnState.kind === "not_turn_based" ? (
             <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-3">
               {t("room:spin.host_only_hint")}
+            </p>
+          ) : null}
+          {wheelState === "idle" && turnState.kind === "my_turn" ? (
+            <p className="text-center text-sm font-medium text-brand-amber-3 py-3">
+              {t("room:turn.my_turn")}
+            </p>
+          ) : null}
+          {wheelState === "idle" && turnState.kind === "waiting" ? (
+            <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-3">
+              {turnState.whoName !== null
+                ? t("room:turn.waiting_named", { name: turnState.whoName })
+                : t("room:turn.waiting_unnamed")}
+            </p>
+          ) : null}
+          {wheelState === "idle" && turnState.kind === "no_one" ? (
+            <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-3">
+              {t("room:turn.no_one")}
             </p>
           ) : null}
           {wheelState === "spinning" ? (
