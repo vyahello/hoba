@@ -2,15 +2,17 @@
 
 > Operational layer over `docs/spec.md`. The spec is the *what*; this file is the *next-N-stages order of operations*. Both live in the repo; this one rotates as we ship.
 >
-> Updated: 2026-05-26.
+> Updated: 2026-05-28 (Stage A + B + C deploy chain reflected).
 
 ---
 
 ## Where we are right now
 
-**Code-complete through Phase 6 (MVP "ship point")**, commits `dbbf570 … 559d534`. The webapp boots, the wheel spins solo, rooms exist, the Socket.IO `/rooms` namespace fires server-authoritative spins to multiple clients, presence and reactions work. But the multiplayer *invite flow* (the thing that lets a second human actually join your room from Telegram) does not land yet, and the room screen is partly hardcoded to English.
+**Stage C open with NO-GO on Phase 7+** (recorded 2026-05-28). Stages A + B + C shipped on top of the Phase 6 MVP commits `dbbf570 … 559d534`. Stage A closed the original five MVP blockers plus six verification-pass fixes plus a nine-item close-out batch (multiplayer invite flow lands, RoomPage i18n cleared, hub-tap regression guards, etc.). Stage B added pre-launch hardening (server rate limits + spin cooldown, brand-keyed crash screen, host settings sheet, `room:updated` broadcast). Stage C deployed to `hobagame.duckdns.org` (Hetzner shared VPS, host nginx as TLS terminator, multi-stage Dockerfile pulled forward from Stage G), but no soft-launch sessions were logged — the verdict in `docs/validation-notes.md` is **NO-GO**, rationale = insufficient real-user evidence.
 
-The spec calls Phase 6 the **🚢 MVP ship point** — stop, ship, validate with 10–20 real users, then start Phase 7. The plan below honors that intent.
+Test totals at the current freeze: **113 backend / 53 frontend, 91 % coverage**.
+
+The spec calls Phase 6 the **🚢 MVP ship point** — Stage C is its validation gate. Phase 7 work is gated on either real-device session data or an explicit owner override.
 
 ---
 
@@ -128,7 +130,9 @@ Two phases bundled because the data model + UI work overlaps heavily.
 
 ### Stage G — Phase 11 (full) + Phase 12: Host moderation + Final hardening + Launch
 
-The remaining Phase 11/12 work not pulled into Stage B: full host moderation toolkit (kick, lock, anonymous mode, mode change mid-room, room close with confirmations + anonymous nickname generator), custom SVG onboarding illustrations, result share-card PNG, fuzz tests over every API route, room cleanup cron, full deploy script, public Privacy + Terms in EN + UK, README walkthrough GIF.
+The remaining Phase 11/12 work not pulled into Stage B *or* Stage C: full host moderation toolkit (kick, lock, anonymous mode, mode change mid-room, room close with confirmations + anonymous nickname generator), custom SVG onboarding illustrations, result share-card PNG, fuzz tests over every API route, room cleanup cron, full deploy script, public Privacy + Terms in EN + UK, README walkthrough GIF.
+
+> Note: the multi-stage Dockerfile static build (originally Stage G scope, Phase 12) was pulled forward into Stage C deploy chain (commit `2050774`) when the Vite-dev-in-prod path proved unreliable. The remaining Stage G items are unaffected.
 
 **End-of-stage gate:** all bullets in spec §17 "Full Done (Phases 7–12)" tick.
 
