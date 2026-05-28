@@ -31,6 +31,24 @@
     "title": "Choose a game mode",
     "create": "Create room"
   },
+  "modes": {
+    "classic": {
+      "label": "Classic",
+      "tagline": "Spin the wheel. Settle anything."
+    },
+    "elimination": {
+      "label": "Elimination",
+      "tagline": "Losing segments disappear each round."
+    },
+    "punishment": {
+      "label": "Punishment",
+      "tagline": "Take turns. Loser draws a card."
+    },
+    "chaos": {
+      "label": "Chaos",
+      "tagline": "Random twist before every spin."
+    }
+  },
   "settings": {
     "open_aria": "Room settings",
     "title": "Room settings",
