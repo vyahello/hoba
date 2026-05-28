@@ -36,6 +36,59 @@ From the roadmap Stage C charter, the questions worth answering:
 
 ## Session log
 
+### Session 1 — 2026-05-28 (scheduled, in person)
+
+> **Status: scheduled, not yet run.** Pre-session entry written
+> 2026-05-28 to reserve the slot. Fields below get filled in
+> post-session — owner replaces every `[TBD]` marker.
+
+**Who joined:** [TBD post-session — 1 tester, in person]
+**Devices:** [TBD — tester's device + owner's device for multiplayer demo]
+**Format:** In person
+
+**What happened (timeline notes):**
+- [TBD] — tester opens `@hobagame_bot` first time
+- [TBD] — first solo spin
+- [TBD] — multiplayer demo (owner joins from a second device)
+- [TBD] — anything noteworthy
+
+**Bugs / errors observed:**
+- [ ] [TBD — paste console error / screenshot link / repro steps]
+
+**Quotes worth remembering:**
+> [TBD] — [tester, context]
+
+**Brand-word moment:**
+- Did `Hoba!` / `Хоба!` reveal land? [TBD: yes / kind of / no]
+- Why? [TBD]
+
+**Multiplayer attempts:**
+- Owner-initiated demo from second device (only 1 organic tester present,
+  so organic share intent can't be measured here). What to watch: does
+  the tester themselves try to share the room with someone else
+  unprompted after seeing the multiplayer demo?
+- [TBD post-session]
+
+**Game modes asked for:**
+- [TBD post-session — most-requested-first]
+
+**Action items spawned:**
+- [TBD post-session — add to docs/TODO.md with stage tag, or note inline]
+
+**Pre-session caveats (logged 2026-05-28):**
+- Only 1 organic tester → learning question #3 (multiplayer invite
+  path) gets partial signal at best. Real organic-share data
+  requires a session with ≥ 2 people who aren't the owner.
+- Single in-person session → no Android / 360 px / slow-network signal
+  unless the tester happens to use one. Real-device-bug coverage
+  (question #6) starts here but doesn't close here.
+- Locale signal (question #5) only available if tester is a UK speaker.
+- Per the NO-GO conversion criterion at the bottom of this doc:
+  **two real-device sessions** minimum to consider re-running the
+  synthesis. Session 1 is one of those two.
+
+---
+
 ### Session N — YYYY-MM-DD (template)
 
 **Who joined:** [names or initials, count]
