@@ -8,6 +8,7 @@ function makeSnapshot(args: {
   spin_policy: "anyone" | "host_only" | "turn_based";
   me_user_id: number;
   participants: Array<{ user_id: number; role: "host" | "guest" }>;
+  current_turn_user_id?: number | null;
 }): RoomState {
   return {
     room: {
@@ -21,6 +22,7 @@ function makeSnapshot(args: {
       suggestion_policy: "off",
       is_locked: false,
       is_anonymous: false,
+      current_turn_user_id: args.current_turn_user_id ?? null,
       created_at: "2026-05-27T00:00:00Z",
       closed_at: null,
     },

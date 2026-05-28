@@ -105,6 +105,7 @@ export interface ServerRoom {
   suggestion_policy: SuggestionPolicy;
   is_locked: boolean;
   is_anonymous: boolean;
+  current_turn_user_id: number | null;
   created_at: string;
   closed_at: string | null;
 }
