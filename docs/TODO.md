@@ -3,8 +3,6 @@
 Tracked TODOs per `CLAUDE.md` rule 8 ("No TODOs without entry in `docs/TODO.md`").
 Format: `- [ ] phase:N — area — description (owner, date)`. Resolve by deleting the line.
 
-- [ ] stage:D — modes — finish `turn_based` spin policy. services/spins.user_can_spin currently treats it as host_only. Required by Punishment + Elimination game modes (spec §5).
-- [ ] stage:D — mode defaults — when a room is created with a non-Classic game_mode, override the default spin_policy: Elimination → host_only, Punishment → turn_based, Chaos → anyone, Rigged → host_only.
 ## Resolved in Stage A (2026-05-26)
 
 - [x] phase:6 — share — `RootLayout` now reads `start_param` from SDK → URL hash → URL query (the SDK at v7.10.1 ignores top-level `tgWebAppStartParam`); share link builder supports the optional Direct Link Mini App `/<short_name>?startapp=` form via `VITE_TELEGRAM_APP_SHORT_NAME`.
@@ -32,3 +30,8 @@ Format: `- [ ] phase:N — area — description (owner, date)`. Resolve by delet
 ## Resolved in Stage C close (2026-05-28)
 
 - [x] stage:C — verify — iPhone X spin-lag fix (commit `33a976b`, stacked-strokes replacement for feGaussianBlur ring-glow filter). Confirmed smooth on real iPhone X (A11, iOS 16) during owner-side verification — see `docs/validation-notes.md` § Owner-side verification — 2026-05-28.
+
+## Resolved in Stage D foundations (2026-05-28)
+
+- [x] stage:D — modes — `turn_based` spin policy shipped end-to-end. Backend: `current_turn_user_id` column on rooms (Alembic 0004), `advance_turn` helper (presence-aware skip), `user_can_spin` dispatch, initial cursor on lobby→active, WS `_emit_settled` advance + `room:updated` broadcast, `update_room` cursor lifecycle. Frontend: `computeCanSpin` turn_based branch, new `computeTurnState` helper, room-header status line in EN + UK. Spec at `docs/superpowers/specs/2026-05-28-turn-based-mode-defaults-design.md`; plan at `docs/superpowers/plans/2026-05-28-turn-based-mode-defaults.md`. Commits `6a91c46 … 023b6f3`.
+- [x] stage:D — mode defaults — `game_mode` on `RoomCreateIn` (defaults `classic`), `spin_policy` optional with `_derive_spin_policy` fallback (Elimination→host_only, Punishment→turn_based, Chaos→anyone, Rigged→host_only). Explicit user value wins. Commits `9bd462f`, `cfeb648`, `2490e95`.
