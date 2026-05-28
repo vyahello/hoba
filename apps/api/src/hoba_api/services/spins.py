@@ -107,8 +107,9 @@ def user_can_spin(room: Room, user_id: int) -> bool:
         return True
     if room.spin_policy == "host_only":
         return room.host_id == user_id
-    # turn_based — defer to Phase 11; for Phase 6, treat as host_only.
-    return room.host_id == user_id
+    if room.spin_policy == "turn_based":
+        return room.current_turn_user_id == user_id
+    return False
 
 
 async def advance_turn(

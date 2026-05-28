@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from hoba_api.models.room import Room
 from hoba_api.services.participants import join_room
 from hoba_api.services.rooms import (
     RoomServiceError,
@@ -12,7 +13,7 @@ from hoba_api.services.rooms import (
     create_room,
     update_room,
 )
-from hoba_api.services.spins import list_room_spins, trigger_spin
+from hoba_api.services.spins import list_room_spins, trigger_spin, user_can_spin
 from hoba_api.wheel.spin_math import segment_under_pointer
 
 
@@ -139,3 +140,43 @@ async def test_list_room_spins_descending(db: AsyncSession) -> None:
 
 # `update_room` reference to keep the test module exporting clean imports
 _ = update_room
+
+
+# --- user_can_spin policy dispatch -----------------------------------------
+
+
+def _make_room(
+    spin_policy: str, *, host_id: int = 1, current_turn: int | None = None,
+) -> Room:
+    room = Room(
+        code="ABC123",
+        host_id=host_id,
+        status="active",
+        game_mode="classic",
+        spin_policy=spin_policy,
+        suggestion_policy="off",
+    )
+    room.current_turn_user_id = current_turn
+    return room
+
+
+def test_user_can_spin_turn_based_cursor_match() -> None:
+    room = _make_room("turn_based", host_id=1, current_turn=42)
+    assert user_can_spin(room, user_id=42) is True
+
+
+def test_user_can_spin_turn_based_cursor_mismatch() -> None:
+    room = _make_room("turn_based", host_id=1, current_turn=42)
+    assert user_can_spin(room, user_id=99) is False
+
+
+def test_user_can_spin_turn_based_cursor_null_denies_everyone() -> None:
+    room = _make_room("turn_based", host_id=1, current_turn=None)
+    # Cursor unset → no one is "the current turn", including host.
+    assert user_can_spin(room, user_id=1) is False
+    assert user_can_spin(room, user_id=99) is False
+
+
+def test_user_can_spin_unknown_policy_denies() -> None:
+    room = _make_room("not_a_policy", host_id=1)
+    assert user_can_spin(room, user_id=1) is False
