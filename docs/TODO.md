@@ -3,12 +3,9 @@
 Tracked TODOs per `CLAUDE.md` rule 8 ("No TODOs without entry in `docs/TODO.md`").
 Format: `- [ ] phase:N — area — description (owner, date)`. Resolve by deleting the line.
 
-- [ ] stage:B — moderation — host toggle in Room settings sheet to flip spin_policy between anyone (default since 2026-05-26) and host_only without leaving the room. Server-side: PATCH /api/v1/rooms/{code} already accepts it; UI is missing.
-- [ ] stage:B — anti-spam — server-side cooldown on spin:trigger (1.5–2s after the previous spin:settled in the same room) so thumb-mashing the SPIN hub can't shower duplicate spins. Today the only throttle is the client-side `state !== "spinning"` gate (relaxed from `!== "idle"` in commit 31a23e8), which is bypassable. Surfaced during Stage A verification; folded into Stage B because it shares scope with the broader rate-limit work already listed there (spec §14 §7).
 - [ ] stage:D — modes — finish `turn_based` spin policy. services/spins.user_can_spin currently treats it as host_only. Required by Punishment + Elimination game modes (spec §5).
 - [ ] stage:D — mode defaults — when a room is created with a non-Classic game_mode, override the default spin_policy: Elimination → host_only, Punishment → turn_based, Chaos → anyone, Rigged → host_only.
-- [ ] stage:G — deploy — replace `apps/webapp/Dockerfile` `CMD ["pnpm", "dev"]` with a multi-stage build that emits a static bundle into `/srv` and have Caddy serve it directly (`root * /srv` + `file_server`) instead of reverse-proxying Vite. Current prod profile boots but runs the dev server — fine for the Stage C soft-launch (≤20 users), wrong for any serious traffic. Spec §15 Phase 12.
-- [ ] stage:C → stage:B — broadcast — emit a `room:updated` Socket.IO event from `PATCH /api/v1/rooms/{code}` so guests pick up host policy changes without a reconnect. Today only the host's local snapshot refreshes after they flip `spin_policy` via the new settings sheet (see commit `ac7dab2`).
+- [ ] stage:C — verify — iPhone X spin-lag fix (commit `33a976b`, stacked-strokes replacement for feGaussianBlur ring-glow filter). Confirm smoothness on an actual iPhone X / A11 device. Pending since 2026-05-27.
 
 ## Resolved in Stage A (2026-05-26)
 
@@ -23,3 +20,13 @@ Format: `- [ ] phase:N — area — description (owner, date)`. Resolve by delet
 - [x] stage:A — rooms — `computeCanSpin(snapshot)` extracted from `RoomPage` with seven unit tests covering anyone / host_only / turn_based / -1 sentinel / unknown user_id. Regression guard for the tg_id-vs-user_id bug fixed in `7db1b0a`. Commit `c5334ee`.
 - [x] stage:A — docs — BotFather short_name aligned to `play` (the `spin` Direct Link Mini App was deleted to remove the duplicate). Commit `0756782`.
 - [x] stage:B → stage:A — networking — README delegates the ngrok walkthrough to `docs/development.md` "Dev tunnel for real Telegram testing"; the original TODO line is now stale and removed in this entry.
+
+## Resolved in Stage B (2026-05-27)
+
+- [x] stage:B — moderation — host toggle in Room settings sheet to flip `spin_policy`. Shipped as `RoomSettingsSheet` (bottom sheet) + `isHost(snapshot)` helper + `api.patchRoom` + `useRoomStore.setSnapshot`. Commit `ac7dab2`.
+- [x] stage:B — anti-spam — server-side cooldown on `spin:trigger` via new `cooldown_take(key, ttl_ms)` Redis primitive (1.5 s/room + 30 spins/room/hour) + room-creation throttle (5/user/hour). Commit `f723a0f`.
+- [x] stage:C → stage:B — broadcast — `room:updated` Socket.IO event from `PATCH /api/v1/rooms/{code}` so guests pick up host policy changes without reconnect. Closes the Stage C carry-over. Commit `3f4dbeb`.
+
+## Resolved in Stage C deploy chain (2026-05-27)
+
+- [x] stage:G — deploy — multi-stage Dockerfile static build serving via `nginx:1.27-alpine` in-container (Vite dev server proved unreliable in prod). Pulled forward from Stage G because the soft-launch path needed it. `apps/webapp/nginx.conf` handles SPA fallback + immutable-asset caching. Commit `2050774`.
