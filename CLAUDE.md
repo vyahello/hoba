@@ -49,7 +49,7 @@ Skipping any of these = future Claude opens cold and re-derives state from `git 
 - Phase 3 — aiogram bot, all commands, deep-link parsing for `room_<CODE>`
 - Phase 4 — Vite/React/TS Mini App, full DS at `/dev/ds`, i18n EN + UK (6 namespaces), Home with Quick Wheels (F2)
 - Phase 5 — `<Wheel>` + solo spin flow + audio + custom wheel editor + spin history
-- Phase 6 — Rooms REST (`/api/v1/rooms`), Socket.IO `/rooms` namespace, server-authoritative spin, presence, reactions, share-link generation (delivery broken — see blockers)
+- Phase 6 — Rooms REST (`/api/v1/rooms`), Socket.IO `/rooms` namespace, server-authoritative spin, presence, reactions, share-link generation + delivery (delivery fixed in Stage A item 1, commit `b873a00`)
 
 ## Stage A close-out (2026-05-26)
 
@@ -139,7 +139,7 @@ EN + UK only. Brand is locale-aware per spec §0 and rule 5 below — `Hoba!` in
 - **Backend:** Python 3.12 + FastAPI + aiogram 3 + SQLAlchemy 2.0 (async) + Alembic + python-socketio + Redis + structlog + pytest. Deps via `uv`.
 - **Frontend:** React 18 + Vite 5 + TypeScript 5 (strict) + Tailwind + Framer Motion + Zustand + @twa-dev/sdk + socket.io-client + react-i18next + Howler. Deps via `pnpm`.
 - **Persistence:** SQLite (default, `aiosqlite`) via `DATABASE_URL`. Postgres-ready (URL swap). Redis required from day 1.
-- **Infra:** Docker Compose. Caddy in prod profile only (auto-TLS). dev tunnel via cloudflared (developer-managed, not in compose).
+- **Infra:** Docker Compose. Caddy in dedicated-VPS prod profile (auto-TLS); shared-VPS deploys (e.g. current Stage C `hobagame.duckdns.org`) disable Caddy and use host nginx as TLS terminator via `compose.shared.yaml`. Dev tunnel via ngrok (developer-managed, not in compose; cloudflared was tried but had iPhone Safari reachability issues during Stage A).
 
 ## Telegram bot identity
 
@@ -164,11 +164,11 @@ docker compose up
 # webapp → http://localhost:5173
 # api docs → http://localhost:8000/docs
 # in another terminal, for real Telegram testing:
-ngrok http 5173   # cloudflared was unreachable from iPhone Safari — see docs/TODO.md
+ngrok http 5173   # cloudflared had iPhone Safari reachability issues; ngrok is the current preference
 # paste returned HTTPS URL into WEBAPP_URL in .env and restart bot service
 ```
 
-> Dev tunnel: **ngrok preferred over cloudflared** until the cloudflared mobile issue is documented. See `docs/TODO.md`.
+> Dev tunnel: **ngrok preferred over cloudflared** based on Stage A real-device testing. See `docs/development.md` § "Dev tunnel for real Telegram testing".
 
 ## Key directories (created across Phase 1+)
 
