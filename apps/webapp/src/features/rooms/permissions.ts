@@ -11,8 +11,8 @@ import { type RoomState } from "@/lib/api";
  *
  * `snapshot.me_user_id` is the server-provided internal user_id of THIS
  * connection. Telegram's `initDataUnsafe.user.id` is the tg_id, a
- * different number space, and must never be used here — that bug was
- * the entire point of commit 7db1b0a (Stage A).
+ * different number space, and must never be used here — they will not
+ * match.
  */
 export function computeCanSpin(snapshot: RoomState | null): boolean {
   if (snapshot === null) return false;

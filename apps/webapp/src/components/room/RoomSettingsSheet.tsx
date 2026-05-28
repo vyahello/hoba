@@ -14,13 +14,13 @@ export interface RoomSettingsSheetProps {
 }
 
 /**
- * Host-only sheet for editing room-wide settings. For Stage B the only
- * editable axis is `spin_policy`; later phases extend the same sheet
- * with kick / lock / mode-change controls (spec §F11 + roadmap stage G).
+ * Host-only sheet for editing room-wide settings. The only editable
+ * axis today is `spin_policy`; later phases extend the same sheet with
+ * kick / lock / mode-change controls (spec §F11 + roadmap stage G).
  *
- * The PATCH is REST, not WS, so only the calling host's local snapshot
- * updates immediately. Guests pick up the change on their next refresh
- * — server-side broadcast of `room:updated` is queued for a later stage.
+ * The PATCH is REST, not WS, but the server also emits a `room:updated`
+ * broadcast on the room namespace so connected guests pick up the
+ * change immediately without a reconnect.
  */
 export function RoomSettingsSheet({
   open,

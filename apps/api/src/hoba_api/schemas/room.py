@@ -99,9 +99,9 @@ class RoomCreateIn(BaseModel):
     question_text: str = Field(min_length=1, max_length=120)
     segments: list[SegmentIn] = Field(min_length=2, max_length=12)
     title: str | None = Field(default=None, max_length=80)
-    # Default is `anyone` to match the party-game social dynamic — see
-    # docs/roadmap.md Stage B for the host-toggle that lets a moderator
-    # flip back to `host_only` mid-room.
+    # Default is `anyone` to match the party-game social dynamic — the
+    # host settings sheet (`RoomSettingsSheet` in the webapp) lets a
+    # moderator flip back to `host_only` mid-room.
     spin_policy: SpinPolicy = "anyone"
     suggestion_policy: SuggestionPolicy = "off"
 
