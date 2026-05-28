@@ -158,27 +158,48 @@ describe("computeCanSpin", () => {
     ).toBe(false);
   });
 
-  it("treats `turn_based` like `host_only` until per-turn rotation lands", () => {
-    // Server-side services/spins.user_can_spin currently treats
-    // turn_based as host_only (TODO docs/TODO.md stage:D). Client
-    // mirrors that so the hub state matches what the server will allow.
-    const hostSnap = makeSnapshot({
-      spin_policy: "turn_based",
-      me_user_id: 7,
-      participants: [
-        { user_id: 7, role: "host" },
-        { user_id: 12, role: "guest" },
-      ],
-    });
-    const guestSnap = makeSnapshot({
-      spin_policy: "turn_based",
-      me_user_id: 12,
-      participants: [
-        { user_id: 7, role: "host" },
-        { user_id: 12, role: "guest" },
-      ],
-    });
-    expect(computeCanSpin(hostSnap)).toBe(true);
-    expect(computeCanSpin(guestSnap)).toBe(false);
+  it("returns true under `turn_based` when current_turn_user_id matches me_user_id", () => {
+    expect(
+      computeCanSpin(
+        makeSnapshot({
+          spin_policy: "turn_based",
+          current_turn_user_id: 7,
+          me_user_id: 7,
+          participants: [
+            { user_id: 7, role: "host" },
+            { user_id: 9, role: "guest" },
+          ],
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("returns false under `turn_based` when current_turn_user_id is someone else", () => {
+    expect(
+      computeCanSpin(
+        makeSnapshot({
+          spin_policy: "turn_based",
+          current_turn_user_id: 9,
+          me_user_id: 7,
+          participants: [
+            { user_id: 7, role: "host" },
+            { user_id: 9, role: "guest" },
+          ],
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("returns false under `turn_based` when current_turn_user_id is null (lobby)", () => {
+    expect(
+      computeCanSpin(
+        makeSnapshot({
+          spin_policy: "turn_based",
+          current_turn_user_id: null,
+          me_user_id: 7,
+          participants: [{ user_id: 7, role: "host" }],
+        }),
+      ),
+    ).toBe(false);
   });
 });
