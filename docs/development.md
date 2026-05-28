@@ -114,7 +114,7 @@ The webapp's Vite dev server proxies `/api/*` and `/socket.io/*` to `http://loca
 
 Telegram WebView refuses `http://localhost`. To open the Mini App from your phone, expose `:5173` over HTTPS.
 
-**ngrok (current preference — cloudflared had iPhone Safari reachability issues, see `docs/TODO.md`):**
+**ngrok (current preference — cloudflared had iPhone Safari reachability issues during Stage A; the older TODO entry tracking the cloudflared bug was closed when we standardised on ngrok):**
 
 ```bash
 ngrok http 5173

@@ -35,7 +35,7 @@ cd /home/kali/hoba
 pnpm typecheck && pnpm lint && pnpm test && pnpm i18n:check
 ```
 
-Expected as of Stage A: **102 pytest passed**, **31 vitest passed**, mypy / ruff / eslint / tsc clean, `i18n:check` exits 0 (with advisory warnings for unused-but-reserved keys).
+Expected as of Stage C entry (2026-05-27): **113 pytest passed**, **53 vitest passed**, **91 % backend coverage**, mypy / ruff / eslint / tsc clean, `i18n:check` exits 0 (with advisory warnings for unused-but-reserved keys).
 
 ---
 
@@ -103,8 +103,15 @@ pytest --no-cov                                        # skip the coverage gate 
 
 ```
 apps/webapp/src/
-├── features/wheel/__tests__/spinMath.test.ts    # pure spin math; matches server
-└── lib/__tests__/telegram.test.ts               # Stage A: extractStartParam, parseRoomDeepLink, buildRoomInviteLink
+├── features/wheel/__tests__/
+│   ├── spinMath.test.ts                 # pure spin math; matches server
+│   └── hubLogic.test.ts                 # Stage A close-out: isHubInteractive() across idle/spinning/settled + permission
+├── features/rooms/__tests__/
+│   ├── permissions.test.ts              # Stage A close-out: computeCanSpin (host_only / anyone / turn_based)
+│   └── reactionLanes.test.ts            # Stage A close-out: fixed lanes per emoji + jitter
+└── lib/__tests__/
+    ├── telegram.test.ts                 # Stage A: extractStartParam, parseRoomDeepLink, buildRoomInviteLink
+    └── navigation.test.ts               # Stage B: safeNavigateBack with deep-link history-length=1 fallback
 ```
 
 vitest config is in `apps/webapp/vitest.config.ts`. Default environment is `node` (faster) — UI integration tests would need `jsdom`/`happy-dom` if added later.
