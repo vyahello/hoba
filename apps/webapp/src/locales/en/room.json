@@ -21,6 +21,12 @@
   "spin": {
     "host_only_hint": "Host spins. React with the bar above."
   },
+  "turn": {
+    "my_turn": "Your turn",
+    "waiting_named": "Waiting for {name}",
+    "waiting_unnamed": "Waiting for next player",
+    "no_one": "Waiting for someone to join"
+  },
   "settings": {
     "open_aria": "Room settings",
     "title": "Room settings",
