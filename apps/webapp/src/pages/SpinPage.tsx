@@ -9,6 +9,7 @@ import { fireConfetti } from "@/components/ds/ConfettiBurst";
 import { HobaWord } from "@/components/ds/HobaWord";
 import { IconButton } from "@/components/ds/IconButton";
 import { ResultBanner } from "@/components/ds/ResultBanner";
+import { RoomModePickerSheet } from "@/components/room/RoomModePickerSheet";
 import { findQuickWheel, type QuickWheel } from "@/data/quickWheels";
 import { Wheel, type WheelHandle } from "@/features/wheel/Wheel";
 import { freshSeed } from "@/features/wheel/seededRandom";
@@ -19,7 +20,7 @@ import {
   type WheelDef,
   type WheelState,
 } from "@/features/wheel/types";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, type GameMode } from "@/lib/api";
 import { haptics } from "@/lib/haptics";
 import { safeNavigateBack } from "@/lib/navigation";
 import { useCustomWheel, useSpinHistory } from "@/stores/spinHistory";
@@ -61,6 +62,7 @@ export function SpinPage(): JSX.Element {
   const [state, setState] = useState<WheelState>("idle");
   const [spin, setSpin] = useState<SpinResult | undefined>(undefined);
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [modePickerOpen, setModePickerOpen] = useState(false);
   const [resultRevealed, setResultRevealed] = useState(false);
   const wheelRef = useRef<WheelHandle>(null);
 
@@ -167,10 +169,15 @@ export function SpinPage(): JSX.Element {
     setResultRevealed(false);
   }
 
-  async function handleInviteFriends(): Promise<void> {
+  function handleInviteFriends(): void {
+    if (wheel === undefined || inviteLoading) return;
+    haptics.medium();
+    setModePickerOpen(true);
+  }
+
+  async function handleCreateRoom(mode: GameMode): Promise<void> {
     if (wheel === undefined || inviteLoading) return;
     setInviteLoading(true);
-    haptics.medium();
     try {
       const state = await api.createRoom({
         question_text: wheel.questionText,
@@ -180,6 +187,7 @@ export function SpinPage(): JSX.Element {
           color_seed: s.colorSeed,
           weight: s.weight ?? 1,
         })),
+        game_mode: mode,
       });
       navigate(`/room/${state.room.code}`);
     } catch (exc) {
@@ -333,6 +341,17 @@ export function SpinPage(): JSX.Element {
           ) : null}
         </AnimatePresence>
       </main>
+
+      <RoomModePickerSheet
+        open={modePickerOpen}
+        loading={inviteLoading}
+        onClose={() => {
+          setModePickerOpen(false);
+        }}
+        onCreate={(mode) => {
+          void handleCreateRoom(mode);
+        }}
+      />
     </>
   );
 }
