@@ -78,13 +78,13 @@ it manually instead:
 ```
 /setmenubutton
 @hobagame_bot
-https://<your-cloudflared-or-prod-url>/
+https://<your-tunnel-or-prod-url>/
 Open Hoba!
 ```
 
-In dev: paste the current `https://*.trycloudflare.com` URL from the
-running `cloudflared tunnel --url http://localhost:5173` process. Note
-the trailing slash.
+In dev: paste the current `https://*.ngrok-free.app` URL from the
+running `ngrok http 5173` process (ngrok is the current dev-tunnel
+preference per `docs/development.md`). Note the trailing slash.
 
 ## 8. Direct Link Mini App (REQUIRED from Phase 6 — share deep links)
 
