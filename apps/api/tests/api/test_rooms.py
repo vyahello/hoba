@@ -17,8 +17,10 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from hoba_api.api.v1.rooms import ROOM_CREATE_RATE_LIMIT_MAX
+from hoba_api.models.room import Room
 from hoba_api.realtime import server as ws_server
 from tests.conftest import make_init_data
 
@@ -170,14 +172,17 @@ def test_post_room_explicit_spin_policy_wins_over_mode(
     assert body["room"]["spin_policy"] == "anyone"
 
 
-def test_patch_room_to_turn_based_active_broadcasts_cursor(
+async def test_patch_room_to_turn_based_active_broadcasts_cursor(
     client: TestClient,
+    db: AsyncSession,
     init_data: str,
     captured_sio_emits: list[EmittedSioCall],
 ) -> None:
     """When host flips spin_policy to turn_based on an active room, the
     `room:updated` broadcast must carry BOTH spin_policy AND the new
     current_turn_user_id so guests see both updates without reconnect."""
+    from sqlalchemy import select
+
     headers = {HEADER: init_data}
     create = client.post("/api/v1/rooms", json=_payload(), headers=headers)
     assert create.status_code == 201, create.text
@@ -185,22 +190,12 @@ def test_patch_room_to_turn_based_active_broadcasts_cursor(
     code = body["room"]["code"]
     host_id = body["room"]["host_id"]
 
-    # Trip the room into active status directly (simpler than running a
-    # real spin through the WS handler — we're testing the broadcast
-    # logic, not the lobby→active transition).
-    import asyncio
-
-    from hoba_api.db import SessionLocal
-    from hoba_api.services.rooms import get_room_by_code
-
-    async def set_active() -> None:
-        async with SessionLocal() as s:
-            room = await get_room_by_code(s, code)
-            assert room is not None
-            room.status = "active"
-            await s.commit()
-
-    asyncio.get_event_loop().run_until_complete(set_active())
+    # Trip the room into active status using the test-scoped session so we
+    # stay on the same in-memory SQLite database as the rest of the test.
+    result = await db.execute(select(Room).where(Room.code == code))
+    room = result.scalar_one()
+    room.status = "active"
+    await db.commit()
 
     captured_sio_emits.clear()
     patch = client.patch(
