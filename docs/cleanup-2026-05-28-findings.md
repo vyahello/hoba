@@ -6,7 +6,17 @@
 
 ## Summary
 
-_To be filled at exit. Pre-fill at start of execution: see plan Task 22._
+**Cleanup pass executed 2026-05-28 per `docs/superpowers/specs/2026-05-28-cleanup-pass-design.md`** (Approach A, no new stage, no `CLAUDE.md` "Current phase" change). Stage C remains open with NO-GO on Phase 7+; this pass paid down debt only.
+
+- **Lane 1 (TODO.md hygiene)** — 4 stale lines struck (B6 host toggle, B1 cooldown, G Dockerfile, C→B `room:updated` broadcast); 1 line added (`stage:C — verify — iPhone X spin-lag fix`); exhaustive cross-reference against every CLAUDE.md close-out section surfaced 0 extras. Two genuinely open Stage D items confirmed accurate. Commit `5fa6024`.
+- **Lane 2 (doc drift)** — 5 docs edited inline with confident drift fixes (`roadmap.md`, `deployment.md`, `development.md`, `testing.md`, `botfather-setup.md`, `CLAUDE.md`), batched across 6 commits. `spec.md` left untouched (no factual drift; Phase 12 text remains future-tense and accurate). 1 opinion-drift finding logged (`architecture.md` prod-topology incomplete). 0 stale-but-historical findings — both `manual-verify-stage*.md` docs accurately describe their own pending-verification state. Rule-8 sweep (in-code `TODO`/`FIXME`/`XXX`) found 3 matches, all legitimate references to tracked work or historical narrative; no violations.
+- **Lane 3 (codebase audit)** — Hardcoded English `.tsx` sweep: clean (Stage A acceptance grep zero, DevDSPage logged as exempt-question for owner). Debug `console.*` sweep: clean (one legitimate try/catch warn). `// removed` / backcompat shims sweep: clean (zero matches). Stale comments walk: 3 confident fixes applied across `permissions.ts`, `RoomSettingsSheet.tsx`, `schemas/room.py` in commit `d98fc0d` (commit-hash reference + stale-stage references). Half-implementations walk: clean. Dead exports sweep: scope-limited due to 133-export surface area; 5 needs-owner-decision findings logged (1 truly-dead `disconnectRoomSocket`, 3 export-keyword-unnecessary, 1 ambiguous `Modal`).
+
+**Total commits in this pass:** 10 (between spec commit `5659c52` and findings-doc finalization).
+
+**Quality gates at exit:** 113 backend tests / 53 frontend tests passing; `ruff` / `mypy --strict` / `eslint` / `tsc --noEmit` / `pnpm i18n:check` all green; 91 % backend coverage (unchanged from baseline).
+
+**Owner triage queue:** the "needs owner decision" entries in Lane 3 (DevDSPage i18n exemption, 5 dead-export borderlines) and the single Lane 2 opinion-drift entry (architecture.md prod topology) are the actionable backlog from this pass. None are blocking; all can sit indefinitely.
 
 ## Plan-execution meta-findings
 
