@@ -8,10 +8,12 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from hoba_api.models.participant import Participant
 from hoba_api.models.question import Question
 from hoba_api.models.room import Room
 from hoba_api.models.segment import Segment
 from hoba_api.models.spin import Spin
+from hoba_api.redis_client import presence_user_ids
 from hoba_api.services.rooms import RoomServiceError
 from hoba_api.wheel.spin_math import compute_spin
 
@@ -107,6 +109,52 @@ def user_can_spin(room: Room, user_id: int) -> bool:
         return room.host_id == user_id
     # turn_based — defer to Phase 11; for Phase 6, treat as host_only.
     return room.host_id == user_id
+
+
+async def advance_turn(
+    session: AsyncSession, room: Room,
+) -> int | None:
+    """Advance `room.current_turn_user_id` to the next online participant.
+
+    Walks Participant rows ordered by joined_at (= join order; user_id is
+    the tiebreaker). Starts at the slot after `room.current_turn_user_id`,
+    or at slot 0 if the cursor is None. Skips any participant whose
+    presence key is missing from Redis. Wraps around past the end.
+    Returns the new cursor (or None if no one is online). Mutates
+    `room.current_turn_user_id` in place; caller commits.
+    """
+    rows: list[int] = list(
+        (
+            await session.execute(
+                select(Participant.user_id)
+                .where(Participant.room_id == room.id)
+                .order_by(Participant.joined_at, Participant.user_id),
+            )
+        ).scalars().all(),
+    )
+    if not rows:
+        room.current_turn_user_id = None
+        return None
+    online = await presence_user_ids(room.id)
+    if not online:
+        room.current_turn_user_id = None
+        return None
+
+    if room.current_turn_user_id is None:
+        start = 0
+    else:
+        try:
+            start = rows.index(room.current_turn_user_id) + 1
+        except ValueError:
+            start = 0
+    n = len(rows)
+    for offset in range(n):
+        candidate = rows[(start + offset) % n]
+        if candidate in online:
+            room.current_turn_user_id = candidate
+            return candidate
+    room.current_turn_user_id = None
+    return None
 
 
 async def list_room_spins(
