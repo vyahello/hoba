@@ -5,8 +5,6 @@ Format: `- [ ] phase:N — area — description (owner, date)`. Resolve by delet
 
 - [ ] stage:D — modes — finish `turn_based` spin policy. services/spins.user_can_spin currently treats it as host_only. Required by Punishment + Elimination game modes (spec §5).
 - [ ] stage:D — mode defaults — when a room is created with a non-Classic game_mode, override the default spin_policy: Elimination → host_only, Punishment → turn_based, Chaos → anyone, Rigged → host_only.
-- [ ] stage:C — verify — iPhone X spin-lag fix (commit `33a976b`, stacked-strokes replacement for feGaussianBlur ring-glow filter). Confirm smoothness on an actual iPhone X / A11 device. Pending since 2026-05-27.
-
 ## Resolved in Stage A (2026-05-26)
 
 - [x] phase:6 — share — `RootLayout` now reads `start_param` from SDK → URL hash → URL query (the SDK at v7.10.1 ignores top-level `tgWebAppStartParam`); share link builder supports the optional Direct Link Mini App `/<short_name>?startapp=` form via `VITE_TELEGRAM_APP_SHORT_NAME`.
@@ -30,3 +28,7 @@ Format: `- [ ] phase:N — area — description (owner, date)`. Resolve by delet
 ## Resolved in Stage C deploy chain (2026-05-27)
 
 - [x] stage:G — deploy — multi-stage Dockerfile static build serving via `nginx:1.27-alpine` in-container (Vite dev server proved unreliable in prod). Pulled forward from Stage G because the soft-launch path needed it. `apps/webapp/nginx.conf` handles SPA fallback + immutable-asset caching. Commit `2050774`.
+
+## Resolved in Stage C close (2026-05-28)
+
+- [x] stage:C — verify — iPhone X spin-lag fix (commit `33a976b`, stacked-strokes replacement for feGaussianBlur ring-glow filter). Confirmed smooth on real iPhone X (A11, iOS 16) during owner-side verification — see `docs/validation-notes.md` § Owner-side verification — 2026-05-28.

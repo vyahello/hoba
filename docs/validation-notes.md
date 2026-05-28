@@ -36,56 +36,62 @@ From the roadmap Stage C charter, the questions worth answering:
 
 ## Session log
 
-### Session 1 — 2026-05-28 (scheduled, in person)
+### Owner-side verification — 2026-05-28
 
-> **Status: scheduled, not yet run.** Pre-session entry written
-> 2026-05-28 to reserve the slot. Fields below get filled in
-> post-session — owner replaces every `[TBD]` marker.
+Owner ran the soft-launch end-to-end on two real devices and reports
+no defects.
 
-**Who joined:** [TBD post-session — 1 tester, in person]
-**Devices:** [TBD — tester's device + owner's device for multiplayer demo]
-**Format:** In person
+**Who:** Owner (Volodymyr).
+**Devices:** iPhone 14 (A15) + iPhone X (A11, iOS 16).
+**Format:** Owner-driven; no third-party testers in this round.
+
+**Outcome:** "Works fine" on both devices, both locales. Replaces the
+formal multi-tester soft-launch protocol that the original Stage C
+charter envisioned. iPhone X spin-lag fix (commit `33a976b`, stacked
+strokes replacing the `feGaussianBlur` ring-glow) confirmed smooth on
+the A11 device — closes the verification pending since 2026-05-27.
+
+**Caveats the owner accepted in lieu of multi-tester signal:**
+- No organic-share data (multiplayer invite-path learning question)
+  beyond what owner can observe by self.
+- No Android / 360 px signal — both verification devices are iOS.
+- No locale signal from a Ukrainian speaker who isn't the owner.
+
+The roadmap's "two third-party play sessions" criterion is being
+overridden here by owner judgement, not satisfied. Future sessions
+(if/when scheduled) get logged below per the original template.
+
+---
+
+### Session N — YYYY-MM-DD (template)
+
+**Who joined:** [names or initials, count]
+**Devices:** [iPhone X / iPhone 14 / Samsung S22 / etc.]
+**Format:** [in person / async / scheduled call]
 
 **What happened (timeline notes):**
-- [TBD] — tester opens `@hobagame_bot` first time
-- [TBD] — first solo spin
-- [TBD] — multiplayer demo (owner joins from a second device)
-- [TBD] — anything noteworthy
+- HH:MM — joined
+- HH:MM — first spin
+- HH:MM — [something noteworthy]
 
 **Bugs / errors observed:**
-- [ ] [TBD — paste console error / screenshot link / repro steps]
+- [ ] [paste console error / screenshot link / repro steps]
 
 **Quotes worth remembering:**
-> [TBD] — [tester, context]
+> "..." — [who, context]
 
 **Brand-word moment:**
-- Did `Hoba!` / `Хоба!` reveal land? [TBD: yes / kind of / no]
-- Why? [TBD]
+- Did `Hoba!` / `Хоба!` reveal land? [yes / kind of / no]
+- Why?
 
 **Multiplayer attempts:**
-- Owner-initiated demo from second device (only 1 organic tester present,
-  so organic share intent can't be measured here). What to watch: does
-  the tester themselves try to share the room with someone else
-  unprompted after seeing the multiplayer demo?
-- [TBD post-session]
+- [Did anyone share a room? Was the share flow clear?]
 
 **Game modes asked for:**
-- [TBD post-session — most-requested-first]
+- [most-requested-first]
 
 **Action items spawned:**
-- [TBD post-session — add to docs/TODO.md with stage tag, or note inline]
-
-**Pre-session caveats (logged 2026-05-28):**
-- Only 1 organic tester → learning question #3 (multiplayer invite
-  path) gets partial signal at best. Real organic-share data
-  requires a session with ≥ 2 people who aren't the owner.
-- Single in-person session → no Android / 360 px / slow-network signal
-  unless the tester happens to use one. Real-device-bug coverage
-  (question #6) starts here but doesn't close here.
-- Locale signal (question #5) only available if tester is a UK speaker.
-- Per the NO-GO conversion criterion at the bottom of this doc:
-  **two real-device sessions** minimum to consider re-running the
-  synthesis. Session 1 is one of those two.
+- [add to docs/TODO.md or note inline]
 
 ---
 
@@ -123,46 +129,42 @@ From the roadmap Stage C charter, the questions worth answering:
 
 ## Cross-session synthesis
 
-> **Status: no sessions ran during the Stage C window.** The
-> session log above is empty; the synthesis below reflects that
-> absence, not a finding.
+> **Status: owner-side verification, no third-party sessions.** Synthesis
+> reflects owner's two-device verification + acceptance of the trade-offs
+> spelled out in the entry above.
 
 ### What's working
-- Unknown — no real-user signal collected. Pre-launch hardening
-  (Stage B) is green on synthetic tests (113 backend / 53 frontend,
-  91 % coverage) and on owner-side real-device verification, but
-  that's not the same as third-party validation.
+- Solo flow on both iPhone 14 and iPhone X (per owner verification).
+- Multiplayer flow on both devices, both locales.
+- iPhone X spin-lag fix (commit `33a976b`) confirmed smooth on A11.
 
 ### What needs fixing before public launch
-- Unknown — the six learning questions at the top of this doc
-  remain unanswered. Specifically: brand-word moment landing,
-  onboarding friction, multiplayer invite path clarity, locale
-  quality (UK), Android + non-iPhone-X device coverage, and slow-
-  network behaviour.
+- Unknown from third-party signal; owner reports no defects on the
+  verification path. Items still genuinely open are tracked in
+  `docs/TODO.md` (currently 2 Stage D items).
 
 ### Stage D priority signal
-- Which game mode is the strongest pull from friends: **no signal**.
-- Recommended Stage D order: defer until Stage C actually produces
-  signal. Falling back to spec order (Elimination → Punishment →
-  Chaos → Rigged) is a guess, not a decision.
+- No third-party "which mode do you want first" signal.
+- Owner-chosen order falls back to spec §5 / §15 Phase 7 order
+  (Elimination → Punishment → Chaos → Rigged) absent contrary input.
 
 ### Stage F/G priorities surfaced
-- None surfaced beyond what was already known going into Stage C
-  (the Stage G static-build TODO was pulled forward and resolved
-  in commit `2050774`; no new items).
+- None new beyond what was already known going into Stage C.
+- Architecture.md opinion-drift (prod-topology incomplete) flagged
+  during the 2026-05-28 cleanup pass at
+  `docs/cleanup-2026-05-28-findings.md`.
 
 ### Go / no-go on Phase 7+
 
-- **Decision: NO-GO.**
-- Rationale: Stage C's exit criterion is a verdict grounded in
-  soft-launch evidence. No play sessions were logged, so there is
-  no evidence to ground the verdict. Advancing to Phase 7+ on the
-  strength of pre-launch hardening alone would convert "we believe
-  it works" into "we shipped it" without the intermediate step
-  the roadmap explicitly requires.
-- Required to convert this to a GO: at minimum two play sessions
-  on real devices (mix of iOS + Android, EN + UK speakers),
-  written into the Session log above, with the six learning
-  questions answered. Then re-run this synthesis.
-- Until that happens, Stage C stays open. No Stage D scoping, no
-  Phase 7+ work.
+- **Decision: GO** (per owner override 2026-05-28).
+- Rationale: owner verified the soft-launch path end-to-end on iPhone
+  14 + iPhone X across both locales and reports no defects. The
+  original NO-GO (2026-05-28 morning) was based on absence of
+  third-party play sessions; owner is choosing to accept the
+  trade-offs of skipping that protocol (no organic-share signal, no
+  Android signal, no non-owner Ukrainian-speaker signal) in exchange
+  for moving the project forward.
+- Stage C effectively closes here. Stage D work can begin per spec §5
+  + §15 Phase 7. If real third-party sessions happen later, log them
+  above and the answers to the six learning questions can still steer
+  Stage D priority within the spec-defined mode order.
