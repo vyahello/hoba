@@ -37,7 +37,8 @@
     "spin_policy": {
       "label": "Who can spin",
       "anyone": "Everyone in the room",
-      "host_only": "Only me (host)"
+      "host_only": "Only me (host)",
+      "turn_based": "Take turns"
     },
     "save_failed": "Couldn't save. Try again."
   },

@@ -75,6 +75,14 @@ export function RoomSettingsSheet({
               void applyPolicy("host_only");
             }}
           />
+          <PolicyOption
+            label={t("room:settings.spin_policy.turn_based")}
+            selected={snapshot.room.spin_policy === "turn_based"}
+            saving={saving === "turn_based"}
+            onSelect={() => {
+              void applyPolicy("turn_based");
+            }}
+          />
         </div>
       </section>
     </Sheet>
