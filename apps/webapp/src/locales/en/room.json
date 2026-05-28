@@ -27,6 +27,10 @@
     "waiting_unnamed": "Waiting for next player",
     "no_one": "Waiting for someone to join"
   },
+  "mode_picker": {
+    "title": "Choose a game mode",
+    "create": "Create room"
+  },
   "settings": {
     "open_aria": "Room settings",
     "title": "Room settings",
