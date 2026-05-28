@@ -12,6 +12,7 @@ from hoba_api.models.segment import Segment
 from hoba_api.services.rooms import (
     RoomServiceError,
     SegmentDraft,
+    _derive_spin_policy,
     close_room,
     create_room,
     generate_room_code,
@@ -157,3 +158,36 @@ async def test_update_room_host_only(db: AsyncSession) -> None:
     await db.commit()
     assert room.title == "Hello"
     assert room.spin_policy == "anyone"
+
+
+# --- _derive_spin_policy ----------------------------------------------------
+
+
+def test_derive_spin_policy_explicit_wins_for_classic() -> None:
+    assert _derive_spin_policy("host_only", "classic") == "host_only"
+
+
+def test_derive_spin_policy_explicit_wins_for_punishment() -> None:
+    # Explicit value beats mode default even when mode is non-classic.
+    assert _derive_spin_policy("anyone", "punishment") == "anyone"
+
+
+def test_derive_spin_policy_default_for_classic() -> None:
+    # No explicit spin_policy + classic mode → "anyone" (party-game default).
+    assert _derive_spin_policy(None, "classic") == "anyone"
+
+
+def test_derive_spin_policy_default_for_elimination() -> None:
+    assert _derive_spin_policy(None, "elimination") == "host_only"
+
+
+def test_derive_spin_policy_default_for_punishment() -> None:
+    assert _derive_spin_policy(None, "punishment") == "turn_based"
+
+
+def test_derive_spin_policy_default_for_chaos() -> None:
+    assert _derive_spin_policy(None, "chaos") == "anyone"
+
+
+def test_derive_spin_policy_default_for_rigged() -> None:
+    assert _derive_spin_policy(None, "rigged") == "host_only"
