@@ -39,7 +39,7 @@
     "new_round": "Новий раунд",
     "eliminated_label": "Вибув",
     "eliminated_result": "💥 {label} вибуває!",
-    "winner_title": "🏆 {label} — переможець!",
+    "winner_title": "{label} — переможець!",
     "waiting_new_round": "Чекаємо на новий раунд…"
   },
   "modes": {

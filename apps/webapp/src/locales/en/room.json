@@ -39,7 +39,7 @@
     "new_round": "New round",
     "eliminated_label": "Out",
     "eliminated_result": "💥 {label} is out!",
-    "winner_title": "🏆 {label} wins!",
+    "winner_title": "{label} wins!",
     "waiting_new_round": "Waiting for a new round…"
   },
   "modes": {
