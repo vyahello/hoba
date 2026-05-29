@@ -8,6 +8,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 GameMode = Literal["classic", "elimination", "punishment", "chaos", "rigged"]
+PunishmentDeck = Literal["mild", "spicy", "chaos"]
 SpinPolicy = Literal["host_only", "anyone", "turn_based"]
 SuggestionPolicy = Literal["off", "approval", "free"]
 RoomStatus = Literal["lobby", "active", "closed"]
@@ -80,6 +81,9 @@ class RoomOut(BaseModel):
     is_locked: bool
     is_anonymous: bool
     current_turn_user_id: int | None
+    punishment_deck: PunishmentDeck | None
+    punishment_done_count: int
+    punishment_active_card: dict[str, object] | None
     created_at: datetime
     closed_at: datetime | None
 
@@ -107,6 +111,7 @@ class RoomCreateIn(BaseModel):
     spin_policy: SpinPolicy | None = Field(default=None)
     suggestion_policy: SuggestionPolicy = "off"
     game_mode: GameMode = "classic"
+    punishment_deck: PunishmentDeck | None = Field(default=None)
 
 
 class RoomUpdateIn(BaseModel):
@@ -115,3 +120,4 @@ class RoomUpdateIn(BaseModel):
     suggestion_policy: SuggestionPolicy | None = None
     is_locked: bool | None = None
     game_mode: GameMode | None = None
+    punishment_deck: PunishmentDeck | None = None

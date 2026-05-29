@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -71,6 +72,17 @@ class Room(Base, TimestampMixin):
     current_turn_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
+    )
+
+    # Punishment mode (spec §5.3). NULL/0 for other modes.
+    punishment_deck: Mapped[str | None] = mapped_column(String(16))
+    punishment_done_count: Mapped[int] = mapped_column(
+        default=0, nullable=False, server_default="0",
+    )
+    # Pending card, room-shared (survives reconnects, gates spinning):
+    # {"text", "deck", "victim_segment_id", "spin_id"} or NULL when none.
+    punishment_active_card: Mapped[dict[str, object] | None] = mapped_column(
+        JSON, nullable=True,
     )
 
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -91,10 +91,13 @@ async def create_room(
     spin_policy: str | None = None,
     suggestion_policy: str = "off",
     game_mode: str = "classic",
+    punishment_deck: str | None = None,
 ) -> Room:
     """Create a room + its first question + segments, marking host as Participant."""
     if game_mode not in GAME_MODES:
         raise RoomServiceError("bad_game_mode")
+    if punishment_deck is not None and punishment_deck not in ("mild", "spicy", "chaos"):
+        raise RoomServiceError("bad_punishment_deck")
     effective_spin_policy = _derive_spin_policy(spin_policy, game_mode)
     if effective_spin_policy not in SPIN_POLICIES:
         raise RoomServiceError("bad_spin_policy")
@@ -114,6 +117,9 @@ async def create_room(
         game_mode=game_mode,
         spin_policy=effective_spin_policy,
         suggestion_policy=suggestion_policy,
+        punishment_deck=(
+            (punishment_deck or "mild") if game_mode == "punishment" else None
+        ),
     )
     session.add(room)
     await session.flush()
@@ -171,6 +177,7 @@ async def update_room(
         "suggestion_policy",
         "is_locked",
         "game_mode",
+        "punishment_deck",
     }
     new_spin_policy = patch.get("spin_policy") if "spin_policy" in patch else None
     for key, value in patch.items():

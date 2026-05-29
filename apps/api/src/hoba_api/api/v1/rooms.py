@@ -91,6 +91,7 @@ async def create_room_endpoint(
             spin_policy=payload.spin_policy,
             suggestion_policy=payload.suggestion_policy,
             game_mode=payload.game_mode,
+            punishment_deck=payload.punishment_deck,
         )
     except RoomServiceError as exc:
         raise _service_error_to_http(exc) from exc
