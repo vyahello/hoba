@@ -53,6 +53,7 @@ export type GameMode =
   | "punishment"
   | "chaos"
   | "rigged";
+export type PunishmentDeck = "mild" | "spicy" | "chaos";
 export type SpinPolicy = "host_only" | "anyone" | "turn_based";
 export type SuggestionPolicy = "off" | "approval" | "free";
 export type RoomStatus = "lobby" | "active" | "closed";
@@ -107,6 +108,14 @@ export interface ServerRoom {
   is_locked: boolean;
   is_anonymous: boolean;
   current_turn_user_id: number | null;
+  punishment_deck: PunishmentDeck | null;
+  punishment_done_count: number;
+  punishment_active_card: {
+    text: string;
+    deck: PunishmentDeck;
+    victim_segment_id: number;
+    spin_id: number;
+  } | null;
   created_at: string;
   closed_at: string | null;
 }
@@ -137,6 +146,7 @@ export interface RoomCreatePayload {
   spin_policy?: SpinPolicy;
   suggestion_policy?: SuggestionPolicy;
   game_mode?: GameMode;
+  punishment_deck?: PunishmentDeck;
 }
 
 export interface RoomPatchPayload {
@@ -145,6 +155,7 @@ export interface RoomPatchPayload {
   suggestion_policy?: SuggestionPolicy;
   is_locked?: boolean;
   game_mode?: GameMode;
+  punishment_deck?: PunishmentDeck;
 }
 
 // --- API surface ---------------------------------------------------------

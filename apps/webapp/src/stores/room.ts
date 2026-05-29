@@ -14,7 +14,10 @@ import { type Socket, io } from "socket.io-client";
 import { create } from "zustand";
 
 import { reactionLaneFor } from "@/features/rooms/reactionLanes";
-import { type RoomState as ServerRoomState } from "@/lib/api";
+import {
+  type PunishmentDeck,
+  type RoomState as ServerRoomState,
+} from "@/lib/api";
 
 const NAMESPACE = "/rooms";
 const REACTION_TTL_MS = 2200;
@@ -38,6 +41,9 @@ export interface SpinSettledEvent {
     remaining?: number;
     round_over?: boolean;
     survivor_segment_id?: number | null;
+    punishment_card?: string;
+    deck?: PunishmentDeck;
+    victim_segment_id?: number;
   };
 }
 
@@ -299,6 +305,10 @@ export const useRoomStore = create<RoomStore>((_set, get) => ({
 
   resetRound(): void {
     socket?.emit("round:reset");
+  },
+
+  markPunishmentDone(): void {
+    socket?.emit("punishment:done");
   },
 }));
 
