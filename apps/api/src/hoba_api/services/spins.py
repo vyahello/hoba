@@ -13,6 +13,8 @@ from hoba_api.models.question import Question
 from hoba_api.models.room import Room
 from hoba_api.models.segment import Segment
 from hoba_api.models.spin import Spin
+from hoba_api.modes import engine_for
+from hoba_api.modes.base import SpinContext
 from hoba_api.redis_client import presence_user_ids
 from hoba_api.services.rooms import RoomServiceError
 from hoba_api.wheel.spin_math import compute_spin
@@ -50,7 +52,7 @@ async def trigger_spin(
     if question is None:
         raise RoomServiceError("no_active_question")
 
-    segments = list(
+    all_segments = list(
         (
             await session.execute(
                 select(Segment)
@@ -64,7 +66,12 @@ async def trigger_spin(
         .scalars()
         .all(),
     )
-    if len(segments) < MIN_SEGMENTS_TO_SPIN:
+
+    engine = engine_for(room.game_mode)
+    ctx = SpinContext(room=room, question=question, segments=all_segments)
+    decision = engine.on_spin_request(ctx)
+    spin_segments = decision.segments
+    if len(spin_segments) < MIN_SEGMENTS_TO_SPIN:
         raise RoomServiceError("too_few_segments")
 
     last_spin = (
@@ -77,31 +84,34 @@ async def trigger_spin(
     ).scalar_one_or_none()
     starting_angle_deg = last_spin.final_angle_deg if last_spin is not None else 0.0
 
-    # Mulberry32 expects a 32-bit seed; use the low 31 bits of os entropy.
     seed = secrets.randbits(31)
-    raw_weights = [float(s.weight) for s in segments]
+    raw_weights = [float(s.weight) for s in spin_segments]
     weights: list[float] | None = (
         None if all(w == 1.0 for w in raw_weights) else raw_weights
     )
     result = compute_spin(
-        segment_count=len(segments),
+        segment_count=len(spin_segments),
         seed=seed,
         starting_angle_deg=starting_angle_deg,
         weights=weights,
     )
+    duration_ms = round(result.duration_ms * decision.duration_multiplier)
 
-    winning_segment = segments[result.result_segment_index]
+    winning_segment = spin_segments[result.result_segment_index]
     started_at = datetime.now(UTC)
     spin = Spin(
         question_id=question.id,
         triggered_by=user_id,
         result_segment_id=winning_segment.id,
         final_angle_deg=result.final_angle_deg,
-        duration_ms=result.duration_ms,
+        duration_ms=duration_ms,
         seed=seed,
-        mode_state_snapshot={},
+        mode_state_snapshot={
+            "living_segment_ids": [s.id for s in spin_segments],
+            "mode_effects": decision.effects,
+        },
         started_at=started_at,
-        settled_at=started_at + timedelta(milliseconds=result.duration_ms),
+        settled_at=started_at + timedelta(milliseconds=duration_ms),
     )
     session.add(spin)
 

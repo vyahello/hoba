@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hoba_api.models.room import Room
+from hoba_api.models.segment import Segment
 from hoba_api.services.participants import join_room
 from hoba_api.services.rooms import (
     RoomServiceError,
@@ -216,3 +220,50 @@ async def test_trigger_spin_sets_initial_cursor_on_lobby_to_active_turn_based(
     await trigger_spin(db, room=room, user_id=host_id)
     assert room.status == "active"
     assert room.current_turn_user_id == host_id
+
+
+async def test_trigger_spin_elimination_spins_over_living_only(
+    db: AsyncSession,
+) -> None:
+    host_id = await _make_user(db, tg_id=300)
+    room = await create_room(
+        db, host_id=host_id, question_text="Q?",
+        segments=_drafts(3), spin_policy="anyone", game_mode="elimination",
+    )
+    await db.refresh(room, ["questions"])
+    q = next(qq for qq in room.questions if qq.is_active)
+    segs = (await db.execute(
+        select(Segment).where(Segment.parent_id == q.id,
+                              Segment.parent_type == "question")
+        .order_by(Segment.position)
+    )).scalars().all()
+    segs[0].eliminated_at = datetime.now(UTC)  # only 2 living
+    await db.flush()
+
+    spin = await trigger_spin(db, room=room, user_id=host_id)
+    # Winner must be one of the living segments, never the eliminated one.
+    assert spin.result_segment_id in {segs[1].id, segs[2].id}
+    # 2 living -> dramatic multiplier baked into stored duration.
+    assert spin.mode_state_snapshot["mode_effects"] == {"dramatic": True}
+
+
+async def test_trigger_spin_elimination_rejects_when_one_living(
+    db: AsyncSession,
+) -> None:
+    host_id = await _make_user(db, tg_id=301)
+    room = await create_room(
+        db, host_id=host_id, question_text="Q?",
+        segments=_drafts(2), spin_policy="anyone", game_mode="elimination",
+    )
+    await db.refresh(room, ["questions"])
+    q = next(qq for qq in room.questions if qq.is_active)
+    segs = (await db.execute(
+        select(Segment).where(Segment.parent_id == q.id,
+                              Segment.parent_type == "question")
+        .order_by(Segment.position)
+    )).scalars().all()
+    segs[0].eliminated_at = datetime.now(UTC)  # 1 living
+    await db.flush()
+    with pytest.raises(RoomServiceError) as exc:
+        await trigger_spin(db, room=room, user_id=host_id)
+    assert exc.value.code == "too_few_segments"
