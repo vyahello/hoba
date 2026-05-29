@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useAnimate } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -57,6 +57,7 @@ export function RoomPage(): JSX.Element {
   const connected = useRoomStore((s) => s.connected);
   const snapshot = useRoomStore((s) => s.snapshot);
   const currentSpin = useRoomStore((s) => s.currentSpin);
+  const spinSettled = useRoomStore((s) => s.spinSettled);
   const lastError = useRoomStore((s) => s.lastError);
   const joinRoom = useRoomStore((s) => s.joinRoom);
   const leaveRoom = useRoomStore((s) => s.leaveRoom);
@@ -76,6 +77,10 @@ export function RoomPage(): JSX.Element {
   const [wheelState, setWheelState] = useState<WheelState>("idle");
   const [revealed, setRevealed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Shatter thunk: when a segment is eliminated, briefly compress the wheel
+  // (scale 1 → 0.97 → 1, ~300 ms) so players feel the winner "pop off".
+  const [wheelScope, animateWheel] = useAnimate();
 
   // Active rooms only — a closed swipe mid-spin would orphan everyone
   // else in the room. Lobby is fine to back out of.
@@ -126,6 +131,18 @@ export function RoomPage(): JSX.Element {
     const message = localized === key ? t("room:errors.fallback") : localized;
     toast({ title: message, intent: "warning" });
   }, [lastError, t]);
+
+  // Shatter thunk — fires once per elimination settle.
+  // Only runs when `eliminated_segment_id` is present; no-ops on classic
+  // settles or on re-renders. The spin_id makes the key unique per spin
+  // so the same settled event never re-fires if the component re-renders.
+  const settledSpinId = spinSettled?.spin_id ?? null;
+  const settledEliminatedId = spinSettled?.mode_aftereffects?.eliminated_segment_id;
+  useEffect(() => {
+    if (settledEliminatedId === undefined) return;
+    haptics.medium();
+    void animateWheel(wheelScope.current, { scale: [1, 0.97, 1] }, { duration: 0.3, ease: "easeInOut" });
+  }, [settledSpinId, settledEliminatedId, animateWheel, wheelScope]);
 
   const segments: SegmentDef[] = useMemo(() => {
     if (snapshot?.active_question == null) return [];
@@ -293,17 +310,19 @@ export function RoomPage(): JSX.Element {
       </section>
 
       <main className="flex-1 px-4 pt-3 pb-6 flex flex-col gap-4 relative">
-        <Wheel
-          segments={segments}
-          state={wheelState}
-          spin={wheelSpin}
-          ariaLabel={snapshot.active_question?.text ?? t("room:header.wheel_aria")}
-          // Only attach the hub-tap handler when this user is actually
-          // allowed to spin (host_only policy) — otherwise the hub
-          // would invite a tap that the server then rejects.
-          onSpinClick={canSpin && !roundOver ? triggerSpin : undefined}
-          className="max-w-md mx-auto"
-        />
+        <motion.div ref={wheelScope}>
+          <Wheel
+            segments={segments}
+            state={wheelState}
+            spin={wheelSpin}
+            ariaLabel={snapshot.active_question?.text ?? t("room:header.wheel_aria")}
+            // Only attach the hub-tap handler when this user is actually
+            // allowed to spin (host_only policy) — otherwise the hub
+            // would invite a tap that the server then rejects.
+            onSpinClick={canSpin && !roundOver ? triggerSpin : undefined}
+            className="max-w-md mx-auto"
+          />
+        </motion.div>
 
         {isElimination && eliminatedSegments(activeQuestion).length > 0 ? (
           <div className="flex flex-wrap gap-1.5 justify-center px-2">
