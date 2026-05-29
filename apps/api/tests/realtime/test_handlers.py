@@ -846,3 +846,81 @@ def _tg_user_for_handlers(user_id: int) -> Any:
             "photo_url": None,
         },
     )
+
+
+@pytest.mark.asyncio
+async def test_emit_settled_punishment_emits_card_and_patch(
+    sio: FakeSocketIO, db: Any,
+) -> None:
+    from hoba_api.services.rooms import get_room_by_code
+    from hoba_api.services.spins import trigger_spin
+
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=880))
+    room = await create_room(
+        db, host_id=host.id, question_text="Q?",
+        segments=[SegmentDraft(label="a", color_seed=0, weight=1),
+                  SegmentDraft(label="b", color_seed=1, weight=1)],
+        spin_policy="anyone", game_mode="punishment", punishment_deck="mild",
+    )
+    await db.commit()
+    spin = await trigger_spin(db, room=room, user_id=host.id)
+    await db.commit()
+    fetched = await get_room_by_code(db, room.code)
+    assert fetched is not None
+    sio.emitted.clear()
+
+    await _emit_settled(  # type: ignore[arg-type]
+        sio, room.code, fetched.id,
+        spin_id=spin.id, result_segment_id=spin.result_segment_id, duration_ms=0,
+    )
+
+    after = sio.events_named("spin:settled")[-1][1]["mode_aftereffects"]
+    assert after["punishment_card"]
+    assert after["victim_segment_id"] == spin.result_segment_id
+    patches = [e[1]["patch"] for e in sio.events_named("room:updated")
+               if isinstance(e[1], dict) and "patch" in e[1]]
+    assert any("punishment_active_card" in p for p in patches)
+
+
+@pytest.mark.asyncio
+async def test_punishment_done_increments_tally_and_clears(
+    sio: FakeSocketIO, db: Any,
+) -> None:
+    from hoba_api.services.rooms import get_room_by_code
+    from hoba_api.services.spins import trigger_spin
+
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=890))
+    room = await create_room(
+        db, host_id=host.id, question_text="Q?",
+        segments=[SegmentDraft(label="a", color_seed=0, weight=1),
+                  SegmentDraft(label="b", color_seed=1, weight=1)],
+        spin_policy="anyone", game_mode="punishment", punishment_deck="mild",
+    )
+    await db.commit()
+    await trigger_spin(db, room=room, user_id=host.id)
+    await db.commit()
+    code = room.code
+
+    await _connect(sio, "sid-h890", user_id=890)
+    await sio.call("room:join", "sid-h890", {"code": code})
+    sio.emitted.clear()
+
+    await sio.call("punishment:done", "sid-h890")
+    assert sio.events_named("punishment:cleared")
+    refreshed = await get_room_by_code(db, code)
+    assert refreshed is not None
+    await db.refresh(refreshed)
+    assert refreshed.punishment_done_count == 1
+    assert refreshed.punishment_active_card is None
+
+
+@pytest.mark.asyncio
+async def test_punishment_done_noop_without_card(sio: FakeSocketIO, db: Any) -> None:
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=900))
+    await db.commit()
+    code = await _create_room(db, host_id=host.id)  # classic, no card
+    await _connect(sio, "sid-h900", user_id=900)
+    await sio.call("room:join", "sid-h900", {"code": code})
+    sio.emitted.clear()
+    await sio.call("punishment:done", "sid-h900")
+    assert not sio.events_named("punishment:cleared")

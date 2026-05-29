@@ -123,6 +123,8 @@ async def _emit_settled(
     mode_aftereffects: dict[str, Any] = {}
     new_cursor: int | None = None
     advanced = False
+    punishment_card: dict[str, Any] | None = None
+    done_count = 0
 
     async with SessionLocal() as session:
         room = await session.get(Room, room_id)
@@ -173,6 +175,18 @@ async def _emit_settled(
                             "round_over": effects.round_over,
                             "survivor_segment_id": survivor_id,
                         }
+            if (
+                room.game_mode == "punishment"
+                and room.punishment_active_card is not None
+            ):
+                card = room.punishment_active_card
+                punishment_card = dict(card)
+                mode_aftereffects = {
+                    "punishment_card": card["text"],
+                    "deck": card["deck"],
+                    "victim_segment_id": card["victim_segment_id"],
+                }
+            done_count = room.punishment_done_count
             if room.spin_policy == "turn_based":
                 new_cursor = await advance_turn(session, room)
                 advanced = True
@@ -192,6 +206,18 @@ async def _emit_settled(
         await sio.emit(
             "room:updated",
             {"patch": {"current_turn_user_id": new_cursor}},
+            room=room_code,
+            namespace=NAMESPACE,
+        )
+    if punishment_card is not None:
+        await sio.emit(
+            "room:updated",
+            {
+                "patch": {
+                    "punishment_active_card": punishment_card,
+                    "punishment_done_count": done_count,
+                },
+            },
             room=room_code,
             namespace=NAMESPACE,
         )
@@ -457,6 +483,37 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
             await session.commit()
         await sio.emit("round:reset", {}, room=room_code, namespace=NAMESPACE)
         log.info("ws.round.reset", user_id=user_id, code=room_code)
+
+    @sio.on("punishment:done", namespace=NAMESPACE)
+    async def on_punishment_done(sid: str) -> None:
+        sess = await sio.get_session(sid, namespace=NAMESPACE)
+        user_id = sess.get("user_id")
+        room_code = sess.get("room_code")
+        room_id = sess.get("room_id")
+        if user_id is None or room_code is None or room_id is None:
+            await sio.emit("error", {"code": "not_in_room"}, to=sid, namespace=NAMESPACE)
+            return
+        async with SessionLocal() as session:
+            room = await session.get(Room, room_id)
+            if room is None or room.punishment_active_card is None:
+                return  # nothing pending — no-op
+            room.punishment_done_count += 1
+            room.punishment_active_card = None
+            done_count = room.punishment_done_count
+            await session.commit()
+        await sio.emit(
+            "room:updated",
+            {
+                "patch": {
+                    "punishment_active_card": None,
+                    "punishment_done_count": done_count,
+                },
+            },
+            room=room_code,
+            namespace=NAMESPACE,
+        )
+        await sio.emit("punishment:cleared", {}, room=room_code, namespace=NAMESPACE)
+        log.info("ws.punishment.done", user_id=user_id, code=room_code)
 
     @sio.on("reaction:send", namespace=NAMESPACE)
     async def on_reaction_send(sid: str, data: dict[str, Any]) -> None:
