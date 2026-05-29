@@ -368,6 +368,31 @@ async def test_spin_trigger_turn_based_lobby_allows_host_first_spin(
     assert len(sio.events_named("spin:started")) == 1
 
 
+@pytest.mark.asyncio
+async def test_spin_trigger_first_spin_broadcasts_active_status(
+    sio: FakeSocketIO, db: Any,
+) -> None:
+    # The lobby->active transition happens inside trigger_spin but was
+    # never broadcast, so other clients kept a stale snapshot.room.status
+    # of "lobby" until a reconnect. The first spin must emit room:updated
+    # with the new status so every client stays in sync.
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=80))
+    await db.commit()
+    code = await _create_room(db, host_id=host.id)  # host_only, lobby
+
+    await _connect(sio, "sid-h80", user_id=80)
+    await sio.call("room:join", "sid-h80", {"code": code})
+    sio.emitted.clear()
+
+    await sio.call("spin:trigger", "sid-h80", {})
+    patches = [
+        e[1]["patch"]
+        for e in sio.events_named("room:updated")
+        if isinstance(e[1], dict) and "patch" in e[1]
+    ]
+    assert any(p.get("status") == "active" for p in patches)
+
+
 # ---------- turn_based: _emit_settled cursor advance + room:updated ------
 
 

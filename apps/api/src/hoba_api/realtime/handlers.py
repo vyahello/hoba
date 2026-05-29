@@ -299,12 +299,21 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                 )
                 return
 
+            was_lobby = room.status == "lobby"
             try:
                 spin = await trigger_spin(session, room=room, user_id=user_id)
             except RoomServiceError as exc:
                 await sio.emit("error", {"code": exc.code}, to=sid, namespace=NAMESPACE)
                 return
             await session.commit()
+            # trigger_spin flips lobby->active on the first spin (and, for
+            # turn_based, seeds the cursor to host_id). Capture the post-spin
+            # values so we can broadcast the transition — otherwise every
+            # other client keeps a stale snapshot.room.status of "lobby"
+            # until a reconnect.
+            status_changed = was_lobby and room.status != "lobby"
+            status_after = room.status
+            cursor_after = room.current_turn_user_id
             spin_payload = {
                 "spin_id": spin.id,
                 "question_id": spin.question_id,
@@ -319,6 +328,19 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
             spin_id = spin.id
             result_segment_id = spin.result_segment_id
             duration_ms = spin.duration_ms
+
+        if status_changed:
+            await sio.emit(
+                "room:updated",
+                {
+                    "patch": {
+                        "status": status_after,
+                        "current_turn_user_id": cursor_after,
+                    },
+                },
+                room=room_code,
+                namespace=NAMESPACE,
+            )
 
         await sio.emit(
             "spin:announced",
