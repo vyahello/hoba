@@ -445,15 +445,14 @@ export function RoomPage(): JSX.Element {
               return (
                 <>
                   {/* Skewed brand exclamation — the celebratory "Хоба!" beat. */}
-                  <motion.span
+                  <motion.div
                     initial={{ scale: 0.3, opacity: 0, skewX: -18, rotate: -10 }}
                     animate={{ scale: 1, opacity: 1, skewX: -11, rotate: -4 }}
                     transition={{ type: "spring", damping: 9, stiffness: 240 }}
-                    className="font-display font-extrabold text-6xl text-brand-primary drop-shadow"
-                    aria-label={t("common:brand")}
+                    className="origin-center"
                   >
-                    {t("common:brand")}
-                  </motion.span>
+                    <HobaWord />
+                  </motion.div>
                   <motion.span
                     key={winner?.id}
                     initial={{ scale: 0.4, rotate: -10, opacity: 0 }}
