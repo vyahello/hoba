@@ -62,6 +62,7 @@ export function RoomPage(): JSX.Element {
   const joinRoom = useRoomStore((s) => s.joinRoom);
   const leaveRoom = useRoomStore((s) => s.leaveRoom);
   const triggerSpin = useRoomStore((s) => s.triggerSpin);
+  const resetRound = useRoomStore((s) => s.resetRound);
 
   const upperCode = code.toUpperCase();
 
@@ -93,6 +94,15 @@ export function RoomPage(): JSX.Element {
     };
   }, [roomStatus]);
 
+  // Elimination view-state — derived above the effects so the reveal
+  // flow can branch on it (classic celebrates; elimination just flags
+  // what's out and saves the celebration for the final survivor).
+  const isElimination = snapshot?.room.game_mode === "elimination";
+  const activeQuestion = snapshot?.active_question ?? null;
+  const remaining = remainingCount(activeQuestion);
+  const roundOver = isElimination && isRoundOver(activeQuestion);
+  const survivor = roundOver ? livingSegments(activeQuestion)[0] : undefined;
+
   useEffect(() => {
     if (currentSpin === null) {
       setWheelState("idle");
@@ -110,8 +120,12 @@ export function RoomPage(): JSX.Element {
     }, currentSpin.duration_ms);
 
     const revealAt = window.setTimeout(() => {
-      audio.play("hoba_pop");
-      fireConfetti();
+      // Classic celebrates the winner. Elimination only flags what's out
+      // — the confetti/"Hoba!" payoff is reserved for the final survivor.
+      if (!isElimination) {
+        audio.play("hoba_pop");
+        fireConfetti();
+      }
       setRevealed(true);
     }, currentSpin.duration_ms + REVEAL_DELAY_MS);
 
@@ -119,7 +133,26 @@ export function RoomPage(): JSX.Element {
       window.clearTimeout(settleAt);
       window.clearTimeout(revealAt);
     };
-  }, [currentSpin?.spin_id, currentSpin]);
+  }, [currentSpin?.spin_id, currentSpin, isElimination]);
+
+  // Elimination: the "what's out" flash auto-dismisses — no manual close.
+  useEffect(() => {
+    if (!isElimination || !revealed || roundOver) return undefined;
+    const timer = window.setTimeout(() => {
+      setRevealed(false);
+    }, 1800);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isElimination, revealed, roundOver]);
+
+  // Crown the survivor: celebrate once when the round ends.
+  useEffect(() => {
+    if (!roundOver) return;
+    audio.play("hoba_pop");
+    haptics.success();
+    fireConfetti();
+  }, [roundOver]);
 
   useEffect(() => {
     if (lastError === null) return;
@@ -180,13 +213,6 @@ export function RoomPage(): JSX.Element {
   const canSpin = computeCanSpin(snapshot);
   const callerIsHost = isHost(snapshot);
   const turnState = computeTurnState(snapshot);
-
-  const isElimination = snapshot?.room.game_mode === "elimination";
-  const activeQuestion = snapshot?.active_question ?? null;
-  const remaining = remainingCount(activeQuestion);
-  const roundOver = isElimination && isRoundOver(activeQuestion);
-  const survivor = roundOver ? livingSegments(activeQuestion)[0] : undefined;
-  const resetRound = useRoomStore((s) => s.resetRound);
 
   async function handleShare(): Promise<void> {
     if (snapshot === null) return;
@@ -310,19 +336,49 @@ export function RoomPage(): JSX.Element {
       </section>
 
       <main className="flex-1 px-4 pt-3 pb-6 flex flex-col gap-4 relative">
-        <motion.div ref={wheelScope}>
-          <Wheel
-            segments={segments}
-            state={wheelState}
-            spin={wheelSpin}
-            ariaLabel={snapshot.active_question?.text ?? t("room:header.wheel_aria")}
-            // Only attach the hub-tap handler when this user is actually
-            // allowed to spin (host_only policy) — otherwise the hub
-            // would invite a tap that the server then rejects.
-            onSpinClick={canSpin && !roundOver ? triggerSpin : undefined}
-            className="max-w-md mx-auto"
-          />
-        </motion.div>
+        {roundOver ? (
+          // Joyful finish — the lone survivor as a winner hero, in place
+          // of a pointless single-wedge wheel. Confetti fires from the
+          // roundOver effect above.
+          <div className="max-w-md mx-auto w-full flex flex-col items-center justify-center text-center py-10 gap-4">
+            <motion.span
+              key={survivor?.id}
+              initial={{ scale: 0.4, rotate: -10, opacity: 0 }}
+              animate={{ scale: 1, rotate: 0, opacity: 1 }}
+              transition={{ type: "spring", damping: 12, stiffness: 220 }}
+              className="text-7xl leading-none"
+              aria-hidden
+            >
+              {survivor?.emoji ?? "🏆"}
+            </motion.span>
+            <h2 className="font-display font-extrabold text-3xl text-brand-amber-3">
+              {t("room:elimination.winner_title", { label: survivor?.label ?? "" })}
+            </h2>
+            {callerIsHost ? (
+              <Button variant="primary" size="lg" className="mt-2" onClick={resetRound}>
+                {t("room:elimination.new_round")}
+              </Button>
+            ) : (
+              <p className="text-sm text-ink-light-2 dark:text-ink-dark-2">
+                {t("room:elimination.waiting_new_round")}
+              </p>
+            )}
+          </div>
+        ) : (
+          <motion.div ref={wheelScope}>
+            <Wheel
+              segments={segments}
+              state={wheelState}
+              spin={wheelSpin}
+              ariaLabel={snapshot.active_question?.text ?? t("room:header.wheel_aria")}
+              // Only attach the hub-tap handler when this user is actually
+              // allowed to spin (host_only policy) — otherwise the hub
+              // would invite a tap that the server then rejects.
+              onSpinClick={canSpin ? triggerSpin : undefined}
+              className="max-w-md mx-auto"
+            />
+          </motion.div>
+        )}
 
         {isElimination && eliminatedSegments(activeQuestion).length > 0 ? (
           <div className="flex flex-wrap gap-1.5 justify-center px-2">
@@ -339,25 +395,9 @@ export function RoomPage(): JSX.Element {
 
         <div className="mt-auto flex flex-col gap-3">
           <ReactionsBar />
-          {roundOver ? (
-            <div className="text-center py-3">
-              <p className="text-lg font-display font-bold text-brand-amber-3">
-                {t("room:elimination.survivor", { label: survivor?.label ?? "" })}
-              </p>
-              {callerIsHost ? (
-                <Button
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  className="mt-3"
-                  onClick={resetRound}
-                >
-                  {t("room:elimination.new_round")}
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
-          {canSpin && wheelState === "idle" && !roundOver ? (
+          {/* Classic keeps its bottom SPIN button; Elimination spins only
+              via the centered wheel hub (single control). */}
+          {canSpin && wheelState === "idle" && !roundOver && !isElimination ? (
             <Button variant="accent" size="xl" fullWidth onClick={triggerSpin}>
               {t("common:actions.spin").toUpperCase()}
             </Button>
@@ -384,12 +424,12 @@ export function RoomPage(): JSX.Element {
               {t("room:turn.no_one")}
             </p>
           ) : null}
-          {wheelState === "spinning" ? (
+          {wheelState === "spinning" && !isElimination ? (
             <Button variant="accent" size="xl" fullWidth disabled loading>
               {t("common:actions.spin").toUpperCase()}…
             </Button>
           ) : null}
-          {wheelState === "settled" && canSpin && !roundOver ? (
+          {wheelState === "settled" && canSpin && !roundOver && !isElimination ? (
             <Button variant="primary" size="lg" fullWidth onClick={triggerSpin}>
               {t("common:actions.spin")} →
             </Button>
@@ -409,36 +449,68 @@ export function RoomPage(): JSX.Element {
         ) : null}
 
         <AnimatePresence>
-          {revealed && winningSegment !== undefined ? (
-            <motion.div
-              key="result"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="absolute inset-0 z-30 px-4 pt-3 pb-6 flex flex-col items-center justify-center bg-bg-light/90 dark:bg-bg-dark/90 backdrop-blur-sm"
-              aria-live="polite"
-              role="status"
-            >
-              <HobaWord />
-              <ResultBanner
-                segmentLabel={winningSegment.label}
-                segmentEmoji={winningSegment.emoji ?? undefined}
-                segmentColor={
-                  WHEEL_PALETTE[winningSegment.color_seed % WHEEL_PALETTE.length] ?? "#7C5CFF"
-                }
-                className="mt-6 w-full max-w-sm"
-              />
-              <Button
-                variant="ghost"
+          {revealed && winningSegment !== undefined && !roundOver ? (
+            isElimination ? (
+              // Elimination: a light "what's out" flash. Auto-dismisses
+              // (effect above) and a tap anywhere skips it — no manual close,
+              // no "Hoba!"/confetti. The winner here is the eliminated item.
+              <motion.div
+                key="elim-out"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
                 onClick={() => {
                   setRevealed(false);
                 }}
-                className="mt-4"
+                className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-bg-light/85 dark:bg-bg-dark/85 backdrop-blur-sm cursor-pointer"
+                aria-live="polite"
+                role="status"
               >
-                {t("common:actions.close")}
-              </Button>
-            </motion.div>
+                <motion.span
+                  initial={{ scale: 0.5, rotate: -8, opacity: 0 }}
+                  animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                  transition={{ type: "spring", damping: 13, stiffness: 240 }}
+                  className="text-6xl leading-none grayscale"
+                  aria-hidden
+                >
+                  {winningSegment.emoji ?? "💥"}
+                </motion.span>
+                <p className="font-display font-bold text-2xl text-center px-6 text-ink-light-1 dark:text-ink-dark-1">
+                  {t("room:elimination.eliminated_result", { label: winningSegment.label })}
+                </p>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="result"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="absolute inset-0 z-30 px-4 pt-3 pb-6 flex flex-col items-center justify-center bg-bg-light/90 dark:bg-bg-dark/90 backdrop-blur-sm"
+                aria-live="polite"
+                role="status"
+              >
+                <HobaWord />
+                <ResultBanner
+                  segmentLabel={winningSegment.label}
+                  segmentEmoji={winningSegment.emoji ?? undefined}
+                  segmentColor={
+                    WHEEL_PALETTE[winningSegment.color_seed % WHEEL_PALETTE.length] ?? "#7C5CFF"
+                  }
+                  className="mt-6 w-full max-w-sm"
+                />
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setRevealed(false);
+                  }}
+                  className="mt-4"
+                >
+                  {t("common:actions.close")}
+                </Button>
+              </motion.div>
+            )
           ) : null}
         </AnimatePresence>
       </main>
