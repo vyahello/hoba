@@ -1,4 +1,4 @@
-import { type GameMode } from "@/lib/api";
+import { type GameMode, type PunishmentDeck } from "@/lib/api";
 
 export interface GameModeMeta {
   id: GameMode;
@@ -6,6 +6,21 @@ export interface GameModeMeta {
   /** i18n key under `room` namespace, suffixed with `.label` and `.tagline`. */
   i18nKey: string;
 }
+
+export interface PunishmentDeckMeta {
+  id: PunishmentDeck;
+  emoji: string;
+  /** i18n key under `room` namespace, suffixed with `.label`. */
+  i18nKey: string;
+}
+
+export const PUNISHMENT_DECKS: readonly PunishmentDeckMeta[] = [
+  { id: "mild", emoji: "🙂", i18nKey: "punishment.deck_mild" },
+  { id: "spicy", emoji: "🌶️", i18nKey: "punishment.deck_spicy" },
+  { id: "chaos", emoji: "🔥", i18nKey: "punishment.deck_chaos" },
+];
+
+export const DEFAULT_PUNISHMENT_DECK: PunishmentDeck = "mild";
 
 /**
  * Picker order = display order. Rigged is intentionally excluded —

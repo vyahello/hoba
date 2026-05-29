@@ -20,7 +20,7 @@ import {
   type WheelDef,
   type WheelState,
 } from "@/features/wheel/types";
-import { api, ApiError, type GameMode } from "@/lib/api";
+import { api, ApiError, type GameMode, type PunishmentDeck } from "@/lib/api";
 import { haptics } from "@/lib/haptics";
 import { safeNavigateBack } from "@/lib/navigation";
 import { useCustomWheel, useSpinHistory } from "@/stores/spinHistory";
@@ -187,7 +187,9 @@ export function SpinPage(): JSX.Element {
     setModePickerOpen(true);
   }
 
-  async function handleCreateRoom(mode: GameMode): Promise<void> {
+  async function handleCreateRoom(
+    mode: GameMode, deck?: PunishmentDeck,
+  ): Promise<void> {
     if (wheel === undefined || inviteLoading) return;
     setInviteLoading(true);
     try {
@@ -200,6 +202,7 @@ export function SpinPage(): JSX.Element {
           weight: s.weight ?? 1,
         })),
         game_mode: mode,
+        ...(deck !== undefined ? { punishment_deck: deck } : {}),
       });
       navigate(`/room/${state.room.code}`);
     } catch (exc) {
@@ -289,8 +292,8 @@ export function SpinPage(): JSX.Element {
         onClose={() => {
           setModePickerOpen(false);
         }}
-        onCreate={(mode) => {
-          void handleCreateRoom(mode);
+        onCreate={(mode, deck) => {
+          void handleCreateRoom(mode, deck);
         }}
       />
     </>
