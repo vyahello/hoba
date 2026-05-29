@@ -107,6 +107,12 @@ export function RoomPage(): JSX.Element {
   const roundOver = isElimination && isRoundOver(activeQuestion);
   const survivor = roundOver ? livingSegments(activeQuestion)[0] : undefined;
 
+  // Punishment view-state.
+  const isPunish = snapshot?.room.game_mode === "punishment";
+  const pendingCard = activeCard(snapshot);
+  const punishDone = doneCount(snapshot);
+  const markPunishmentDone = useRoomStore((s) => s.markPunishmentDone);
+
   useEffect(() => {
     if (currentSpin === null) {
       setWheelState("idle");

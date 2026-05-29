@@ -79,6 +79,8 @@ interface RoomStore {
   setSnapshot(state: ServerRoomState): void;
   /** Emit round:reset to the server (host-only, Elimination mode). */
   resetRound(): void;
+  /** Emit punishment:done (any participant) to clear the pending card. */
+  markPunishmentDone(): void;
 }
 
 // --- Pure reducers (exported for unit testing) ---------------------------
