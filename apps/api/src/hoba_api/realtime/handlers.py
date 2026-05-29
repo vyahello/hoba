@@ -195,22 +195,46 @@ async def _emit_settled(
                 }
             done_count = room.punishment_done_count
 
-            # Best-of-N (Classic, spin_count > 1): record this attempt, and
-            # finalize the round winner once N attempts are reached with a
-            # single leader. A tie keeps the round open for more attempts.
-            if room.game_mode == "classic" and room.spin_count > 1:
-                tally = dict(room.bon_tally or {})
-                key = str(result_segment_id)
-                tally[key] = tally.get(key, 0) + 1
-                room.bon_tally = tally
-                room.bon_attempts += 1
-                leaders = best_of_n_leaders({int(k): v for k, v in tally.items()})
-                if room.bon_attempts >= room.spin_count and len(leaders) == 1:
-                    room.bon_winner_segment_id = leaders[0]
+            # Best-of-N (Classic, spin_count > 1): recompute the round from
+            # the committed Spin rows rather than incrementing shared
+            # counters. _emit_settled runs as overlapping background tasks,
+            # so an increment-based count races: a late stale patch (e.g.
+            # attempts=4, winner=null) can arrive after the finalizing patch
+            # and blank the winner on clients (the "5/5, no winner" bug).
+            # Counting committed spins is order-independent — every settle
+            # after the Nth spin commits converges to the same result.
+            if (
+                room.game_mode == "classic"
+                and room.spin_count > 1
+                and question is not None
+            ):
+                baseline = room.bon_round_start_spin_id or 0
+                round_seg_ids = list(
+                    (
+                        await session.execute(
+                            select(Spin.result_segment_id).where(
+                                Spin.question_id == question.id,
+                                Spin.id > baseline,
+                            ),
+                        )
+                    ).scalars().all(),
+                )
+                counts: dict[int, int] = {}
+                for seg_id in round_seg_ids:
+                    counts[seg_id] = counts.get(seg_id, 0) + 1
+                leaders = best_of_n_leaders(counts)
+                winner_id = (
+                    leaders[0]
+                    if len(round_seg_ids) >= room.spin_count and len(leaders) == 1
+                    else None
+                )
+                room.bon_attempts = len(round_seg_ids)
+                room.bon_tally = {str(k): v for k, v in counts.items()}
+                room.bon_winner_segment_id = winner_id
                 bon_patch = {
                     "bon_attempts": room.bon_attempts,
-                    "bon_tally": tally,
-                    "bon_winner_segment_id": room.bon_winner_segment_id,
+                    "bon_tally": room.bon_tally,
+                    "bon_winner_segment_id": winner_id,
                 }
 
             if room.spin_policy == "turn_based":
