@@ -71,7 +71,43 @@ interface RoomStore {
    * room:updated, this is how the calling client refreshes its view.
    */
   setSnapshot(state: ServerRoomState): void;
+  /** Emit round:reset to the server (host-only, Elimination mode). */
+  resetRound(): void;
 }
+
+// --- Pure reducers (exported for unit testing) ---------------------------
+
+export function applyEliminated(
+  snap: ServerRoomState,
+  eliminatedSegmentId: number,
+): ServerRoomState {
+  if (snap.active_question === null) return snap;
+  return {
+    ...snap,
+    active_question: {
+      ...snap.active_question,
+      segments: snap.active_question.segments.map((s) =>
+        s.id === eliminatedSegmentId ? { ...s, is_eliminated: true } : s,
+      ),
+    },
+  };
+}
+
+export function reviveAllSegments(snap: ServerRoomState): ServerRoomState {
+  if (snap.active_question === null) return snap;
+  if (snap.active_question.segments.every((s) => !s.is_eliminated)) return snap;
+  return {
+    ...snap,
+    active_question: {
+      ...snap.active_question,
+      segments: snap.active_question.segments.map((s) =>
+        s.is_eliminated ? { ...s, is_eliminated: false } : s,
+      ),
+    },
+  };
+}
+
+// -------------------------------------------------------------------------
 
 let socket: Socket | null = null;
 
@@ -173,7 +209,18 @@ function wireListeners(s: Socket): void {
   });
 
   s.on("spin:settled", (payload: SpinSettledEvent) => {
-    setState({ spinSettled: payload });
+    const eliminatedId = payload.mode_aftereffects?.eliminated_segment_id;
+    const snap = getState().snapshot;
+    if (eliminatedId !== undefined && snap !== null) {
+      setState({ spinSettled: payload, snapshot: applyEliminated(snap, eliminatedId) });
+    } else {
+      setState({ spinSettled: payload });
+    }
+  });
+
+  s.on("round:reset", () => {
+    const snap = getState().snapshot;
+    if (snap !== null) setState({ snapshot: reviveAllSegments(snap) });
   });
 
   s.on(
@@ -248,6 +295,10 @@ export const useRoomStore = create<RoomStore>((_set, get) => ({
 
   setSnapshot(state: ServerRoomState): void {
     useRoomStore.setState({ snapshot: state });
+  },
+
+  resetRound(): void {
+    socket?.emit("round:reset");
   },
 }));
 
