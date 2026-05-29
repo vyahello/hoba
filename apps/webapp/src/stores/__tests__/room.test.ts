@@ -15,6 +15,7 @@ function snap(): RoomState {
       game_mode: "elimination", spin_policy: "anyone", suggestion_policy: "off",
       is_locked: false, is_anonymous: false, current_turn_user_id: null,
       punishment_deck: null, punishment_done_count: 0, punishment_active_card: null,
+      spin_count: 1,
       created_at: "2026-05-29T00:00:00Z", closed_at: null,
     },
     participants: [],
