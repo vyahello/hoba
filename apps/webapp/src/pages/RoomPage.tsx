@@ -48,6 +48,9 @@ import { toast } from "@/stores/toast";
 import { WHEEL_PALETTE } from "../../tailwind.config";
 
 const REVEAL_DELAY_MS = 1500;
+// Elimination shows its reveal sooner — the brand beat leads, then the
+// eliminated item — so players don't sit on the landed option first.
+const ELIM_REVEAL_DELAY_MS = 600;
 
 export function RoomPage(): JSX.Element {
   const { code = "" } = useParams<{ code: string }>();
@@ -120,14 +123,15 @@ export function RoomPage(): JSX.Element {
     }, currentSpin.duration_ms);
 
     const revealAt = window.setTimeout(() => {
-      // Classic celebrates the winner. Elimination only flags what's out
-      // — the confetti/"Hoba!" payoff is reserved for the final survivor.
-      if (!isElimination) {
-        audio.play("hoba_pop");
-        fireConfetti();
-      }
+      // "Хоба!" brand pop on every reveal. Confetti is the win payoff —
+      // classic result + the final elimination survivor only, never a
+      // mid-game elimination (that's a quieter "out").
+      audio.play("hoba_pop");
+      if (!isElimination) fireConfetti();
       setRevealed(true);
-    }, currentSpin.duration_ms + REVEAL_DELAY_MS);
+      // Elimination leads with the brand beat sooner so it reads as
+      // "Хоба! → what's out", not "stare at the landed option, then text".
+    }, currentSpin.duration_ms + (isElimination ? ELIM_REVEAL_DELAY_MS : REVEAL_DELAY_MS));
 
     return () => {
       window.clearTimeout(settleAt);
@@ -142,7 +146,7 @@ export function RoomPage(): JSX.Element {
     if (!revealed || roundOver) return undefined;
     const timer = window.setTimeout(() => {
       setRevealed(false);
-    }, isElimination ? 1800 : 2800);
+    }, isElimination ? 2200 : 2800);
     return () => {
       window.clearTimeout(timer);
     };
@@ -461,22 +465,25 @@ export function RoomPage(): JSX.Element {
                 onClick={() => {
                   setRevealed(false);
                 }}
-                className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-bg-light/85 dark:bg-bg-dark/85 backdrop-blur-sm cursor-pointer"
+                className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-bg-light/85 dark:bg-bg-dark/85 backdrop-blur-sm cursor-pointer"
                 aria-live="polite"
                 role="status"
               >
-                <motion.span
-                  initial={{ scale: 0.5, rotate: -8, opacity: 0 }}
-                  animate={{ scale: 1, rotate: 0, opacity: 1 }}
-                  transition={{ type: "spring", damping: 13, stiffness: 240 }}
-                  className="text-6xl leading-none grayscale"
-                  aria-hidden
+                {/* Brand beat leads, then the eliminated item drops in. */}
+                <HobaWord />
+                <motion.div
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5, type: "spring", damping: 16, stiffness: 240 }}
+                  className="flex flex-col items-center gap-2"
                 >
-                  {winningSegment.emoji ?? "💥"}
-                </motion.span>
-                <p className="font-display font-bold text-2xl text-center px-6 text-ink-light-1 dark:text-ink-dark-1">
-                  {t("room:elimination.eliminated_result", { label: winningSegment.label })}
-                </p>
+                  <span className="text-6xl leading-none grayscale" aria-hidden>
+                    {winningSegment.emoji ?? "💥"}
+                  </span>
+                  <p className="font-display font-bold text-2xl text-center px-6 text-ink-light-1 dark:text-ink-dark-1">
+                    {t("room:elimination.eliminated_result", { label: winningSegment.label })}
+                  </p>
+                </motion.div>
               </motion.div>
             ) : (
               <motion.div
