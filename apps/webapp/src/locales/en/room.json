@@ -30,7 +30,8 @@
   },
   "mode_picker": {
     "title": "Choose a game mode",
-    "create": "Create room"
+    "create": "Create room",
+    "deck_title": "Choose a deck"
   },
   "elimination": {
     "remaining": "{count, plural, one {# left} other {# left}}",
@@ -87,5 +88,23 @@
     "unauthenticated": "Sign-in expired. Reopen from Telegram.",
     "bad_payload": "Something looked off — try again.",
     "fallback": "Something went wrong."
+  },
+  "punishment": {
+    "tally": "{count, plural, one {# punishment done} other {# punishments done}}",
+    "done": "Done ✓",
+    "victim_card": "🎯 {victim}",
+    "pending_hint": "Resolve the card to keep going",
+    "deck_mild": {
+      "label": "Mild",
+      "tagline": "Silly, all-ages dares"
+    },
+    "deck_spicy": {
+      "label": "Spicy",
+      "tagline": "Bolder adult-party dares"
+    },
+    "deck_chaos": {
+      "label": "Chaos",
+      "tagline": "Absurd wildcard dares"
+    }
   }
 }

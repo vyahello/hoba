@@ -30,7 +30,8 @@
   },
   "mode_picker": {
     "title": "Виберіть режим",
-    "create": "Створити кімнату"
+    "create": "Створити кімнату",
+    "deck_title": "Виберіть колоду"
   },
   "elimination": {
     "remaining": "{count, plural, one {залишився #} few {залишилось #} many {залишилось #} other {залишилось #}}",
@@ -87,5 +88,23 @@
     "unauthenticated": "Сеанс минув. Відкрийте Mini App з Telegram.",
     "bad_payload": "Щось пішло не так — спробуйте ще раз.",
     "fallback": "Щось зламалось."
+  },
+  "punishment": {
+    "tally": "{count, plural, one {# покарання виконано} few {# покарання виконано} many {# покарань виконано} other {# покарання виконано}}",
+    "done": "Готово ✓",
+    "victim_card": "🎯 {victim}",
+    "pending_hint": "Виконайте картку, щоб продовжити",
+    "deck_mild": {
+      "label": "Лагідний",
+      "tagline": "Жартівливі завдання для всіх"
+    },
+    "deck_spicy": {
+      "label": "Гострий",
+      "tagline": "Сміливіші завдання для дорослих"
+    },
+    "deck_chaos": {
+      "label": "Хаос",
+      "tagline": "Абсурдні непередбачувані завдання"
+    }
   }
 }
