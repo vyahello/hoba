@@ -105,13 +105,46 @@ describe("computeTurnState", () => {
     });
   });
 
-  it("returns no_one when cursor is null", () => {
+  it("returns no_one when cursor is null in an active room", () => {
+    // Active room whose cursor was cleared (advance_turn found no one
+    // online). There is genuinely no turn-holder.
     const snapshot = makeSnapshot({
       me_user_id: 7,
-      room: makeRoom({ current_turn_user_id: null }),
+      room: makeRoom({ status: "active", current_turn_user_id: null }),
       participants: [makeParticipant(7, "Volo", "host")],
     });
     expect(computeTurnState(snapshot)).toEqual({ kind: "no_one" });
+  });
+
+  it("returns my_turn for the host in a lobby with a null cursor", () => {
+    // Mirrors the server: in a turn_based lobby the cursor is null until
+    // the first spin, which trigger_spin seeds to host_id. The host is
+    // therefore the effective turn-holder and may kick things off.
+    const snapshot = makeSnapshot({
+      me_user_id: 7,
+      room: makeRoom({ status: "lobby", host_id: 7, current_turn_user_id: null }),
+      participants: [
+        makeParticipant(7, "Volo", "host"),
+        makeParticipant(9, "Anna"),
+      ],
+    });
+    expect(computeTurnState(snapshot)).toEqual({ kind: "my_turn" });
+  });
+
+  it("returns waiting-on-host for a guest in a lobby with a null cursor", () => {
+    const snapshot = makeSnapshot({
+      me_user_id: 9,
+      room: makeRoom({ status: "lobby", host_id: 7, current_turn_user_id: null }),
+      participants: [
+        makeParticipant(7, "Volo", "host"),
+        makeParticipant(9, "Anna"),
+      ],
+    });
+    expect(computeTurnState(snapshot)).toEqual({
+      kind: "waiting",
+      whoUserId: 7,
+      whoName: "Volo",
+    });
   });
 
   it("returns no_one when cursor points to an unknown participant (defensive)", () => {

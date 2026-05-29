@@ -9,6 +9,7 @@ function makeSnapshot(args: {
   me_user_id: number;
   participants: Array<{ user_id: number; role: "host" | "guest" }>;
   current_turn_user_id?: number | null;
+  status?: "lobby" | "active" | "closed";
 }): RoomState {
   return {
     room: {
@@ -16,7 +17,7 @@ function makeSnapshot(args: {
       code: "ABC123",
       host_id: args.participants.find((p) => p.role === "host")?.user_id ?? 0,
       title: null,
-      status: "active",
+      status: args.status ?? "active",
       game_mode: "classic",
       spin_policy: args.spin_policy,
       suggestion_policy: "off",
@@ -190,14 +191,54 @@ describe("computeCanSpin", () => {
     ).toBe(false);
   });
 
-  it("returns false under `turn_based` when current_turn_user_id is null (lobby)", () => {
+  it("returns false under `turn_based` when cursor is null in an active room", () => {
+    // Active room whose cursor was cleared (advance_turn found no one
+    // online) — no one holds the turn, not even the host.
     expect(
       computeCanSpin(
         makeSnapshot({
           spin_policy: "turn_based",
+          status: "active",
           current_turn_user_id: null,
           me_user_id: 7,
           participants: [{ user_id: 7, role: "host" }],
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("lets the host spin under `turn_based` in a lobby with a null cursor", () => {
+    // Regression for the lobby deadlock: the server seeds the cursor to
+    // host_id on the first spin, so the host's hub must be tappable
+    // before that first spin. Without this the room could never start.
+    expect(
+      computeCanSpin(
+        makeSnapshot({
+          spin_policy: "turn_based",
+          status: "lobby",
+          current_turn_user_id: null,
+          me_user_id: 7,
+          participants: [
+            { user_id: 7, role: "host" },
+            { user_id: 9, role: "guest" },
+          ],
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not let a guest spin under `turn_based` in a lobby with a null cursor", () => {
+    expect(
+      computeCanSpin(
+        makeSnapshot({
+          spin_policy: "turn_based",
+          status: "lobby",
+          current_turn_user_id: null,
+          me_user_id: 9,
+          participants: [
+            { user_id: 7, role: "host" },
+            { user_id: 9, role: "guest" },
+          ],
         }),
       ),
     ).toBe(false);

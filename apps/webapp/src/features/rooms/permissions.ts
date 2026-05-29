@@ -1,5 +1,7 @@
 import { type RoomState } from "@/lib/api";
 
+import { effectiveTurnUserId } from "./turnState";
+
 /**
  * Whether the calling user is allowed to spin in the current room
  * snapshot. Mirrors the server-side check in
@@ -16,7 +18,7 @@ export function computeCanSpin(snapshot: RoomState | null): boolean {
   if (snapshot.room.spin_policy === "anyone") return true;
   const myUserId = snapshot.me_user_id;
   if (snapshot.room.spin_policy === "turn_based") {
-    return snapshot.room.current_turn_user_id === myUserId;
+    return effectiveTurnUserId(snapshot) === myUserId;
   }
   const myParticipant = snapshot.participants.find(
     (p) => p.user_id === myUserId,
