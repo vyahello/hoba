@@ -112,7 +112,7 @@
   },
   "best_of_n": {
     "attempt": "Спроба {k}/{n}",
-    "winner": "🏆 {label} — переможець!",
+    "winner": "{label} — переможець!",
     "new_round": "Новий раунд"
   }
 }
