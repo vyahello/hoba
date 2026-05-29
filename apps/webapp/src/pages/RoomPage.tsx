@@ -180,6 +180,14 @@ export function RoomPage(): JSX.Element {
     fireConfetti();
   }, [roundOver]);
 
+  // Same celebration when a best-of-N round finalizes a winner.
+  useEffect(() => {
+    if (!bonOver) return;
+    audio.play("hoba_pop");
+    haptics.success();
+    fireConfetti();
+  }, [bonOver]);
+
   useEffect(() => {
     if (lastError === null) return;
     // `lastError` is a server-emitted machine code (e.g. "room_closed",
@@ -426,6 +434,42 @@ export function RoomPage(): JSX.Element {
               </p>
             )}
           </div>
+        ) : isBon && bonOver ? (
+          // Best-of-N finish — winner hero in place of the wheel so the
+          // result is unmissable without scrolling.
+          <div className="max-w-md mx-auto w-full flex flex-col items-center justify-center text-center py-10 gap-4">
+            {(() => {
+              const winner = snapshot.active_question?.segments.find(
+                (s) => s.id === bonWinnerId,
+              );
+              return (
+                <>
+                  <motion.span
+                    key={winner?.id}
+                    initial={{ scale: 0.4, rotate: -10, opacity: 0 }}
+                    animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                    transition={{ type: "spring", damping: 12, stiffness: 220 }}
+                    className="text-7xl leading-none"
+                    aria-hidden
+                  >
+                    {winner?.emoji ?? "🏆"}
+                  </motion.span>
+                  <h2 className="font-display font-extrabold text-3xl text-brand-amber-3">
+                    {t("room:best_of_n.winner", { label: winner?.label ?? "" })}
+                  </h2>
+                </>
+              );
+            })()}
+            {callerIsHost ? (
+              <Button variant="primary" size="lg" className="mt-2" onClick={bestOfNReset}>
+                {t("room:best_of_n.new_round")}
+              </Button>
+            ) : (
+              <p className="text-sm text-ink-light-2 dark:text-ink-dark-2">
+                {t("room:elimination.waiting_new_round")}
+              </p>
+            )}
+          </div>
         ) : (
           <motion.div ref={wheelScope}>
             <Wheel
@@ -498,29 +542,6 @@ export function RoomPage(): JSX.Element {
             <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-2">
               {t("room:punishment.pending_hint")}
             </p>
-          ) : null}
-          {isBon && bonOver ? (
-            <div className="text-center py-2">
-              <p className="text-lg font-display font-bold text-brand-amber-3">
-                {t("room:best_of_n.winner", {
-                  label:
-                    snapshot.active_question?.segments.find(
-                      (s) => s.id === bonWinnerId,
-                    )?.label ?? "",
-                })}
-              </p>
-              {callerIsHost ? (
-                <Button
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  className="mt-3"
-                  onClick={bestOfNReset}
-                >
-                  {t("room:best_of_n.new_round")}
-                </Button>
-              ) : null}
-            </div>
           ) : null}
         </div>
 
