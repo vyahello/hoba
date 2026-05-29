@@ -135,16 +135,18 @@ export function RoomPage(): JSX.Element {
     };
   }, [currentSpin?.spin_id, currentSpin, isElimination]);
 
-  // Elimination: the "what's out" flash auto-dismisses — no manual close.
+  // The result auto-dismisses for every mode — no manual close. The
+  // elimination "what's out" flash is quick; the classic celebration
+  // lingers a touch longer.
   useEffect(() => {
-    if (!isElimination || !revealed || roundOver) return undefined;
+    if (!revealed || roundOver) return undefined;
     const timer = window.setTimeout(() => {
       setRevealed(false);
-    }, 1800);
+    }, isElimination ? 1800 : 2800);
     return () => {
       window.clearTimeout(timer);
     };
-  }, [isElimination, revealed, roundOver]);
+  }, [revealed, roundOver, isElimination]);
 
   // Crown the survivor: celebrate once when the round ends.
   useEffect(() => {
@@ -173,9 +175,14 @@ export function RoomPage(): JSX.Element {
   const settledEliminatedId = spinSettled?.mode_aftereffects?.eliminated_segment_id;
   useEffect(() => {
     if (settledEliminatedId === undefined) return;
+    // On the FINAL elimination the wheel unmounts (the winner hero takes
+    // its place), so wheelScope.current is null — calling animate() on it
+    // crashes Framer Motion ("WeakMap keys must be objects"). Skip the
+    // thunk in that case; the finish has its own celebration.
+    if (roundOver || wheelScope.current === null) return;
     haptics.medium();
     void animateWheel(wheelScope.current, { scale: [1, 0.97, 1] }, { duration: 0.3, ease: "easeInOut" });
-  }, [settledSpinId, settledEliminatedId, animateWheel, wheelScope]);
+  }, [settledSpinId, settledEliminatedId, animateWheel, wheelScope, roundOver]);
 
   const segments: SegmentDef[] = useMemo(() => {
     if (snapshot?.active_question == null) return [];
@@ -213,6 +220,12 @@ export function RoomPage(): JSX.Element {
   const canSpin = computeCanSpin(snapshot);
   const callerIsHost = isHost(snapshot);
   const turnState = computeTurnState(snapshot);
+
+  // Spinning is the only state without status lines. No mode has a bottom
+  // SPIN button anymore (the centered hub is the sole control), so the
+  // wheel lingers in "settled" between spins — keep the turn/status
+  // indicator visible there too, not just while idle.
+  const idleish = wheelState !== "spinning";
 
   async function handleShare(): Promise<void> {
     if (snapshot === null) return;
@@ -395,44 +408,29 @@ export function RoomPage(): JSX.Element {
 
         <div className="mt-auto flex flex-col gap-3">
           <ReactionsBar />
-          {/* Classic keeps its bottom SPIN button; Elimination spins only
-              via the centered wheel hub (single control). */}
-          {canSpin && wheelState === "idle" && !roundOver && !isElimination ? (
-            <Button variant="accent" size="xl" fullWidth onClick={triggerSpin}>
-              {t("common:actions.spin").toUpperCase()}
-            </Button>
-          ) : null}
-          {!canSpin && wheelState === "idle" && turnState.kind === "not_turn_based" && !roundOver ? (
+          {/* No bottom SPIN button in any mode — the centered wheel hub is
+              the sole spin control. Only status/turn lines live here. */}
+          {!canSpin && idleish && turnState.kind === "not_turn_based" && !roundOver ? (
             <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-3">
               {t("room:spin.host_only_hint")}
             </p>
           ) : null}
-          {wheelState === "idle" && turnState.kind === "my_turn" && !roundOver ? (
+          {idleish && turnState.kind === "my_turn" && !roundOver ? (
             <p className="text-center text-sm font-medium text-brand-amber-3 py-3">
               {t("room:turn.my_turn")}
             </p>
           ) : null}
-          {wheelState === "idle" && turnState.kind === "waiting" && !roundOver ? (
+          {idleish && turnState.kind === "waiting" && !roundOver ? (
             <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-3">
               {turnState.whoName !== null
                 ? t("room:turn.waiting_named", { name: turnState.whoName })
                 : t("room:turn.waiting_unnamed")}
             </p>
           ) : null}
-          {wheelState === "idle" && turnState.kind === "no_one" && !roundOver ? (
+          {idleish && turnState.kind === "no_one" && !roundOver ? (
             <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-3">
               {t("room:turn.no_one")}
             </p>
-          ) : null}
-          {wheelState === "spinning" && !isElimination ? (
-            <Button variant="accent" size="xl" fullWidth disabled loading>
-              {t("common:actions.spin").toUpperCase()}…
-            </Button>
-          ) : null}
-          {wheelState === "settled" && canSpin && !roundOver && !isElimination ? (
-            <Button variant="primary" size="lg" fullWidth onClick={triggerSpin}>
-              {t("common:actions.spin")} →
-            </Button>
           ) : null}
         </div>
 
@@ -487,7 +485,10 @@ export function RoomPage(): JSX.Element {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
-                className="absolute inset-0 z-30 px-4 pt-3 pb-6 flex flex-col items-center justify-center bg-bg-light/90 dark:bg-bg-dark/90 backdrop-blur-sm"
+                onClick={() => {
+                  setRevealed(false);
+                }}
+                className="absolute inset-0 z-30 px-4 pt-3 pb-6 flex flex-col items-center justify-center bg-bg-light/90 dark:bg-bg-dark/90 backdrop-blur-sm cursor-pointer"
                 aria-live="polite"
                 role="status"
               >
@@ -500,15 +501,6 @@ export function RoomPage(): JSX.Element {
                   }
                   className="mt-6 w-full max-w-sm"
                 />
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setRevealed(false);
-                  }}
-                  className="mt-4"
-                >
-                  {t("common:actions.close")}
-                </Button>
               </motion.div>
             )
           ) : null}
