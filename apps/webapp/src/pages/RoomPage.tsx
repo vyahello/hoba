@@ -116,38 +116,70 @@ export function RoomPage(): JSX.Element {
   const punishDone = doneCount(snapshot);
   const markPunishmentDone = useRoomStore((s) => s.markPunishmentDone);
 
+  // Normalize a spin into a series (best-of-N). Single spins → 1 entry.
+  const spinSeries = useMemo(() => {
+    if (currentSpin === null) return [];
+    if (currentSpin.series !== undefined && currentSpin.series.length > 0) {
+      return currentSpin.series;
+    }
+    return [
+      {
+        segment_id: currentSpin.result_segment_id,
+        final_angle_deg: currentSpin.final_angle_deg,
+        duration_ms: currentSpin.duration_ms,
+        seed: currentSpin.seed,
+      },
+    ];
+  }, [currentSpin]);
+
+  // New spin → reset to the first sub-spin and start spinning.
   useEffect(() => {
     if (currentSpin === null) {
       setWheelState("idle");
       setRevealed(false);
-      return undefined;
+      setSubIndex(0);
+      return;
     }
     setWheelState("spinning");
     setRevealed(false);
+    setSubIndex(0);
+  }, [currentSpin?.spin_id, currentSpin]);
+
+  // Drive the series: advance through fast sub-spins, then settle + reveal
+  // on the final (winning) one.
+  useEffect(() => {
+    if (currentSpin === null || spinSeries.length === 0) return undefined;
+    const entry = spinSeries[subIndex];
+    if (entry === undefined) return undefined;
+    const isFinal = subIndex >= spinSeries.length - 1;
+
+    if (!isFinal) {
+      const next = window.setTimeout(() => {
+        setSubIndex((i) => i + 1);
+      }, entry.duration_ms);
+      return () => {
+        window.clearTimeout(next);
+      };
+    }
 
     const settleAt = window.setTimeout(() => {
       haptics.heavy();
       haptics.success();
       audio.play("result_chime");
       setWheelState("settled");
-    }, currentSpin.duration_ms);
+    }, entry.duration_ms);
 
     const revealAt = window.setTimeout(() => {
-      // "Хоба!" brand pop on every reveal. Confetti is the win payoff —
-      // classic result + the final elimination survivor only, never a
-      // mid-game elimination (that's a quieter "out").
       audio.play("hoba_pop");
       if (!isElimination) fireConfetti();
       setRevealed(true);
-      // Elimination leads with the brand beat sooner so it reads as
-      // "Хоба! → what's out", not "stare at the landed option, then text".
-    }, currentSpin.duration_ms + (isElimination ? ELIM_REVEAL_DELAY_MS : REVEAL_DELAY_MS));
+    }, entry.duration_ms + (isElimination ? ELIM_REVEAL_DELAY_MS : REVEAL_DELAY_MS));
 
     return () => {
       window.clearTimeout(settleAt);
       window.clearTimeout(revealAt);
     };
-  }, [currentSpin?.spin_id, currentSpin, isElimination]);
+  }, [currentSpin?.spin_id, currentSpin, spinSeries, subIndex, isElimination]);
 
   // The result auto-dismisses for every mode — no manual close. The
   // elimination "what's out" flash is quick; the classic celebration

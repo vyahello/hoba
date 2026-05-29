@@ -11,7 +11,7 @@ function snap(overrides: Partial<RoomState["room"]> = {}): RoomState {
       game_mode: "punishment", spin_policy: "anyone", suggestion_policy: "off",
       is_locked: false, is_anonymous: false, current_turn_user_id: null,
       created_at: "2026-05-29T00:00:00Z", closed_at: null,
-      punishment_deck: "mild", punishment_done_count: 2,
+      punishment_deck: "mild", punishment_done_count: 2, spin_count: 1,
       punishment_active_card: {
         text: "Do a dance", deck: "mild", victim_segment_id: 5, spin_id: 9,
       },

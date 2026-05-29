@@ -23,6 +23,7 @@ function makeRoom(overrides: Partial<ServerRoom> = {}): ServerRoom {
     current_turn_user_id: null,
     punishment_deck: null,
     punishment_done_count: 0,
+    spin_count: 1,
     punishment_active_card: null,
     created_at: "2026-05-28T00:00:00Z",
     closed_at: null,

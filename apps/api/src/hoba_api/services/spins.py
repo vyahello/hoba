@@ -168,34 +168,37 @@ async def trigger_spin(
     ).scalar_one_or_none()
     starting_angle_deg = last_spin.final_angle_deg if last_spin is not None else 0.0
 
-    seed = secrets.randbits(31)
     raw_weights = [float(s.weight) for s in spin_segments]
     weights: list[float] | None = (
         None if all(w == 1.0 for w in raw_weights) else raw_weights
     )
-    result = compute_spin(
-        segment_count=len(spin_segments),
-        seed=seed,
-        starting_angle_deg=starting_angle_deg,
-        weights=weights,
+    # Best-of-N is Classic-only this slice; other modes always single-spin.
+    effective_n = room.spin_count if room.game_mode == "classic" else 1
+    series, winning_segment, tie_break_count = run_spin_series(
+        spin_segments,
+        effective_n,
+        starting_angle_deg,
+        weights,
+        decision.duration_multiplier,
     )
-    duration_ms = round(result.duration_ms * decision.duration_multiplier)
-
-    winning_segment = spin_segments[result.result_segment_index]
+    last_entry = series[-1]
     started_at = datetime.now(UTC)
     spin = Spin(
         question_id=question.id,
         triggered_by=user_id,
         result_segment_id=winning_segment.id,
-        final_angle_deg=result.final_angle_deg,
-        duration_ms=duration_ms,
-        seed=seed,
+        final_angle_deg=last_entry["final_angle_deg"],
+        duration_ms=last_entry["duration_ms"],
+        seed=last_entry["seed"],
         mode_state_snapshot={
             "living_segment_ids": [s.id for s in spin_segments],
             "mode_effects": decision.effects,
+            "series": series,
+            "winner_segment_id": winning_segment.id,
+            "tie_break_count": tie_break_count,
         },
         started_at=started_at,
-        settled_at=started_at + timedelta(milliseconds=duration_ms),
+        settled_at=started_at + timedelta(milliseconds=last_entry["duration_ms"]),
     )
     session.add(spin)
 
