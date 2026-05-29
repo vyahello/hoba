@@ -26,6 +26,7 @@ import {
 import { computeCanSpin, isHost } from "@/features/rooms/permissions";
 import { activeCard, doneCount } from "@/features/rooms/punishment";
 import { computeTurnState } from "@/features/rooms/turnState";
+import { runningTally } from "@/features/wheel/spinSeries";
 import { Wheel } from "@/features/wheel/Wheel";
 import {
   type SegmentDef,
@@ -82,6 +83,8 @@ export function RoomPage(): JSX.Element {
   const [wheelState, setWheelState] = useState<WheelState>("idle");
   const [revealed, setRevealed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Best-of-N: index of the sub-spin currently animating (0-based).
+  const [subIndex, setSubIndex] = useState(0);
 
   // Shatter thunk: when a segment is eliminated, briefly compress the wheel
   // (scale 1 → 0.97 → 1, ~300 ms) so players feel the winner "pop off".
@@ -214,14 +217,18 @@ export function RoomPage(): JSX.Element {
   }, [currentSpin, segments, snapshot]);
 
   const wheelSpin: SpinResult | undefined = useMemo(() => {
-    if (currentSpin === null || winningSegmentIndex < 0) return undefined;
+    if (currentSpin === null) return undefined;
+    const entry = spinSeries[subIndex];
+    if (entry === undefined) return undefined;
+    const idx = segments.findIndex((sd) => sd.id === String(entry.segment_id));
+    if (idx < 0) return undefined;
     return {
-      resultSegmentIndex: winningSegmentIndex,
-      finalAngleDeg: currentSpin.final_angle_deg,
-      durationMs: currentSpin.duration_ms,
-      seed: currentSpin.seed,
+      resultSegmentIndex: idx,
+      finalAngleDeg: entry.final_angle_deg,
+      durationMs: entry.duration_ms,
+      seed: entry.seed,
     };
-  }, [currentSpin, winningSegmentIndex]);
+  }, [currentSpin, spinSeries, subIndex, segments]);
 
   const winningSegment =
     winningSegmentIndex >= 0
@@ -428,6 +435,26 @@ export function RoomPage(): JSX.Element {
             />
           </motion.div>
         )}
+
+        {spinSeries.length > 1 && wheelState !== "idle" ? (
+          <div className="flex flex-wrap gap-1.5 justify-center px-2">
+            {[...runningTally(spinSeries, subIndex).entries()].map(
+              ([segId, count]) => {
+                const seg = snapshot.active_question?.segments.find(
+                  (s) => s.id === segId,
+                );
+                return (
+                  <span
+                    key={segId}
+                    className="text-xs font-semibold px-2 py-1 rounded-full bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1"
+                  >
+                    {seg?.emoji ? `${seg.emoji} ` : ""}{seg?.label ?? segId} · {count}
+                  </span>
+                );
+              },
+            )}
+          </div>
+        ) : null}
 
         {isElimination && eliminatedSegments(activeQuestion).length > 0 ? (
           <div className="flex flex-wrap gap-1.5 justify-center px-2">
