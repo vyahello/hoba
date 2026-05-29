@@ -29,5 +29,11 @@ class Settings(BaseSettings):
     # and create schema via `Base.metadata.create_all` for speed.
     auto_migrate: bool = True
 
+    # Room-creation rate limit (spec §14): max creations per user per
+    # window. Default 5/hour for prod abuse protection; raise on the VPS
+    # (e.g. ROOM_CREATE_RATE_LIMIT_MAX=1000) for heavy manual testing.
+    room_create_rate_limit_max: int = 5
+    room_create_rate_limit_window_seconds: int = 60 * 60
+
 
 settings = Settings()

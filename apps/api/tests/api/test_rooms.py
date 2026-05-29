@@ -51,6 +51,22 @@ def test_room_creation_hourly_cap_blocks_after_max(
     assert r.json()["detail"] == "rate_limited"
 
 
+def test_room_creation_cap_respects_configured_limit(
+    client: TestClient, init_data: str, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The cap is env-configurable (settings -> module constant). Prove the
+    # endpoint reads that knob: drop it to 1 and the 2nd create is blocked.
+    import hoba_api.api.v1.rooms as rooms_module
+
+    monkeypatch.setattr(rooms_module, "ROOM_CREATE_RATE_LIMIT_MAX", 1)
+    headers = {HEADER: init_data}
+    r1 = client.post("/api/v1/rooms", json=_payload(label_a="first"), headers=headers)
+    assert r1.status_code == 201
+    r2 = client.post("/api/v1/rooms", json=_payload(label_a="second"), headers=headers)
+    assert r2.status_code == 429
+    assert r2.json()["detail"] == "rate_limited"
+
+
 EmittedSioCall = tuple[str, Any, dict[str, Any]]
 
 

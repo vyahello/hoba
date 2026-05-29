@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hoba_api.auth.dependencies import CurrentUser
+from hoba_api.config import settings
 from hoba_api.db import get_db
 from hoba_api.models.question import Question
 from hoba_api.realtime.server import NAMESPACE, sio
@@ -29,11 +30,12 @@ from hoba_api.services.rooms import (
 )
 from hoba_api.services.spins import list_room_spins
 
-# Per spec §14: 5 room creations / user / hour. Enforced at the REST
+# Per spec §14: room creations / user / window. Enforced at the REST
 # boundary so a spamming caller is turned away before the full
-# graph-insert path runs.
-ROOM_CREATE_RATE_LIMIT_MAX = 5
-ROOM_CREATE_RATE_LIMIT_WINDOW_SECONDS = 60 * 60
+# graph-insert path runs. Sourced from settings (env-configurable) —
+# default 5/hour for prod; raise on the VPS for heavy manual testing.
+ROOM_CREATE_RATE_LIMIT_MAX = settings.room_create_rate_limit_max
+ROOM_CREATE_RATE_LIMIT_WINDOW_SECONDS = settings.room_create_rate_limit_window_seconds
 
 
 def _room_create_rate_limit_key(user_id: int) -> str:
