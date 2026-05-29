@@ -35,5 +35,12 @@ class Settings(BaseSettings):
     room_create_rate_limit_max: int = 5
     room_create_rate_limit_window_seconds: int = 60 * 60
 
+    # Reaction flood guard: max reactions per user per window per room.
+    # Generous by default so enthusiastic tapping never hits the wall;
+    # still caps a misbehaving client. Override via REACTIONS_PER_WINDOW /
+    # REACTIONS_WINDOW_SECONDS.
+    reactions_per_window: int = 40
+    reactions_window_seconds: int = 5
+
 
 settings = Settings()

@@ -48,8 +48,8 @@ from hoba_api.services.users import cache_user_after_commit, resolve_telegram_us
 
 log = structlog.get_logger("hoba_api.realtime")
 
-REACTIONS_PER_WINDOW = 10
-REACTIONS_WINDOW_SECONDS = 30
+REACTIONS_PER_WINDOW = settings.reactions_per_window
+REACTIONS_WINDOW_SECONDS = settings.reactions_window_seconds
 SPIN_ANNOUNCE_DELAY_SECONDS = 0.3
 # Per spec §14: 30 spins/room/hour + a 1.5 s per-room cooldown so the
 # SPIN hub can't be thumb-mashed. Both keyed by room_id so multiple
