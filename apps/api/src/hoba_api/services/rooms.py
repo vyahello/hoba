@@ -190,6 +190,12 @@ async def update_room(
             continue
         setattr(room, key, value)
 
+    # Changing the attempts target resets any in-progress best-of-N round.
+    if "spin_count" in patch:
+        room.bon_attempts = 0
+        room.bon_tally = None
+        room.bon_winner_segment_id = None
+
     # Cursor lifecycle: only meaningful for turn_based.
     # - PATCH away from turn_based → clear cursor.
     # - PATCH to turn_based while status=active → treat as fresh

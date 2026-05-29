@@ -37,7 +37,12 @@ from hoba_api.redis_client import (
 from hoba_api.services.participants import join_room, refresh_presence
 from hoba_api.services.room_state import build_room_state
 from hoba_api.services.rooms import RoomServiceError, get_room_by_code
-from hoba_api.services.spins import advance_turn, trigger_spin, user_can_spin
+from hoba_api.services.spins import (
+    advance_turn,
+    best_of_n_leaders,
+    trigger_spin,
+    user_can_spin,
+)
 from hoba_api.services.users import cache_user_after_commit, resolve_telegram_user
 
 log = structlog.get_logger("hoba_api.realtime")
@@ -125,6 +130,7 @@ async def _emit_settled(
     advanced = False
     punishment_card: dict[str, Any] | None = None
     done_count = 0
+    bon_patch: dict[str, Any] | None = None
 
     async with SessionLocal() as session:
         room = await session.get(Room, room_id)
@@ -187,6 +193,25 @@ async def _emit_settled(
                     "victim_segment_id": card["victim_segment_id"],
                 }
             done_count = room.punishment_done_count
+
+            # Best-of-N (Classic, spin_count > 1): record this attempt, and
+            # finalize the round winner once N attempts are reached with a
+            # single leader. A tie keeps the round open for more attempts.
+            if room.game_mode == "classic" and room.spin_count > 1:
+                tally = dict(room.bon_tally or {})
+                key = str(result_segment_id)
+                tally[key] = tally.get(key, 0) + 1
+                room.bon_tally = tally
+                room.bon_attempts += 1
+                leaders = best_of_n_leaders({int(k): v for k, v in tally.items()})
+                if room.bon_attempts >= room.spin_count and len(leaders) == 1:
+                    room.bon_winner_segment_id = leaders[0]
+                bon_patch = {
+                    "bon_attempts": room.bon_attempts,
+                    "bon_tally": tally,
+                    "bon_winner_segment_id": room.bon_winner_segment_id,
+                }
+
             if room.spin_policy == "turn_based":
                 new_cursor = await advance_turn(session, room)
                 advanced = True
@@ -218,6 +243,13 @@ async def _emit_settled(
                     "punishment_done_count": done_count,
                 },
             },
+            room=room_code,
+            namespace=NAMESPACE,
+        )
+    if bon_patch is not None:
+        await sio.emit(
+            "room:updated",
+            {"patch": bon_patch},
             room=room_code,
             namespace=NAMESPACE,
         )
@@ -522,6 +554,44 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
         )
         await sio.emit("punishment:cleared", {}, room=room_code, namespace=NAMESPACE)
         log.info("ws.punishment.done", user_id=user_id, code=room_code)
+
+    @sio.on("bon:reset", namespace=NAMESPACE)
+    async def on_bon_reset(sid: str) -> None:
+        sess = await sio.get_session(sid, namespace=NAMESPACE)
+        user_id = sess.get("user_id")
+        room_code = sess.get("room_code")
+        room_id = sess.get("room_id")
+        if user_id is None or room_code is None or room_id is None:
+            await sio.emit("error", {"code": "not_in_room"}, to=sid, namespace=NAMESPACE)
+            return
+        async with SessionLocal() as session:
+            room = await session.get(Room, room_id)
+            if room is None:
+                await sio.emit(
+                    "error", {"code": "room_not_found"}, to=sid, namespace=NAMESPACE,
+                )
+                return
+            if room.host_id != user_id:
+                await sio.emit("error", {"code": "not_host"}, to=sid, namespace=NAMESPACE)
+                return
+            room.bon_attempts = 0
+            room.bon_tally = None
+            room.bon_winner_segment_id = None
+            await session.commit()
+        await sio.emit(
+            "room:updated",
+            {
+                "patch": {
+                    "bon_attempts": 0,
+                    "bon_tally": None,
+                    "bon_winner_segment_id": None,
+                },
+            },
+            room=room_code,
+            namespace=NAMESPACE,
+        )
+        await sio.emit("bon:reset", {}, room=room_code, namespace=NAMESPACE)
+        log.info("ws.bon.reset", user_id=user_id, code=room_code)
 
     @sio.on("reaction:send", namespace=NAMESPACE)
     async def on_reaction_send(sid: str, data: dict[str, Any]) -> None:

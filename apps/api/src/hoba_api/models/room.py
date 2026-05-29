@@ -85,11 +85,18 @@ class Room(Base, TimestampMixin):
         JSON, nullable=True,
     )
 
-    # Best-of-N (cross-mode): spins per trigger; most-frequent segment wins.
-    # 1 = single spin (current behavior). Classic-only this slice.
+    # Best-of-N (Classic): number of MANUAL spin attempts per round.
+    # 1 = single spin (current behavior).
     spin_count: Mapped[int] = mapped_column(
         default=1, nullable=False, server_default="1",
     )
+    # Round progress for best-of-N. bon_winner_segment_id is set (and spinning
+    # gated) once the round finalizes; host resets to start a new round.
+    bon_attempts: Mapped[int] = mapped_column(
+        default=0, nullable=False, server_default="0",
+    )
+    bon_tally: Mapped[dict[str, int] | None] = mapped_column(JSON, nullable=True)
+    bon_winner_segment_id: Mapped[int | None] = mapped_column(nullable=True)
 
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

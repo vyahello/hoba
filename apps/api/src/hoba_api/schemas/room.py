@@ -85,6 +85,9 @@ class RoomOut(BaseModel):
     punishment_done_count: int
     punishment_active_card: dict[str, object] | None
     spin_count: int
+    bon_attempts: int
+    bon_tally: dict[str, int] | None
+    bon_winner_segment_id: int | None
     created_at: datetime
     closed_at: datetime | None
 

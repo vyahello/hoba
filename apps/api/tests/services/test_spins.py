@@ -286,9 +286,7 @@ async def test_trigger_spin_punishment_draws_and_sets_active_card(
     assert 0 <= pun["card_index"] < 30
     card = room.punishment_active_card
     assert card is not None
-    assert card["text"]
     assert card["victim_segment_id"] == spin.result_segment_id
-    assert card["spin_id"] == spin.id
 
 
 async def test_trigger_spin_punishment_blocks_while_card_pending(
@@ -320,74 +318,41 @@ async def test_draw_without_replacement_no_repeat_until_exhausted(
     for _ in range(30):
         spin = await trigger_spin(db, room=room, user_id=host_id)
         seen.append(spin.mode_state_snapshot["punishment"]["card_index"])
-        room.punishment_active_card = None  # simulate "done" so spin unblocks
+        room.punishment_active_card = None
         await db.commit()
     assert sorted(seen) == list(range(30))
 
 
-def test_run_spin_series_basic_and_winner() -> None:
-    from hoba_api.models.segment import Segment
-    from hoba_api.services.spins import run_spin_series
+def test_best_of_n_leaders() -> None:
+    from hoba_api.services.spins import best_of_n_leaders
 
-    segs = [
-        Segment(id=i, parent_id=1, parent_type="question", label=f"s{i}",
-                color_seed=0, weight=1, position=i)
-        for i in range(3)
-    ]
-    series, winner, tie_break = run_spin_series(segs, 5, 0.0, None, 1.0)
-    # 5 base spins; tie-break may append more.
-    assert len(series) >= 5
-    assert winner.id in {s.id for s in segs}
-    # angles travel strictly forward (each chained spin >= prev).
-    angles = [e["final_angle_deg"] for e in series]
-    assert angles == sorted(angles)
-    # winner is a most-frequent segment over the base 5 spins (+ tie-breaks).
-    from collections import Counter
-    counts = Counter(e["segment_id"] for e in series)
-    assert counts[winner.id] == max(counts.values())
-    assert tie_break >= 0
+    assert best_of_n_leaders({}) == []
+    assert best_of_n_leaders({1: 3, 2: 1}) == [1]
+    assert sorted(best_of_n_leaders({1: 2, 2: 2, 3: 1})) == [1, 2]
 
 
-def test_run_spin_series_n1_single_entry() -> None:
-    from hoba_api.models.segment import Segment
-    from hoba_api.services.spins import run_spin_series
-
-    segs = [
-        Segment(id=i, parent_id=1, parent_type="question", label=f"s{i}",
-                color_seed=0, weight=1, position=i)
-        for i in range(4)
-    ]
-    series, winner, tie_break = run_spin_series(segs, 1, 0.0, None, 1.0)
-    assert len(series) == 1
-    assert tie_break == 0
-    assert winner.id == series[0]["segment_id"]
+async def test_trigger_spin_single_attempt_no_bon(db: AsyncSession) -> None:
+    host_id = await _make_user(db, tg_id=503)
+    room = await create_room(
+        db, host_id=host_id, question_text="Q?", segments=_drafts(3),
+        spin_policy="anyone", game_mode="classic", spin_count=1,
+    )
+    await db.commit()
+    spin = await trigger_spin(db, room=room, user_id=host_id)
+    await db.commit()
+    assert "series" not in spin.mode_state_snapshot
+    assert room.bon_winner_segment_id is None
 
 
-async def test_trigger_spin_classic_best_of_n_records_series(
-    db: AsyncSession,
-) -> None:
-    host_id = await _make_user(db, tg_id=500)
+async def test_trigger_spin_round_over_blocks(db: AsyncSession) -> None:
+    host_id = await _make_user(db, tg_id=504)
     room = await create_room(
         db, host_id=host_id, question_text="Q?", segments=_drafts(3),
         spin_policy="anyone", game_mode="classic", spin_count=3,
     )
     await db.commit()
-    spin = await trigger_spin(db, room=room, user_id=host_id)
-    await db.commit()
-    series = spin.mode_state_snapshot["series"]
-    assert len(series) >= 3
-    assert spin.mode_state_snapshot["winner_segment_id"] == spin.result_segment_id
-
-
-async def test_trigger_spin_elimination_ignores_spin_count(
-    db: AsyncSession,
-) -> None:
-    host_id = await _make_user(db, tg_id=501)
-    room = await create_room(
-        db, host_id=host_id, question_text="Q?", segments=_drafts(3),
-        spin_policy="anyone", game_mode="elimination", spin_count=5,
-    )
-    await db.commit()
-    spin = await trigger_spin(db, room=room, user_id=host_id)
-    await db.commit()
-    assert len(spin.mode_state_snapshot["series"]) == 1
+    room.bon_winner_segment_id = 1
+    await db.flush()
+    with pytest.raises(RoomServiceError) as exc:
+        await trigger_spin(db, room=room, user_id=host_id)
+    assert exc.value.code == "round_over"

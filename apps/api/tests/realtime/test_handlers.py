@@ -927,25 +927,56 @@ async def test_punishment_done_noop_without_card(sio: FakeSocketIO, db: Any) -> 
 
 
 @pytest.mark.asyncio
-async def test_spin_started_carries_series_for_best_of_n(
-    sio: FakeSocketIO, db: Any,
-) -> None:
-    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=510))
+async def test_best_of_n_tallies_each_attempt(sio: FakeSocketIO, db: Any) -> None:
+    from hoba_api.services.rooms import get_room_by_code
+    from hoba_api.services.spins import trigger_spin
+
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=520))
     room = await create_room(
         db, host_id=host.id, question_text="Q?",
         segments=[SegmentDraft(label="a", color_seed=0, weight=1),
-                  SegmentDraft(label="b", color_seed=1, weight=1),
-                  SegmentDraft(label="c", color_seed=2, weight=1)],
+                  SegmentDraft(label="b", color_seed=1, weight=1)],
         spin_policy="anyone", game_mode="classic", spin_count=3,
     )
     await db.commit()
-    code = room.code
-    await _connect(sio, "sid-h510", user_id=510)
-    await sio.call("room:join", "sid-h510", {"code": code})
+    fetched = await get_room_by_code(db, room.code)
+    assert fetched is not None
+    spin = await trigger_spin(db, room=fetched, user_id=host.id)
+    await db.commit()
     sio.emitted.clear()
-    await sio.call("spin:trigger", "sid-h510", {})
-    started = sio.events_named("spin:started")
-    assert len(started) == 1
-    payload = started[0][1]
-    assert len(payload["series"]) >= 3
-    assert payload["winner_segment_id"] == payload["result_segment_id"]
+    await _emit_settled(  # type: ignore[arg-type]
+        sio, room.code, fetched.id,
+        spin_id=spin.id, result_segment_id=spin.result_segment_id, duration_ms=0,
+    )
+    patches = [e[1]["patch"] for e in sio.events_named("room:updated")
+               if isinstance(e[1], dict) and "patch" in e[1]]
+    bon = [p for p in patches if "bon_attempts" in p]
+    assert bon and bon[-1]["bon_attempts"] == 1
+    assert bon[-1]["bon_winner_segment_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_bon_reset_clears_round(sio: FakeSocketIO, db: Any) -> None:
+    from hoba_api.services.rooms import get_room_by_code
+
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=521))
+    room = await create_room(
+        db, host_id=host.id, question_text="Q?",
+        segments=[SegmentDraft(label="a", color_seed=0, weight=1),
+                  SegmentDraft(label="b", color_seed=1, weight=1)],
+        spin_policy="anyone", game_mode="classic", spin_count=3,
+    )
+    room.bon_attempts = 3
+    room.bon_winner_segment_id = 1
+    await db.commit()
+    code = room.code
+    await _connect(sio, "sid-h521", user_id=521)
+    await sio.call("room:join", "sid-h521", {"code": code})
+    sio.emitted.clear()
+    await sio.call("bon:reset", "sid-h521")
+    assert sio.events_named("bon:reset")
+    refreshed = await get_room_by_code(db, code)
+    assert refreshed is not None
+    await db.refresh(refreshed)
+    assert refreshed.bon_attempts == 0
+    assert refreshed.bon_winner_segment_id is None

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import TypedDict
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,84 +22,12 @@ from hoba_api.services.rooms import RoomServiceError
 from hoba_api.wheel.spin_math import compute_spin
 
 MIN_SEGMENTS_TO_SPIN = 2
-TIE_BREAK_CAP = 20
-# Non-final sub-spins in a best-of-N series animate fast; only the final
-# (winning) spin plays at full dramatic length.
-FAST_SUBSPIN_MS = 1500
-
-
-class SeriesEntry(TypedDict):
-    segment_id: int
-    final_angle_deg: float
-    duration_ms: int
-    seed: int
-
-
-def _leaders(tally: dict[int, int]) -> list[int]:
-    """Segment ids tied at the current maximum hit count."""
+def best_of_n_leaders(tally: dict[int, int]) -> list[int]:
+    """Segment ids tied at the current maximum hit count (empty if no tally)."""
     if not tally:
         return []
     top = max(tally.values())
     return [sid for sid, c in tally.items() if c == top]
-
-
-def run_spin_series(
-    spin_segments: list[Segment],
-    n: int,
-    starting_angle_deg: float,
-    weights: list[float] | None,
-    duration_multiplier: float,
-) -> tuple[list[SeriesEntry], Segment, int]:
-    """Run N chained spins; winner = most-frequent segment. Ties broken by
-    extra spins counted only when they land on a tied leader, until one leads
-    (capped). Returns (series, winner_segment, tie_break_count). Each entry's
-    angle chains forward so the wheel always travels forward. Pure except for
-    `secrets` seeding — no DB access.
-    """
-    series: list[SeriesEntry] = []
-    tally: dict[int, int] = {}
-    angle = starting_angle_deg
-
-    def _spin() -> Segment:
-        nonlocal angle
-        seed = secrets.randbits(31)
-        result = compute_spin(
-            segment_count=len(spin_segments),
-            seed=seed,
-            starting_angle_deg=angle,
-            weights=weights,
-        )
-        seg = spin_segments[result.result_segment_index]
-        series.append(
-            {
-                "segment_id": seg.id,
-                "final_angle_deg": result.final_angle_deg,
-                "duration_ms": round(result.duration_ms * duration_multiplier),
-                "seed": seed,
-            },
-        )
-        angle = result.final_angle_deg
-        return seg
-
-    for _ in range(n):
-        seg = _spin()
-        tally[seg.id] = tally.get(seg.id, 0) + 1
-
-    tie_break_count = 0
-    leaders = _leaders(tally)
-    while len(leaders) > 1 and tie_break_count < TIE_BREAK_CAP:
-        seg = _spin()
-        tie_break_count += 1
-        if seg.id in leaders:
-            tally[seg.id] += 1
-            leaders = _leaders({sid: tally[sid] for sid in leaders})
-
-    winner_id = leaders[0] if len(leaders) == 1 else secrets.choice(leaders)
-    winner = next(s for s in spin_segments if s.id == winner_id)
-    # Compress every sub-spin except the last (the dramatic finale).
-    for entry in series[:-1]:
-        entry["duration_ms"] = FAST_SUBSPIN_MS
-    return series, winner, tie_break_count
 
 
 async def trigger_spin(
@@ -125,6 +52,12 @@ async def trigger_spin(
 
     if room.game_mode == "punishment" and room.punishment_active_card is not None:
         raise RoomServiceError("card_pending")
+
+    # Best-of-N: while a round's winner is decided, block further spins until
+    # the host resets. Only meaningful when spin_count > 1 (Classic).
+    import sys as _sys; print("GATE", room.game_mode, room.spin_count, room.bon_winner_segment_id, file=_sys.stderr)
+    if room.spin_count > 1 and room.bon_winner_segment_id is not None:
+        raise RoomServiceError("round_over")
 
     question = (
         await session.execute(
@@ -168,37 +101,34 @@ async def trigger_spin(
     ).scalar_one_or_none()
     starting_angle_deg = last_spin.final_angle_deg if last_spin is not None else 0.0
 
+    seed = secrets.randbits(31)
     raw_weights = [float(s.weight) for s in spin_segments]
     weights: list[float] | None = (
         None if all(w == 1.0 for w in raw_weights) else raw_weights
     )
-    # Best-of-N is Classic-only this slice; other modes always single-spin.
-    effective_n = room.spin_count if room.game_mode == "classic" else 1
-    series, winning_segment, tie_break_count = run_spin_series(
-        spin_segments,
-        effective_n,
-        starting_angle_deg,
-        weights,
-        decision.duration_multiplier,
+    result = compute_spin(
+        segment_count=len(spin_segments),
+        seed=seed,
+        starting_angle_deg=starting_angle_deg,
+        weights=weights,
     )
-    last_entry = series[-1]
+    duration_ms = round(result.duration_ms * decision.duration_multiplier)
+
+    winning_segment = spin_segments[result.result_segment_index]
     started_at = datetime.now(UTC)
     spin = Spin(
         question_id=question.id,
         triggered_by=user_id,
         result_segment_id=winning_segment.id,
-        final_angle_deg=last_entry["final_angle_deg"],
-        duration_ms=last_entry["duration_ms"],
-        seed=last_entry["seed"],
+        final_angle_deg=result.final_angle_deg,
+        duration_ms=duration_ms,
+        seed=seed,
         mode_state_snapshot={
             "living_segment_ids": [s.id for s in spin_segments],
             "mode_effects": decision.effects,
-            "series": series,
-            "winner_segment_id": winning_segment.id,
-            "tie_break_count": tie_break_count,
         },
         started_at=started_at,
-        settled_at=started_at + timedelta(milliseconds=last_entry["duration_ms"]),
+        settled_at=started_at + timedelta(milliseconds=duration_ms),
     )
     session.add(spin)
 
