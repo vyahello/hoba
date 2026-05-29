@@ -14,6 +14,8 @@ from urllib.parse import parse_qs
 import socketio
 import structlog
 
+from sqlalchemy import select
+
 from hoba_api.auth.initdata import (
     InvalidInitData,
     parse_telegram_user,
@@ -21,7 +23,11 @@ from hoba_api.auth.initdata import (
 )
 from hoba_api.config import settings
 from hoba_api.db import SessionLocal
+from hoba_api.models.question import Question
 from hoba_api.models.room import Room
+from hoba_api.models.segment import Segment
+from hoba_api.modes import engine_for
+from hoba_api.modes.base import SpinContext
 from hoba_api.realtime.server import NAMESPACE
 from hoba_api.redis_client import (
     cooldown_take,
@@ -114,31 +120,82 @@ async def _emit_settled(
     duration_ms: int,
 ) -> None:
     await asyncio.sleep(duration_ms / 1000)
+
+    mode_aftereffects: dict[str, Any] = {}
+    new_cursor: int | None = None
+    advanced = False
+
+    async with SessionLocal() as session:
+        room = await session.get(Room, room_id)
+        if room is not None:
+            engine = engine_for(room.game_mode)
+            question = (
+                await session.execute(
+                    select(Question).where(
+                        Question.room_id == room.id,
+                        Question.is_active.is_(True),
+                    ),
+                )
+            ).scalar_one_or_none()
+            if question is not None:
+                segments = list(
+                    (
+                        await session.execute(
+                            select(Segment)
+                            .where(
+                                Segment.parent_id == question.id,
+                                Segment.parent_type == "question",
+                            )
+                            .order_by(Segment.position),
+                        )
+                    ).scalars().all(),
+                )
+                winner = next(
+                    (s for s in segments if s.id == result_segment_id), None,
+                )
+                if winner is not None:
+                    ctx = SpinContext(room=room, question=question, segments=segments)
+                    effects = engine.on_spin_settled(ctx, winner)
+                    if effects.eliminate_segment_ids:
+                        now = datetime.now(UTC)
+                        to_kill = set(effects.eliminate_segment_ids)
+                        for seg in segments:
+                            if seg.id in to_kill:
+                                seg.eliminated_at = now
+                        living = [s for s in segments if s.eliminated_at is None]
+                        survivor_id = (
+                            living[0].id
+                            if effects.round_over and len(living) == 1
+                            else None
+                        )
+                        mode_aftereffects = {
+                            "eliminated_segment_id": effects.eliminate_segment_ids[0],
+                            "remaining": len(living),
+                            "round_over": effects.round_over,
+                            "survivor_segment_id": survivor_id,
+                        }
+            if room.spin_policy == "turn_based":
+                new_cursor = await advance_turn(session, room)
+                advanced = True
+            await session.commit()
+
     await sio.emit(
         "spin:settled",
         {
             "spin_id": spin_id,
             "result_segment_id": result_segment_id,
-            "mode_aftereffects": {},
+            "mode_aftereffects": mode_aftereffects,
         },
         room=room_code,
         namespace=NAMESPACE,
     )
-    # Turn-based: advance the cursor and broadcast the new value so all
-    # clients see whose turn it is now. Re-fetch the room because policy
-    # may have changed during the spin animation; skip advance if so.
-    async with SessionLocal() as session:
-        room = await session.get(Room, room_id)
-        if room is None or room.spin_policy != "turn_based":
-            return
-        new_cursor = await advance_turn(session, room)
-        await session.commit()
-    await sio.emit(
-        "room:updated",
-        {"patch": {"current_turn_user_id": new_cursor}},
-        room=room_code,
-        namespace=NAMESPACE,
-    )
+    if advanced:
+        await sio.emit(
+            "room:updated",
+            {"patch": {"current_turn_user_id": new_cursor}},
+            room=room_code,
+            namespace=NAMESPACE,
+        )
 
 
 def register_handlers(sio: socketio.AsyncServer) -> None:
@@ -323,7 +380,7 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                 "duration_ms": spin.duration_ms,
                 "seed": spin.seed,
                 "started_at_server": spin.started_at.isoformat(),
-                "mode_effects": {},
+                "mode_effects": spin.mode_state_snapshot.get("mode_effects", {}),
             }
             spin_id = spin.id
             result_segment_id = spin.result_segment_id

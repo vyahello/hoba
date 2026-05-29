@@ -726,6 +726,108 @@ async def test_presence_ping_inside_room_touches_presence(
     assert sio.emitted == []
 
 
+# ---------- elimination: _emit_settled marks winner + aftereffects ------
+
+
+@pytest.mark.asyncio
+async def test_emit_settled_elimination_marks_winner_and_aftereffects(
+    sio: FakeSocketIO, db: Any,
+) -> None:
+    from hoba_api.models.segment import Segment
+    from hoba_api.services.rooms import get_room_by_code
+    from sqlalchemy import select
+
+    from hoba_api.models.question import Question
+
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=90))
+    room = await create_room(
+        db, host_id=host.id, question_text="Q?",
+        segments=[SegmentDraft(label="a", color_seed=0, weight=1),
+                  SegmentDraft(label="b", color_seed=1, weight=1),
+                  SegmentDraft(label="c", color_seed=2, weight=1)],
+        spin_policy="anyone", game_mode="elimination",
+    )
+    await db.commit()
+    q = (await db.execute(
+        select(Question).where(Question.room_id == room.id, Question.is_active.is_(True))
+    )).scalar_one()
+    segs = (await db.execute(
+        select(Segment).where(Segment.parent_id == q.id,
+                              Segment.parent_type == "question")
+        .order_by(Segment.position)
+    )).scalars().all()
+    winner = segs[0]
+    fetched = await get_room_by_code(db, room.code)
+    assert fetched is not None
+    sio.emitted.clear()
+
+    await _emit_settled(sio, room.code, fetched.id, spin_id=1, result_segment_id=winner.id, duration_ms=0)  # type: ignore[arg-type]
+
+    settled = sio.events_named("spin:settled")
+    assert settled, "expected a spin:settled emit"
+    after = settled[-1][1]["mode_aftereffects"]
+    assert after["eliminated_segment_id"] == winner.id
+    assert after["remaining"] == 2
+    assert after["round_over"] is False
+    await db.refresh(winner)
+    assert winner.eliminated_at is not None
+
+
+# ---------- round:reset handler -----------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_round_reset_host_revives_segments_and_broadcasts(
+    sio: FakeSocketIO, db: Any,
+) -> None:
+    from datetime import UTC, datetime
+
+    from hoba_api.models.segment import Segment
+    from sqlalchemy import select
+
+    from hoba_api.models.question import Question
+
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=95))
+    room = await create_room(
+        db, host_id=host.id, question_text="Q?",
+        segments=[SegmentDraft(label="a", color_seed=0, weight=1),
+                  SegmentDraft(label="b", color_seed=1, weight=1)],
+        spin_policy="anyone", game_mode="elimination",
+    )
+    q = (await db.execute(
+        select(Question).where(Question.room_id == room.id, Question.is_active.is_(True))
+    )).scalar_one()
+    segs = (await db.execute(
+        select(Segment).where(Segment.parent_id == q.id,
+                              Segment.parent_type == "question")
+        .order_by(Segment.position)
+    )).scalars().all()
+    segs[0].eliminated_at = datetime.now(UTC)
+    await db.commit()
+    code = room.code
+
+    await _connect(sio, "sid-h95", user_id=95)
+    await sio.call("room:join", "sid-h95", {"code": code})
+    sio.emitted.clear()
+
+    await sio.call("round:reset", "sid-h95")
+    assert sio.events_named("round:reset"), "expected a round:reset broadcast"
+    await db.refresh(segs[0])
+    assert segs[0].eliminated_at is None
+
+
+@pytest.mark.asyncio
+async def test_round_reset_guest_rejected(sio: FakeSocketIO, db: Any) -> None:
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=96))
+    await db.commit()
+    code = await _create_room(db, host_id=host.id)  # host_only classic, but host_id=96
+    await _connect(sio, "sid-g96", user_id=97)
+    await sio.call("room:join", "sid-g96", {"code": code})
+    sio.emitted.clear()
+    await sio.call("round:reset", "sid-g96")
+    assert any(e[1].get("code") == "not_host" for e in sio.events_named("error"))
+
+
 # ---------- helper ------------------------------------------------------
 
 
