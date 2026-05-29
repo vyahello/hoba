@@ -163,12 +163,16 @@ Classic / other modes: `{}`.
 ### `round:reset` — client → server (new)
 - Host-only. `not_host` error otherwise; `not_in_room` if no room session.
 - Clears `eliminated_at = NULL` for all segments of the active question; commit.
-- Broadcasts a fresh **`room:state`** to the room (reviving all segments is a
-  structural change — what `room:state` is for). Every client refills the wheel
-  and re-enables SPIN.
+- Broadcasts a dedicated **`round:reset` `{}`** server→client event to the room.
+  Each client revives all its segments locally (`is_eliminated = false`),
+  refilling the wheel and re-enabling SPIN.
 - Allowed anytime the host wants (can restart mid-round), not only at round end.
 
-No new server→client event type is needed; `room:state` carries the reset.
+> **Note (resolved during planning):** an earlier draft said "broadcast
+> `room:state`". That is unsafe — `room:state.me_user_id` is **per-connection**,
+> so broadcasting one snapshot to the whole room would hand guests the host's
+> id and break host detection. Hence the dedicated `round:reset` broadcast,
+> which carries no per-recipient data.
 
 ---
 
