@@ -337,13 +337,13 @@ async def test_create_room_rejects_unknown_game_mode(db: AsyncSession) -> None:
 async def test_create_room_spin_count(db) -> None:  # type: ignore[no-untyped-def]
     import pytest
 
+    from hoba_api.auth.initdata import TelegramUser
     from hoba_api.services.rooms import (
         RoomServiceError,
         SegmentDraft,
         create_room,
     )
     from hoba_api.services.users import upsert_from_telegram
-    from hoba_api.auth.initdata import TelegramUser
 
     host = await upsert_from_telegram(db, TelegramUser(id=7800, first_name="H"))
     await db.flush()
