@@ -47,3 +47,7 @@ export function getGameModeMeta(id: GameMode): GameModeMeta | undefined {
 export function shouldShowBadge(mode: GameMode): boolean {
   return mode !== "classic" && mode !== "rigged";
 }
+
+/** Best-of-N options (odd → fewer ties). Default 1. */
+export const SPIN_COUNTS = [1, 3, 5, 7] as const;
+export const DEFAULT_SPIN_COUNT = 1;

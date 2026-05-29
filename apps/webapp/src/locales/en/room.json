@@ -106,5 +106,8 @@
       "label": "Chaos",
       "tagline": "Absurd wildcard dares"
     }
+  },
+  "spin_count": {
+    "label": "Spins"
   }
 }

@@ -6,8 +6,10 @@ import { Sheet } from "@/components/ds/Sheet";
 import {
   DEFAULT_GAME_MODE,
   DEFAULT_PUNISHMENT_DECK,
+  DEFAULT_SPIN_COUNT,
   PICKABLE_GAME_MODES,
   PUNISHMENT_DECKS,
+  SPIN_COUNTS,
 } from "@/data/gameModes";
 import { type GameMode, type PunishmentDeck } from "@/lib/api";
 import { haptics } from "@/lib/haptics";
@@ -16,7 +18,7 @@ export interface RoomModePickerSheetProps {
   open: boolean;
   loading: boolean;
   onClose: () => void;
-  onCreate: (mode: GameMode, deck?: PunishmentDeck) => void;
+  onCreate: (mode: GameMode, deck?: PunishmentDeck, spinCount?: number) => void;
 }
 
 /**
@@ -35,12 +37,14 @@ export function RoomModePickerSheet({
   const { t } = useTranslation(["room"]);
   const [selected, setSelected] = useState<GameMode>(DEFAULT_GAME_MODE);
   const [deck, setDeck] = useState<PunishmentDeck>(DEFAULT_PUNISHMENT_DECK);
+  const [spinCount, setSpinCount] = useState<number>(DEFAULT_SPIN_COUNT);
 
-  // Reset to Classic + default deck each time the sheet re-opens.
+  // Reset to Classic + defaults each time the sheet re-opens.
   useEffect(() => {
     if (open) {
       setSelected(DEFAULT_GAME_MODE);
       setDeck(DEFAULT_PUNISHMENT_DECK);
+      setSpinCount(DEFAULT_SPIN_COUNT);
     }
   }, [open]);
 
@@ -127,6 +131,39 @@ export function RoomModePickerSheet({
         </div>
       ) : null}
 
+      {selected === "classic" ? (
+        <div className="mt-3">
+          <p className="text-sm font-medium text-ink-light-2 dark:text-ink-dark-2 mb-2">
+            {t("room:spin_count.label")}
+          </p>
+          <div className="flex gap-2">
+            {SPIN_COUNTS.map((n) => {
+              const active = n === spinCount;
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  disabled={loading}
+                  aria-pressed={active}
+                  onClick={() => {
+                    if (loading) return;
+                    haptics.selection();
+                    setSpinCount(n);
+                  }}
+                  className={`ds-tactile grow min-h-[44px] px-3 py-2 rounded-md text-sm font-semibold ${
+                    active
+                      ? "bg-brand-primary text-white"
+                      : "bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1"
+                  } disabled:opacity-60`}
+                >
+                  {n}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
       <div className="mt-5">
         <Button
           variant="accent"
@@ -134,7 +171,11 @@ export function RoomModePickerSheet({
           fullWidth
           loading={loading}
           onClick={() => {
-            onCreate(selected, selected === "punishment" ? deck : undefined);
+            onCreate(
+              selected,
+              selected === "punishment" ? deck : undefined,
+              selected === "classic" ? spinCount : undefined,
+            );
           }}
         >
           {t("room:mode_picker.create")}
