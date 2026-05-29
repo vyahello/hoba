@@ -106,6 +106,19 @@ export function SpinPage(): JSX.Element {
     };
   }, [spin, state]);
 
+  // The result auto-dismisses (no manual close) — tap to skip. Falls back
+  // to the settled wheel so the centered hub can re-spin straight away.
+  useEffect(() => {
+    if (!resultRevealed) return undefined;
+    const timer = window.setTimeout(() => {
+      setResultRevealed(false);
+      setState("settled");
+    }, 2500);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [resultRevealed]);
+
   // Record settled spin once revealed.
   useEffect(() => {
     if (!resultRevealed || spin === undefined || wheel === undefined) return;
@@ -161,12 +174,6 @@ export function SpinPage(): JSX.Element {
     setSpin(next);
     setResultRevealed(false);
     setState("spinning");
-  }
-
-  function handleSpinAgain(): void {
-    setState("idle");
-    setSpin(undefined);
-    setResultRevealed(false);
   }
 
   function handleInviteFriends(): void {
@@ -228,65 +235,18 @@ export function SpinPage(): JSX.Element {
         />
 
         <div className="flex flex-col gap-2 mt-auto">
-          {state === "idle" ? (
-            <>
-              <Button
-                variant="accent"
-                size="xl"
-                fullWidth
-                onClick={handleSpin}
-              >
-                {t("common:actions.spin").toUpperCase()}
-              </Button>
-              <Button
-                variant="ghost"
-                fullWidth
-                onClick={handleInviteFriends}
-                loading={inviteLoading}
-              >
-                {t("room:actions.invite_friends")}
-              </Button>
-            </>
-          ) : null}
-
-          {state === "spinning" ? (
-            <Button variant="accent" size="xl" fullWidth disabled loading>
-              {t("common:actions.spin").toUpperCase()}…
+          {/* Spin is the centered wheel hub only. The bottom CTA creates a
+              multiplayer room (opens the mode picker first). */}
+          {state !== "spinning" ? (
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              onClick={handleInviteFriends}
+              loading={inviteLoading}
+            >
+              {t("room:actions.create_room")}
             </Button>
-          ) : null}
-
-          {state === "settled" ? (
-            <>
-              <Button
-                variant="primary"
-                size="lg"
-                fullWidth
-                onClick={handleSpinAgain}
-              >
-                {t("common:actions.spin")} →
-              </Button>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="accent"
-                  onClick={handleInviteFriends}
-                  loading={inviteLoading}
-                >
-                  {t("room:actions.invite_friends")}
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    toast({
-                      title: t("common:status.coming_soon"),
-                      description: t("common:status.phase_label", { phase: 9 }),
-                      intent: "info",
-                    });
-                  }}
-                >
-                  {t("common:actions.save")}
-                </Button>
-              </div>
-            </>
           ) : null}
         </div>
 
@@ -298,7 +258,11 @@ export function SpinPage(): JSX.Element {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="absolute inset-0 z-10 px-4 pt-3 pb-6 flex flex-col items-center justify-center bg-bg-light/85 dark:bg-bg-dark/85 backdrop-blur-sm"
+              onClick={() => {
+                setResultRevealed(false);
+                setState("settled");
+              }}
+              className="absolute inset-0 z-10 px-4 pt-3 pb-6 flex flex-col items-center justify-center bg-bg-light/85 dark:bg-bg-dark/85 backdrop-blur-sm cursor-pointer"
               aria-live="polite"
               role="status"
             >
@@ -309,34 +273,6 @@ export function SpinPage(): JSX.Element {
                 segmentColor={result.color}
                 className="mt-6 w-full max-w-sm"
               />
-              <div className="mt-6 w-full max-w-sm flex flex-col gap-2">
-                <Button
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  onClick={handleSpinAgain}
-                >
-                  {t("common:actions.spin")} →
-                </Button>
-                <Button
-                  variant="accent"
-                  size="lg"
-                  fullWidth
-                  onClick={handleInviteFriends}
-                  loading={inviteLoading}
-                >
-                  {t("room:actions.go_multiplayer")}
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setResultRevealed(false);
-                    setState("settled");
-                  }}
-                >
-                  {t("common:actions.close")}
-                </Button>
-              </div>
             </motion.div>
           ) : null}
         </AnimatePresence>

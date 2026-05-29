@@ -6,7 +6,8 @@
   "actions": {
     "share": "Поділитись",
     "invite_friends": "+ Запросити друзів",
-    "go_multiplayer": "Грати разом"
+    "go_multiplayer": "Грати разом",
+    "create_room": "Створити кімнату"
   },
   "share": {
     "message": "Заходь у мою кімнату Хоба! · код {code}",
