@@ -980,3 +980,44 @@ async def test_bon_reset_clears_round(sio: FakeSocketIO, db: Any) -> None:
     await db.refresh(refreshed)
     assert refreshed.bon_attempts == 0
     assert refreshed.bon_winner_segment_id is None
+
+
+@pytest.mark.asyncio
+async def test_best_of_n_finalizes_winner_after_n_spins(
+    sio: FakeSocketIO, db: Any,
+) -> None:
+    # Regression: with 2 segments + spin_count=3 the round always has a
+    # single leader after 3 spins, so the winner MUST finalize and the
+    # final settle must broadcast it (the user saw "5/5" with no winner).
+    from hoba_api.services.rooms import get_room_by_code
+    from hoba_api.services.spins import trigger_spin
+
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=530))
+    room = await create_room(
+        db, host_id=host.id, question_text="Q?",
+        segments=[SegmentDraft(label="a", color_seed=0, weight=1),
+                  SegmentDraft(label="b", color_seed=1, weight=1)],
+        spin_policy="anyone", game_mode="classic", spin_count=3,
+    )
+    await db.commit()
+    fetched = await get_room_by_code(db, room.code)
+    assert fetched is not None
+    last = None
+    for _ in range(3):
+        last = await trigger_spin(db, room=fetched, user_id=host.id)
+        await db.commit()
+    assert last is not None
+    sio.emitted.clear()
+    await _emit_settled(  # type: ignore[arg-type]
+        sio, room.code, fetched.id,
+        spin_id=last.id, result_segment_id=last.result_segment_id, duration_ms=0,
+    )
+    refreshed = await get_room_by_code(db, room.code)
+    assert refreshed is not None
+    await db.refresh(refreshed)
+    assert refreshed.bon_attempts == 3
+    assert refreshed.bon_winner_segment_id is not None
+    patches = [e[1]["patch"] for e in sio.events_named("room:updated")
+               if isinstance(e[1], dict) and "patch" in e[1]]
+    bon = [p for p in patches if "bon_winner_segment_id" in p]
+    assert bon and bon[-1]["bon_winner_segment_id"] is not None

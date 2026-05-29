@@ -25,6 +25,7 @@ from hoba_api.db import SessionLocal
 from hoba_api.models.question import Question
 from hoba_api.models.room import Room
 from hoba_api.models.segment import Segment
+from hoba_api.models.spin import Spin
 from hoba_api.modes import engine_for
 from hoba_api.modes.base import SpinContext
 from hoba_api.realtime.server import NAMESPACE
@@ -574,6 +575,27 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
             if room.host_id != user_id:
                 await sio.emit("error", {"code": "not_host"}, to=sid, namespace=NAMESPACE)
                 return
+            # Baseline = latest spin of the active question, so only future
+            # spins count toward the new round.
+            active_q = (
+                await session.execute(
+                    select(Question.id).where(
+                        Question.room_id == room.id,
+                        Question.is_active.is_(True),
+                    ),
+                )
+            ).scalar_one_or_none()
+            latest_spin_id = 0
+            if active_q is not None:
+                latest_spin_id = (
+                    await session.execute(
+                        select(Spin.id)
+                        .where(Spin.question_id == active_q)
+                        .order_by(Spin.id.desc())
+                        .limit(1),
+                    )
+                ).scalar_one_or_none() or 0
+            room.bon_round_start_spin_id = latest_spin_id
             room.bon_attempts = 0
             room.bon_tally = None
             room.bon_winner_segment_id = None

@@ -97,6 +97,12 @@ class Room(Base, TimestampMixin):
     )
     bon_tally: Mapped[dict[str, int] | None] = mapped_column(JSON, nullable=True)
     bon_winner_segment_id: Mapped[int | None] = mapped_column(nullable=True)
+    # Round boundary: only spins with id > this count toward the current
+    # round. Set to the latest spin id on "New round". Lets _emit_settled
+    # recompute attempts/tally from the committed Spin rows (order-
+    # independent) instead of incrementing shared counters across the
+    # overlapping background settle tasks.
+    bon_round_start_spin_id: Mapped[int | None] = mapped_column(nullable=True)
 
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
