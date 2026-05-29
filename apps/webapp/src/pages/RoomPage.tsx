@@ -24,6 +24,7 @@ import {
   remainingCount,
 } from "@/features/rooms/elimination";
 import { computeCanSpin, isHost } from "@/features/rooms/permissions";
+import { activeCard, doneCount } from "@/features/rooms/punishment";
 import { computeTurnState } from "@/features/rooms/turnState";
 import { Wheel } from "@/features/wheel/Wheel";
 import {
@@ -350,6 +351,11 @@ export function RoomPage(): JSX.Element {
             {t("room:elimination.remaining", { count: remaining })}
           </span>
         ) : null}
+        {isPunish ? (
+          <span className="text-sm font-medium text-ink-light-2 dark:text-ink-dark-2">
+            {t("room:punishment.tally", { count: punishDone })}
+          </span>
+        ) : null}
         {/* Prominent "whose turn" banner for turn_based rooms — sits high so
             it's unmissable (the old bottom line hid near the home indicator).
             Only the turn_based kinds render here; classic is not_turn_based. */}
@@ -411,7 +417,7 @@ export function RoomPage(): JSX.Element {
               // Only attach the hub-tap handler when this user is actually
               // allowed to spin (host_only policy) — otherwise the hub
               // would invite a tap that the server then rejects.
-              onSpinClick={canSpin ? triggerSpin : undefined}
+              onSpinClick={canSpin && !pendingCard ? triggerSpin : undefined}
               className="max-w-md mx-auto"
             />
           </motion.div>
@@ -441,6 +447,11 @@ export function RoomPage(): JSX.Element {
               {t("room:spin.host_only_hint")}
             </p>
           ) : null}
+          {isPunish && pendingCard ? (
+            <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-2">
+              {t("room:punishment.pending_hint")}
+            </p>
+          ) : null}
         </div>
 
         <FlyingReactions />
@@ -456,7 +467,51 @@ export function RoomPage(): JSX.Element {
         ) : null}
 
         <AnimatePresence>
-          {revealed && winningSegment !== undefined && !roundOver ? (
+          {isPunish && pendingCard ? (
+            <motion.div
+              key="punish-card"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="absolute inset-0 z-30 px-4 pt-3 pb-6 flex flex-col items-center justify-center gap-5 bg-bg-light/92 dark:bg-bg-dark/92 backdrop-blur-sm"
+              aria-live="polite"
+              role="status"
+            >
+              <motion.div
+                initial={{ scale: 0.6, y: 20, opacity: 0 }}
+                animate={{ scale: 1, y: 0, opacity: 1 }}
+                transition={{ type: "spring", damping: 16, stiffness: 240 }}
+                className="w-full max-w-sm rounded-2xl p-6 shadow-spin bg-gradient-to-br from-brand-primary to-brand-amber-3 text-white"
+              >
+                <p className="text-xs uppercase tracking-widest opacity-85 mb-2">
+                  {t(`room:punishment.deck_${pendingCard.deck}.label`)}
+                </p>
+                {(() => {
+                  const victim = snapshot?.active_question?.segments.find(
+                    (s) => s.id === pendingCard.victim_segment_id,
+                  );
+                  return victim !== undefined ? (
+                    <p className="text-sm font-semibold mb-3">
+                      {t("room:punishment.victim_card", {
+                        victim: `${victim.emoji ? `${victim.emoji} ` : ""}${victim.label}`,
+                      })}
+                    </p>
+                  ) : null;
+                })()}
+                <p className="text-2xl font-display font-extrabold leading-snug">
+                  {pendingCard.text}
+                </p>
+              </motion.div>
+              <Button variant="accent" size="xl" onClick={markPunishmentDone}>
+                {t("room:punishment.done")}
+              </Button>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {revealed && winningSegment !== undefined && !roundOver && !isPunish ? (
             isElimination ? (
               // Elimination: a light "what's out" flash. Auto-dismisses
               // (effect above) and a tap anywhere skips it — no manual close,
