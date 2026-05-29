@@ -84,9 +84,12 @@ export function SpinPage(): JSX.Element {
     setResultRevealed(false);
   }, [wheelId]);
 
-  // Wire the post-spin reveal sequence.
+  // Wire the post-spin reveal sequence. Keyed on `spin` only (NOT
+  // wheelState) — otherwise setState("settled") inside the settle timer
+  // re-runs this effect, whose cleanup clears the not-yet-fired reveal
+  // timer, and the result overlay never appears.
   useEffect(() => {
-    if (spin === undefined || state !== "spinning") return undefined;
+    if (spin === undefined) return undefined;
     const settleAt = window.setTimeout(() => {
       haptics.heavy();
       haptics.success();
@@ -104,7 +107,7 @@ export function SpinPage(): JSX.Element {
       window.clearTimeout(settleAt);
       window.clearTimeout(revealAt);
     };
-  }, [spin, state]);
+  }, [spin]);
 
   // The result auto-dismisses (no manual close) — tap to skip. Falls back
   // to the settled wheel so the centered hub can re-spin straight away.
