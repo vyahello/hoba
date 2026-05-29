@@ -112,3 +112,23 @@ A pre-spin event is announced to the room (e.g. "Double spin", "Reverse order") 
 ## Rigged (§5.5) — Planned
 
 Long-press reveal only (not surfaced in the standard mode picker). Host secretly pre-selects the outcome. Planned for a later stage.
+
+## Best-of-N spins (cross-mode)
+
+The host can set `spin_count` ∈ {1, 3, 5, 7} (default 1) when creating a room
+(Classic only this slice; Elimination/Punishment ignore it and always spin
+once). When N > 1, one trigger runs **N server-side spins**; the
+**most-frequent segment wins**. Ties are broken by extra spins counted only
+when they land on a tied leader, until one leads (capped, then random).
+
+- Server (`run_spin_series` in `services/spins.py`): chains angles forward,
+  tallies hits, resolves ties; compresses every sub-spin except the last to a
+  fast duration (`FAST_SUBSPIN_MS`), so only the finale plays full-length.
+- Wire: `spin:started` carries `series` (the sub-spins) + `winner_segment_id`;
+  `_emit_settled` is scheduled over the **series total** duration.
+- Client (`features/wheel/spinSeries.ts` + RoomPage): animates each sub-spin in
+  order with a live tally chip row ("🍕 2 · 🍣 1"), then the dramatic final +
+  "Хоба!" on the winner.
+
+Solo best-of-N (the wheel screen) is a planned follow-up; solo currently spins
+once.
