@@ -84,6 +84,7 @@ class RoomOut(BaseModel):
     punishment_deck: PunishmentDeck | None
     punishment_done_count: int
     punishment_active_card: dict[str, object] | None
+    spin_count: int
     created_at: datetime
     closed_at: datetime | None
 
@@ -112,6 +113,7 @@ class RoomCreateIn(BaseModel):
     suggestion_policy: SuggestionPolicy = "off"
     game_mode: GameMode = "classic"
     punishment_deck: PunishmentDeck | None = Field(default=None)
+    spin_count: int = Field(default=1)
 
 
 class RoomUpdateIn(BaseModel):
@@ -121,3 +123,4 @@ class RoomUpdateIn(BaseModel):
     is_locked: bool | None = None
     game_mode: GameMode | None = None
     punishment_deck: PunishmentDeck | None = None
+    spin_count: int | None = None

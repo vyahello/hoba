@@ -332,3 +332,31 @@ async def test_create_room_rejects_unknown_game_mode(db: AsyncSession) -> None:
             game_mode="not_a_mode",
         )
     assert exc.value.code == "bad_game_mode"
+
+
+async def test_create_room_spin_count(db) -> None:  # type: ignore[no-untyped-def]
+    import pytest
+
+    from hoba_api.services.rooms import (
+        RoomServiceError,
+        SegmentDraft,
+        create_room,
+    )
+    from hoba_api.services.users import upsert_from_telegram
+    from hoba_api.auth.initdata import TelegramUser
+
+    host = await upsert_from_telegram(db, TelegramUser(id=7800, first_name="H"))
+    await db.flush()
+    room = await create_room(
+        db, host_id=host.id, question_text="Q?",
+        segments=[SegmentDraft(label="a"), SegmentDraft(label="b")],
+        spin_count=3,
+    )
+    assert room.spin_count == 3
+    with pytest.raises(RoomServiceError) as exc:
+        await create_room(
+            db, host_id=host.id, question_text="Q?",
+            segments=[SegmentDraft(label="a"), SegmentDraft(label="b")],
+            spin_count=2,
+        )
+    assert exc.value.code == "bad_spin_count"

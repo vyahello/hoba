@@ -85,6 +85,12 @@ class Room(Base, TimestampMixin):
         JSON, nullable=True,
     )
 
+    # Best-of-N (cross-mode): spins per trigger; most-frequent segment wins.
+    # 1 = single spin (current behavior). Classic-only this slice.
+    spin_count: Mapped[int] = mapped_column(
+        default=1, nullable=False, server_default="1",
+    )
+
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     host: Mapped[User] = relationship(foreign_keys=[host_id], lazy="joined")
