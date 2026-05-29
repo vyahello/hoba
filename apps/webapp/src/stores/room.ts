@@ -22,6 +22,13 @@ import {
 const NAMESPACE = "/rooms";
 const REACTION_TTL_MS = 2200;
 
+export interface SpinSeriesEntry {
+  segment_id: number;
+  final_angle_deg: number;
+  duration_ms: number;
+  seed: number;
+}
+
 export interface SpinStartedEvent {
   spin_id: number;
   question_id: number;
@@ -31,6 +38,9 @@ export interface SpinStartedEvent {
   duration_ms: number;
   seed: number;
   started_at_server: string;
+  /** Best-of-N: the sub-spins to animate in order (≥1; last = winner). */
+  series?: SpinSeriesEntry[];
+  winner_segment_id?: number;
 }
 
 export interface SpinSettledEvent {

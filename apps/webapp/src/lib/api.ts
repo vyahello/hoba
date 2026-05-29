@@ -116,6 +116,7 @@ export interface ServerRoom {
     victim_segment_id: number;
     spin_id: number;
   } | null;
+  spin_count: number;
   created_at: string;
   closed_at: string | null;
 }
@@ -147,6 +148,7 @@ export interface RoomCreatePayload {
   suggestion_policy?: SuggestionPolicy;
   game_mode?: GameMode;
   punishment_deck?: PunishmentDeck;
+  spin_count?: number;
 }
 
 export interface RoomPatchPayload {
@@ -156,6 +158,7 @@ export interface RoomPatchPayload {
   is_locked?: boolean;
   game_mode?: GameMode;
   punishment_deck?: PunishmentDeck;
+  spin_count?: number;
 }
 
 // --- API surface ---------------------------------------------------------
