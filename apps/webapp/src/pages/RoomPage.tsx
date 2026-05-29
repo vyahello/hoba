@@ -17,6 +17,12 @@ import { GameModeBadge } from "@/components/room/GameModeBadge";
 import { FlyingReactions } from "@/components/room/FlyingReactions";
 import { ReactionsBar } from "@/components/room/ReactionsBar";
 import { RoomSettingsSheet } from "@/components/room/RoomSettingsSheet";
+import {
+  eliminatedSegments,
+  isRoundOver,
+  livingSegments,
+  remainingCount,
+} from "@/features/rooms/elimination";
 import { computeCanSpin, isHost } from "@/features/rooms/permissions";
 import { computeTurnState } from "@/features/rooms/turnState";
 import { Wheel } from "@/features/wheel/Wheel";
@@ -123,12 +129,14 @@ export function RoomPage(): JSX.Element {
 
   const segments: SegmentDef[] = useMemo(() => {
     if (snapshot?.active_question == null) return [];
-    return snapshot.active_question.segments.map((s) => ({
-      id: String(s.id),
-      label: s.label,
-      emoji: s.emoji ?? undefined,
-      colorSeed: s.color_seed,
-    }));
+    return snapshot.active_question.segments
+      .filter((s) => !s.is_eliminated)
+      .map((s) => ({
+        id: String(s.id),
+        label: s.label,
+        emoji: s.emoji ?? undefined,
+        colorSeed: s.color_seed,
+      }));
   }, [snapshot]);
 
   const winningSegmentIndex = useMemo(() => {
@@ -155,6 +163,13 @@ export function RoomPage(): JSX.Element {
   const canSpin = computeCanSpin(snapshot);
   const callerIsHost = isHost(snapshot);
   const turnState = computeTurnState(snapshot);
+
+  const isElimination = snapshot?.room.game_mode === "elimination";
+  const activeQuestion = snapshot?.active_question ?? null;
+  const remaining = remainingCount(activeQuestion);
+  const roundOver = isElimination && isRoundOver(activeQuestion);
+  const survivor = roundOver ? livingSegments(activeQuestion)[0] : undefined;
+  const resetRound = useRoomStore((s) => s.resetRound);
 
   async function handleShare(): Promise<void> {
     if (snapshot === null) return;
@@ -270,6 +285,11 @@ export function RoomPage(): JSX.Element {
         {/* Own line so a wide mode label can't squeeze the row above.
             Renders null for classic/rigged, so this line vanishes there. */}
         <GameModeBadge mode={snapshot.room.game_mode} />
+        {isElimination ? (
+          <span className="text-sm font-medium text-ink-light-2 dark:text-ink-dark-2">
+            {t("room:elimination.remaining", { count: remaining })}
+          </span>
+        ) : null}
       </section>
 
       <main className="flex-1 px-4 pt-3 pb-6 flex flex-col gap-4 relative">
@@ -281,35 +301,66 @@ export function RoomPage(): JSX.Element {
           // Only attach the hub-tap handler when this user is actually
           // allowed to spin (host_only policy) — otherwise the hub
           // would invite a tap that the server then rejects.
-          onSpinClick={canSpin ? triggerSpin : undefined}
+          onSpinClick={canSpin && !roundOver ? triggerSpin : undefined}
           className="max-w-md mx-auto"
         />
 
+        {isElimination && eliminatedSegments(activeQuestion).length > 0 ? (
+          <div className="flex flex-wrap gap-1.5 justify-center px-2">
+            {eliminatedSegments(activeQuestion).map((s) => (
+              <span
+                key={s.id}
+                className="text-xs px-2 py-1 rounded-full grayscale opacity-60 bg-surface-light-2 dark:bg-surface-dark-2 line-through"
+              >
+                {s.emoji ? `${s.emoji} ` : ""}{s.label}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
         <div className="mt-auto flex flex-col gap-3">
           <ReactionsBar />
-          {canSpin && wheelState === "idle" ? (
+          {roundOver ? (
+            <div className="text-center py-3">
+              <p className="text-lg font-display font-bold text-brand-amber-3">
+                {t("room:elimination.survivor", { label: survivor?.label ?? "" })}
+              </p>
+              {callerIsHost ? (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  className="mt-3"
+                  onClick={resetRound}
+                >
+                  {t("room:elimination.new_round")}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+          {canSpin && wheelState === "idle" && !roundOver ? (
             <Button variant="accent" size="xl" fullWidth onClick={triggerSpin}>
               {t("common:actions.spin").toUpperCase()}
             </Button>
           ) : null}
-          {!canSpin && wheelState === "idle" && turnState.kind === "not_turn_based" ? (
+          {!canSpin && wheelState === "idle" && turnState.kind === "not_turn_based" && !roundOver ? (
             <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-3">
               {t("room:spin.host_only_hint")}
             </p>
           ) : null}
-          {wheelState === "idle" && turnState.kind === "my_turn" ? (
+          {wheelState === "idle" && turnState.kind === "my_turn" && !roundOver ? (
             <p className="text-center text-sm font-medium text-brand-amber-3 py-3">
               {t("room:turn.my_turn")}
             </p>
           ) : null}
-          {wheelState === "idle" && turnState.kind === "waiting" ? (
+          {wheelState === "idle" && turnState.kind === "waiting" && !roundOver ? (
             <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-3">
               {turnState.whoName !== null
                 ? t("room:turn.waiting_named", { name: turnState.whoName })
                 : t("room:turn.waiting_unnamed")}
             </p>
           ) : null}
-          {wheelState === "idle" && turnState.kind === "no_one" ? (
+          {wheelState === "idle" && turnState.kind === "no_one" && !roundOver ? (
             <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-3">
               {t("room:turn.no_one")}
             </p>
@@ -319,7 +370,7 @@ export function RoomPage(): JSX.Element {
               {t("common:actions.spin").toUpperCase()}…
             </Button>
           ) : null}
-          {wheelState === "settled" && canSpin ? (
+          {wheelState === "settled" && canSpin && !roundOver ? (
             <Button variant="primary" size="lg" fullWidth onClick={triggerSpin}>
               {t("common:actions.spin")} →
             </Button>
