@@ -35,7 +35,10 @@
     "remaining": "{count, plural, one {# left} other {# left}}",
     "survivor": "🏆 {label} survives!",
     "new_round": "New round",
-    "eliminated_label": "Out"
+    "eliminated_label": "Out",
+    "eliminated_result": "💥 {label} is out!",
+    "winner_title": "🏆 {label} wins!",
+    "waiting_new_round": "Waiting for a new round…"
   },
   "modes": {
     "classic": {

@@ -35,7 +35,10 @@
     "remaining": "{count, plural, one {залишився #} few {залишилось #} many {залишилось #} other {залишилось #}}",
     "survivor": "🏆 {label} виживає!",
     "new_round": "Новий раунд",
-    "eliminated_label": "Вибув"
+    "eliminated_label": "Вибув",
+    "eliminated_result": "💥 {label} вибуває!",
+    "winner_title": "🏆 {label} — переможець!",
+    "waiting_new_round": "Чекаємо на новий раунд…"
   },
   "modes": {
     "classic": {
