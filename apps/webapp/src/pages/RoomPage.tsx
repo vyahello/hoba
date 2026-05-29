@@ -47,10 +47,10 @@ import {
 import { toast } from "@/stores/toast";
 import { WHEEL_PALETTE } from "../../tailwind.config";
 
-const REVEAL_DELAY_MS = 1500;
-// Elimination shows its reveal sooner — the brand beat leads, then the
-// eliminated item — so players don't sit on the landed option first.
-const ELIM_REVEAL_DELAY_MS = 600;
+// Short beat between the wheel stopping and the result reveal — long
+// enough to register the landed segment, short enough to feel instant.
+const REVEAL_DELAY_MS = 400;
+const ELIM_REVEAL_DELAY_MS = 400;
 
 export function RoomPage(): JSX.Element {
   const { code = "" } = useParams<{ code: string }>();
@@ -350,6 +350,26 @@ export function RoomPage(): JSX.Element {
             {t("room:elimination.remaining", { count: remaining })}
           </span>
         ) : null}
+        {/* Prominent "whose turn" banner for turn_based rooms — sits high so
+            it's unmissable (the old bottom line hid near the home indicator).
+            Only the turn_based kinds render here; classic is not_turn_based. */}
+        {turnState.kind === "my_turn" && !roundOver ? (
+          <div className="rounded-lg bg-brand-amber-3/15 py-2 px-3 text-center text-sm font-semibold text-brand-amber-3">
+            {t("room:turn.my_turn")}
+          </div>
+        ) : null}
+        {turnState.kind === "waiting" && !roundOver ? (
+          <div className="rounded-lg bg-surface-light-2 py-2 px-3 text-center text-sm font-medium text-ink-light-1 dark:bg-surface-dark-2 dark:text-ink-dark-1">
+            {turnState.whoName !== null
+              ? t("room:turn.waiting_named", { name: turnState.whoName })
+              : t("room:turn.waiting_unnamed")}
+          </div>
+        ) : null}
+        {turnState.kind === "no_one" && !roundOver ? (
+          <div className="rounded-lg bg-surface-light-2 py-2 px-3 text-center text-sm text-ink-light-2 dark:bg-surface-dark-2 dark:text-ink-dark-2">
+            {t("room:turn.no_one")}
+          </div>
+        ) : null}
       </section>
 
       <main className="flex-1 px-4 pt-3 pb-6 flex flex-col gap-4 relative">
@@ -414,26 +434,11 @@ export function RoomPage(): JSX.Element {
           <ReactionsBar />
           {/* No bottom SPIN button in any mode — the centered wheel hub is
               the sole spin control. Only status/turn lines live here. */}
+          {/* Classic host_only guests get the "host spins" hint here.
+              turn_based "whose turn" now shows as a banner up top. */}
           {!canSpin && idleish && turnState.kind === "not_turn_based" && !roundOver ? (
             <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-3">
               {t("room:spin.host_only_hint")}
-            </p>
-          ) : null}
-          {idleish && turnState.kind === "my_turn" && !roundOver ? (
-            <p className="text-center text-sm font-medium text-brand-amber-3 py-3">
-              {t("room:turn.my_turn")}
-            </p>
-          ) : null}
-          {idleish && turnState.kind === "waiting" && !roundOver ? (
-            <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-3">
-              {turnState.whoName !== null
-                ? t("room:turn.waiting_named", { name: turnState.whoName })
-                : t("room:turn.waiting_unnamed")}
-            </p>
-          ) : null}
-          {idleish && turnState.kind === "no_one" && !roundOver ? (
-            <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-3">
-              {t("room:turn.no_one")}
             </p>
           ) : null}
         </div>

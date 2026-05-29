@@ -27,7 +27,9 @@ import { useCustomWheel, useSpinHistory } from "@/stores/spinHistory";
 import { toast } from "@/stores/toast";
 import { WHEEL_PALETTE } from "../../tailwind.config";
 
-const REVEAL_DELAY_MS = 1500;
+// Short beat between the wheel stopping and the result reveal — long
+// enough to register the landed segment, short enough to feel instant.
+const REVEAL_DELAY_MS = 400;
 
 function buildQuickWheelDef(
   quick: QuickWheel,
