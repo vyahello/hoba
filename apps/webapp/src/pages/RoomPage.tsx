@@ -444,15 +444,25 @@ export function RoomPage(): JSX.Element {
               );
               return (
                 <>
+                  {/* Skewed brand exclamation — the celebratory "Хоба!" beat. */}
+                  <motion.span
+                    initial={{ scale: 0.3, opacity: 0, skewX: -18, rotate: -10 }}
+                    animate={{ scale: 1, opacity: 1, skewX: -11, rotate: -4 }}
+                    transition={{ type: "spring", damping: 9, stiffness: 240 }}
+                    className="font-display font-extrabold text-6xl text-brand-primary drop-shadow"
+                    aria-label={t("common:brand")}
+                  >
+                    {t("common:brand")}
+                  </motion.span>
                   <motion.span
                     key={winner?.id}
                     initial={{ scale: 0.4, rotate: -10, opacity: 0 }}
                     animate={{ scale: 1, rotate: 0, opacity: 1 }}
-                    transition={{ type: "spring", damping: 12, stiffness: 220 }}
+                    transition={{ delay: 0.15, type: "spring", damping: 12, stiffness: 220 }}
                     className="text-7xl leading-none"
                     aria-hidden
                   >
-                    {winner?.emoji ?? "🏆"}
+                    {winner?.emoji ? `${winner.emoji} ` : ""}🏆
                   </motion.span>
                   <h2 className="font-display font-extrabold text-3xl text-brand-amber-3">
                     {t("room:best_of_n.winner", { label: winner?.label ?? "" })}
@@ -602,7 +612,7 @@ export function RoomPage(): JSX.Element {
         </AnimatePresence>
 
         <AnimatePresence>
-          {revealed && winningSegment !== undefined && !roundOver && !isPunish ? (
+          {revealed && winningSegment !== undefined && !roundOver && !bonOver && !isPunish ? (
             isElimination ? (
               // Elimination: a light "what's out" flash. Auto-dismisses
               // (effect above) and a tap anywhere skips it — no manual close,
