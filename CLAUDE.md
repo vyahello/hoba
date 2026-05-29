@@ -35,6 +35,7 @@ Order of operations is **`docs/roadmap.md`** — stages A → G, each ending wit
 - [`docs/privacy.md`](docs/privacy.md) — Privacy Policy hosted via BotFather.
 - [`docs/validation-notes.md`](docs/validation-notes.md) — Stage C session log + cross-session synthesis.
 - [`docs/soft-launch-invite.md`](docs/soft-launch-invite.md) — friend invite copy (EN + UK) + session protocol.
+- [`docs/game-modes.md`](docs/game-modes.md) — per-mode gameplay mechanics (Elimination live; Punishment/Chaos planned).
 
 When you make a non-trivial change that affects something documented above, update the relevant doc in the same commit.
 
