@@ -24,6 +24,9 @@ from hoba_api.wheel.spin_math import compute_spin
 
 MIN_SEGMENTS_TO_SPIN = 2
 TIE_BREAK_CAP = 20
+# Non-final sub-spins in a best-of-N series animate fast; only the final
+# (winning) spin plays at full dramatic length.
+FAST_SUBSPIN_MS = 1500
 
 
 class SeriesEntry(TypedDict):
@@ -94,6 +97,9 @@ def run_spin_series(
 
     winner_id = leaders[0] if len(leaders) == 1 else secrets.choice(leaders)
     winner = next(s for s in spin_segments if s.id == winner_id)
+    # Compress every sub-spin except the last (the dramatic finale).
+    for entry in series[:-1]:
+        entry["duration_ms"] = FAST_SUBSPIN_MS
     return series, winner, tie_break_count
 
 
