@@ -33,6 +33,12 @@ export interface SpinStartedEvent {
 export interface SpinSettledEvent {
   spin_id: number;
   result_segment_id: number;
+  mode_aftereffects?: {
+    eliminated_segment_id?: number;
+    remaining?: number;
+    round_over?: boolean;
+    survivor_segment_id?: number | null;
+  };
 }
 
 export interface FlyingReaction {

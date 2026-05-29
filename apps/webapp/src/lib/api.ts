@@ -65,6 +65,7 @@ export interface ServerSegment {
   color_seed: number;
   weight: number;
   position: number;
+  is_eliminated: boolean;
 }
 
 export interface ServerQuestion {
