@@ -32,7 +32,16 @@ async def build_room_state(
 
     return RoomState(
         room=RoomOut.model_validate(room),
-        participants=[ParticipantOut.model_validate(p) for p in participants],
+        # `Participant.display_name` is never populated at write time, so
+        # derive the name from the eager-loaded `User` (relationship is
+        # lazy="joined"). Prefer an explicit participant display_name if
+        # one is ever set; otherwise fall back to the user's first_name.
+        participants=[
+            ParticipantOut.model_validate(p).model_copy(
+                update={"display_name": p.display_name or p.user.first_name},
+            )
+            for p in participants
+        ],
         active_question=(
             QuestionOut.model_validate(active_question)
             if active_question is not None
