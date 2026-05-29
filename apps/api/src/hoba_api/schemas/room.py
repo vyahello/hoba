@@ -30,6 +30,7 @@ class SegmentOut(BaseModel):
     color_seed: int
     weight: int
     position: int
+    is_eliminated: bool = False
 
 
 class QuestionOut(BaseModel):

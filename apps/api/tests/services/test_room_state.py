@@ -9,6 +9,7 @@ null names (e.g. the turn status line falls back to the generic
 
 from __future__ import annotations
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hoba_api.auth.initdata import TelegramUser
@@ -43,3 +44,33 @@ async def test_participants_carry_user_first_name(db: AsyncSession) -> None:
     names = {p.user_id: p.display_name for p in state.participants}
     assert names[host.id] == "Volodymyr"
     assert names[guest.id] == "Anna"
+
+
+async def test_segment_out_carries_is_eliminated(db: AsyncSession) -> None:
+    from datetime import UTC, datetime
+
+    from hoba_api.models.segment import Segment
+
+    host = await upsert_from_telegram(db, TelegramUser(id=9101, first_name="H"))
+    await db.flush()
+    room = await create_room(
+        db, host_id=host.id, question_text="Q?",
+        segments=[SegmentDraft(label="a"), SegmentDraft(label="b")],
+    )
+    await db.commit()
+    fetched = await get_room_by_code(db, room.code)
+    assert fetched is not None
+    # Eliminate the first segment directly.
+    q = next(qq for qq in fetched.questions if qq.is_active)
+    seg = (await db.execute(
+        select(Segment).where(Segment.parent_id == q.id,
+                              Segment.parent_type == "question")
+        .order_by(Segment.position)
+    )).scalars().first()
+    seg.eliminated_at = datetime.now(UTC)
+    await db.commit()
+
+    state = await build_room_state(db, fetched, current_user_id=host.id)
+    flags = {s.id: s.is_eliminated for s in state.active_question.segments}
+    assert flags[seg.id] is True
+    assert sum(1 for v in flags.values() if not v) == 1
