@@ -59,7 +59,9 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         disabled={disabled}
         onClick={handleClick}
         className={cn(
-          "inline-flex items-center justify-center select-none",
+          // shrink-0: a 44×44 tap target must never deform when its flex
+          // row overflows (e.g. when a GameModeBadge widens the room header).
+          "inline-flex items-center justify-center select-none shrink-0",
           "ds-tactile disabled:opacity-50 disabled:active:scale-100",
           SIZE_STYLES[size],
           VARIANT_STYLES[variant],

@@ -238,29 +238,38 @@ export function RoomPage(): JSX.Element {
         />
       </header>
 
-      <section className="px-4 pt-3 flex items-center gap-3">
-        <RoomCodePill code={snapshot.room.code} />
+      <section className="px-4 pt-3 flex flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <RoomCodePill code={snapshot.room.code} />
+          {/* ml-auto pins the actions to the right edge; the icon group
+              never shrinks (IconButton is shrink-0), so the code pill keeps
+              its full brand size and the actions stay 48×48 tap targets. */}
+          <div className="ml-auto flex items-center gap-2">
+            <IconButton
+              aria-label={t("room:actions.share")}
+              variant="filled"
+              size="md"
+              icon={<span aria-hidden>📤</span>}
+              onClick={() => {
+                void handleShare();
+              }}
+            />
+            {callerIsHost ? (
+              <IconButton
+                aria-label={t("room:settings.open_aria")}
+                variant="tonal"
+                size="md"
+                icon={<span aria-hidden>⚙️</span>}
+                onClick={() => {
+                  setSettingsOpen(true);
+                }}
+              />
+            ) : null}
+          </div>
+        </div>
+        {/* Own line so a wide mode label can't squeeze the row above.
+            Renders null for classic/rigged, so this line vanishes there. */}
         <GameModeBadge mode={snapshot.room.game_mode} />
-        <IconButton
-          aria-label={t("room:actions.share")}
-          variant="filled"
-          size="md"
-          icon={<span aria-hidden>📤</span>}
-          onClick={() => {
-            void handleShare();
-          }}
-        />
-        {callerIsHost ? (
-          <IconButton
-            aria-label={t("room:settings.open_aria")}
-            variant="tonal"
-            size="md"
-            icon={<span aria-hidden>⚙️</span>}
-            onClick={() => {
-              setSettingsOpen(true);
-            }}
-          />
-        ) : null}
       </section>
 
       <main className="flex-1 px-4 pt-3 pb-6 flex flex-col gap-4 relative">
