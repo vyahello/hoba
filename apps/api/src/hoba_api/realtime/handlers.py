@@ -13,7 +13,6 @@ from urllib.parse import parse_qs
 
 import socketio
 import structlog
-
 from sqlalchemy import select
 
 from hoba_api.auth.initdata import (
@@ -416,6 +415,48 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                 sio, room_code, room_id, spin_id, result_segment_id, duration_ms,
             ),
         )
+
+    @sio.on("round:reset", namespace=NAMESPACE)
+    async def on_round_reset(sid: str) -> None:
+        sess = await sio.get_session(sid, namespace=NAMESPACE)
+        user_id = sess.get("user_id")
+        room_code = sess.get("room_code")
+        room_id = sess.get("room_id")
+        if user_id is None or room_code is None or room_id is None:
+            await sio.emit("error", {"code": "not_in_room"}, to=sid, namespace=NAMESPACE)
+            return
+        async with SessionLocal() as session:
+            room = await session.get(Room, room_id)
+            if room is None:
+                await sio.emit(
+                    "error", {"code": "room_not_found"}, to=sid, namespace=NAMESPACE,
+                )
+                return
+            if room.host_id != user_id:
+                await sio.emit("error", {"code": "not_host"}, to=sid, namespace=NAMESPACE)
+                return
+            question = (
+                await session.execute(
+                    select(Question).where(
+                        Question.room_id == room.id,
+                        Question.is_active.is_(True),
+                    ),
+                )
+            ).scalar_one_or_none()
+            if question is not None:
+                segments = (
+                    await session.execute(
+                        select(Segment).where(
+                            Segment.parent_id == question.id,
+                            Segment.parent_type == "question",
+                        ),
+                    )
+                ).scalars().all()
+                for seg in segments:
+                    seg.eliminated_at = None
+            await session.commit()
+        await sio.emit("round:reset", {}, room=room_code, namespace=NAMESPACE)
+        log.info("ws.round.reset", user_id=user_id, code=room_code)
 
     @sio.on("reaction:send", namespace=NAMESPACE)
     async def on_reaction_send(sid: str, data: dict[str, Any]) -> None:

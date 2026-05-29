@@ -733,11 +733,11 @@ async def test_presence_ping_inside_room_touches_presence(
 async def test_emit_settled_elimination_marks_winner_and_aftereffects(
     sio: FakeSocketIO, db: Any,
 ) -> None:
-    from hoba_api.models.segment import Segment
-    from hoba_api.services.rooms import get_room_by_code
     from sqlalchemy import select
 
     from hoba_api.models.question import Question
+    from hoba_api.models.segment import Segment
+    from hoba_api.services.rooms import get_room_by_code
 
     host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=90))
     room = await create_room(
@@ -761,7 +761,9 @@ async def test_emit_settled_elimination_marks_winner_and_aftereffects(
     assert fetched is not None
     sio.emitted.clear()
 
-    await _emit_settled(sio, room.code, fetched.id, spin_id=1, result_segment_id=winner.id, duration_ms=0)  # type: ignore[arg-type]
+    await _emit_settled(  # type: ignore[arg-type]
+        sio, room.code, fetched.id, spin_id=1, result_segment_id=winner.id, duration_ms=0,
+    )
 
     settled = sio.events_named("spin:settled")
     assert settled, "expected a spin:settled emit"
@@ -782,10 +784,10 @@ async def test_round_reset_host_revives_segments_and_broadcasts(
 ) -> None:
     from datetime import UTC, datetime
 
-    from hoba_api.models.segment import Segment
     from sqlalchemy import select
 
     from hoba_api.models.question import Question
+    from hoba_api.models.segment import Segment
 
     host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=95))
     room = await create_room(
