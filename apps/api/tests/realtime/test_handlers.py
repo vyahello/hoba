@@ -924,3 +924,28 @@ async def test_punishment_done_noop_without_card(sio: FakeSocketIO, db: Any) -> 
     sio.emitted.clear()
     await sio.call("punishment:done", "sid-h900")
     assert not sio.events_named("punishment:cleared")
+
+
+@pytest.mark.asyncio
+async def test_spin_started_carries_series_for_best_of_n(
+    sio: FakeSocketIO, db: Any,
+) -> None:
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=510))
+    room = await create_room(
+        db, host_id=host.id, question_text="Q?",
+        segments=[SegmentDraft(label="a", color_seed=0, weight=1),
+                  SegmentDraft(label="b", color_seed=1, weight=1),
+                  SegmentDraft(label="c", color_seed=2, weight=1)],
+        spin_policy="anyone", game_mode="classic", spin_count=3,
+    )
+    await db.commit()
+    code = room.code
+    await _connect(sio, "sid-h510", user_id=510)
+    await sio.call("room:join", "sid-h510", {"code": code})
+    sio.emitted.clear()
+    await sio.call("spin:trigger", "sid-h510", {})
+    started = sio.events_named("spin:started")
+    assert len(started) == 1
+    payload = started[0][1]
+    assert len(payload["series"]) >= 3
+    assert payload["winner_segment_id"] == payload["result_segment_id"]

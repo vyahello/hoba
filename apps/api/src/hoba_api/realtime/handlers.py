@@ -396,6 +396,7 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
             status_changed = was_lobby and room.status != "lobby"
             status_after = room.status
             cursor_after = room.current_turn_user_id
+            series = spin.mode_state_snapshot.get("series", [])
             spin_payload = {
                 "spin_id": spin.id,
                 "question_id": spin.question_id,
@@ -406,10 +407,17 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                 "seed": spin.seed,
                 "started_at_server": spin.started_at.isoformat(),
                 "mode_effects": spin.mode_state_snapshot.get("mode_effects", {}),
+                "series": series,
+                "winner_segment_id": spin.result_segment_id,
             }
             spin_id = spin.id
             result_segment_id = spin.result_segment_id
-            duration_ms = spin.duration_ms
+            # Settle must cover the whole series (best-of-N), not one spin.
+            duration_ms = (
+                sum(int(e["duration_ms"]) for e in series)
+                if isinstance(series, list) and series
+                else spin.duration_ms
+            )
 
         if status_changed:
             await sio.emit(
