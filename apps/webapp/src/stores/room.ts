@@ -22,13 +22,6 @@ import {
 const NAMESPACE = "/rooms";
 const REACTION_TTL_MS = 2200;
 
-export interface SpinSeriesEntry {
-  segment_id: number;
-  final_angle_deg: number;
-  duration_ms: number;
-  seed: number;
-}
-
 export interface SpinStartedEvent {
   spin_id: number;
   question_id: number;
@@ -38,9 +31,6 @@ export interface SpinStartedEvent {
   duration_ms: number;
   seed: number;
   started_at_server: string;
-  /** Best-of-N: the sub-spins to animate in order (≥1; last = winner). */
-  series?: SpinSeriesEntry[];
-  winner_segment_id?: number;
 }
 
 export interface SpinSettledEvent {
@@ -91,6 +81,8 @@ interface RoomStore {
   resetRound(): void;
   /** Emit punishment:done (any participant) to clear the pending card. */
   markPunishmentDone(): void;
+  /** Emit bon:reset (host) to start a new best-of-N round. */
+  bestOfNReset(): void;
 }
 
 // --- Pure reducers (exported for unit testing) ---------------------------
@@ -321,6 +313,10 @@ export const useRoomStore = create<RoomStore>((_set, get) => ({
 
   markPunishmentDone(): void {
     socket?.emit("punishment:done");
+  },
+
+  bestOfNReset(): void {
+    socket?.emit("bon:reset");
   },
 }));
 

@@ -109,5 +109,10 @@
   },
   "spin_count": {
     "label": "Spins"
+  },
+  "best_of_n": {
+    "attempt": "Attempt {k}/{n}",
+    "winner": "🏆 {label} wins!",
+    "new_round": "New round"
   }
 }

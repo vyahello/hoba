@@ -24,9 +24,16 @@ import {
   remainingCount,
 } from "@/features/rooms/elimination";
 import { computeCanSpin, isHost } from "@/features/rooms/permissions";
+import {
+  attempts as bonAttemptsCount,
+  isBestOfN,
+  roundOver,
+  roundWinnerId,
+  tally as bonTallyMap,
+  target as bonTargetCount,
+} from "@/features/rooms/bestOfN";
 import { activeCard, doneCount } from "@/features/rooms/punishment";
 import { computeTurnState } from "@/features/rooms/turnState";
-import { runningTally } from "@/features/wheel/spinSeries";
 import { Wheel } from "@/features/wheel/Wheel";
 import {
   type SegmentDef,
@@ -83,8 +90,6 @@ export function RoomPage(): JSX.Element {
   const [wheelState, setWheelState] = useState<WheelState>("idle");
   const [revealed, setRevealed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // Best-of-N: index of the sub-spin currently animating (0-based).
-  const [subIndex, setSubIndex] = useState(0);
 
   // Shatter thunk: when a segment is eliminated, briefly compress the wheel
   // (scale 1 → 0.97 → 1, ~300 ms) so players feel the winner "pop off".
@@ -116,70 +121,43 @@ export function RoomPage(): JSX.Element {
   const punishDone = doneCount(snapshot);
   const markPunishmentDone = useRoomStore((s) => s.markPunishmentDone);
 
-  // Normalize a spin into a series (best-of-N). Single spins → 1 entry.
-  const spinSeries = useMemo(() => {
-    if (currentSpin === null) return [];
-    if (currentSpin.series !== undefined && currentSpin.series.length > 0) {
-      return currentSpin.series;
-    }
-    return [
-      {
-        segment_id: currentSpin.result_segment_id,
-        final_angle_deg: currentSpin.final_angle_deg,
-        duration_ms: currentSpin.duration_ms,
-        seed: currentSpin.seed,
-      },
-    ];
-  }, [currentSpin]);
+  // Best-of-N view-state.
+  const isBon = isBestOfN(snapshot);
+  const bonAttempts = bonAttemptsCount(snapshot);
+  const bonTarget = bonTargetCount(snapshot);
+  const bonTally = bonTallyMap(snapshot);
+  const bonWinnerId = roundWinnerId(snapshot);
+  const bonOver = roundOver(snapshot);
+  const bestOfNReset = useRoomStore((s) => s.bestOfNReset);
 
-  // New spin → reset to the first sub-spin and start spinning.
+  // Each spin is a single full animation, then settle + reveal.
   useEffect(() => {
     if (currentSpin === null) {
       setWheelState("idle");
       setRevealed(false);
-      setSubIndex(0);
-      return;
+      return undefined;
     }
     setWheelState("spinning");
     setRevealed(false);
-    setSubIndex(0);
-  }, [currentSpin?.spin_id, currentSpin]);
-
-  // Drive the series: advance through fast sub-spins, then settle + reveal
-  // on the final (winning) one.
-  useEffect(() => {
-    if (currentSpin === null || spinSeries.length === 0) return undefined;
-    const entry = spinSeries[subIndex];
-    if (entry === undefined) return undefined;
-    const isFinal = subIndex >= spinSeries.length - 1;
-
-    if (!isFinal) {
-      const next = window.setTimeout(() => {
-        setSubIndex((i) => i + 1);
-      }, entry.duration_ms);
-      return () => {
-        window.clearTimeout(next);
-      };
-    }
 
     const settleAt = window.setTimeout(() => {
       haptics.heavy();
       haptics.success();
       audio.play("result_chime");
       setWheelState("settled");
-    }, entry.duration_ms);
+    }, currentSpin.duration_ms);
 
     const revealAt = window.setTimeout(() => {
       audio.play("hoba_pop");
       if (!isElimination) fireConfetti();
       setRevealed(true);
-    }, entry.duration_ms + (isElimination ? ELIM_REVEAL_DELAY_MS : REVEAL_DELAY_MS));
+    }, currentSpin.duration_ms + (isElimination ? ELIM_REVEAL_DELAY_MS : REVEAL_DELAY_MS));
 
     return () => {
       window.clearTimeout(settleAt);
       window.clearTimeout(revealAt);
     };
-  }, [currentSpin?.spin_id, currentSpin, spinSeries, subIndex, isElimination]);
+  }, [currentSpin?.spin_id, currentSpin, isElimination]);
 
   // The result auto-dismisses for every mode — no manual close. The
   // elimination "what's out" flash is quick; the classic celebration
@@ -249,18 +227,14 @@ export function RoomPage(): JSX.Element {
   }, [currentSpin, segments, snapshot]);
 
   const wheelSpin: SpinResult | undefined = useMemo(() => {
-    if (currentSpin === null) return undefined;
-    const entry = spinSeries[subIndex];
-    if (entry === undefined) return undefined;
-    const idx = segments.findIndex((sd) => sd.id === String(entry.segment_id));
-    if (idx < 0) return undefined;
+    if (currentSpin === null || winningSegmentIndex < 0) return undefined;
     return {
-      resultSegmentIndex: idx,
-      finalAngleDeg: entry.final_angle_deg,
-      durationMs: entry.duration_ms,
-      seed: entry.seed,
+      resultSegmentIndex: winningSegmentIndex,
+      finalAngleDeg: currentSpin.final_angle_deg,
+      durationMs: currentSpin.duration_ms,
+      seed: currentSpin.seed,
     };
-  }, [currentSpin, spinSeries, subIndex, segments]);
+  }, [currentSpin, winningSegmentIndex]);
 
   const winningSegment =
     winningSegmentIndex >= 0
@@ -462,29 +436,37 @@ export function RoomPage(): JSX.Element {
               // Only attach the hub-tap handler when this user is actually
               // allowed to spin (host_only policy) — otherwise the hub
               // would invite a tap that the server then rejects.
-              onSpinClick={canSpin && !pendingCard ? triggerSpin : undefined}
+              onSpinClick={canSpin && !pendingCard && !bonOver ? triggerSpin : undefined}
               className="max-w-md mx-auto"
             />
           </motion.div>
         )}
 
-        {spinSeries.length > 1 && wheelState !== "idle" ? (
-          <div className="flex flex-wrap gap-1.5 justify-center px-2">
-            {[...runningTally(spinSeries, subIndex).entries()].map(
-              ([segId, count]) => {
-                const seg = snapshot.active_question?.segments.find(
-                  (s) => s.id === segId,
-                );
-                return (
-                  <span
-                    key={segId}
-                    className="text-xs font-semibold px-2 py-1 rounded-full bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1"
-                  >
-                    {seg?.emoji ? `${seg.emoji} ` : ""}{seg?.label ?? segId} · {count}
-                  </span>
-                );
-              },
-            )}
+        {isBon ? (
+          <div className="flex flex-col items-center gap-1.5">
+            <span className="text-sm font-semibold text-ink-light-2 dark:text-ink-dark-2">
+              {t("room:best_of_n.attempt", {
+                k: Math.min(bonAttempts, bonTarget),
+                n: bonTarget,
+              })}
+            </span>
+            {bonTally.size > 0 ? (
+              <div className="flex flex-wrap gap-1.5 justify-center px-2">
+                {[...bonTally.entries()].map(([segId, count]) => {
+                  const seg = snapshot.active_question?.segments.find(
+                    (s) => s.id === segId,
+                  );
+                  return (
+                    <span
+                      key={segId}
+                      className="text-xs font-semibold px-2 py-1 rounded-full bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1"
+                    >
+                      {seg?.emoji ? `${seg.emoji} ` : ""}{seg?.label ?? segId} · {count}
+                    </span>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -516,6 +498,29 @@ export function RoomPage(): JSX.Element {
             <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-2">
               {t("room:punishment.pending_hint")}
             </p>
+          ) : null}
+          {isBon && bonOver ? (
+            <div className="text-center py-2">
+              <p className="text-lg font-display font-bold text-brand-amber-3">
+                {t("room:best_of_n.winner", {
+                  label:
+                    snapshot.active_question?.segments.find(
+                      (s) => s.id === bonWinnerId,
+                    )?.label ?? "",
+                })}
+              </p>
+              {callerIsHost ? (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  className="mt-3"
+                  onClick={bestOfNReset}
+                >
+                  {t("room:best_of_n.new_round")}
+                </Button>
+              ) : null}
+            </div>
           ) : null}
         </div>
 

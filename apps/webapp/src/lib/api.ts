@@ -117,6 +117,9 @@ export interface ServerRoom {
     spin_id: number;
   } | null;
   spin_count: number;
+  bon_attempts: number;
+  bon_tally: Record<string, number> | null;
+  bon_winner_segment_id: number | null;
   created_at: string;
   closed_at: string | null;
 }
