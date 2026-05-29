@@ -278,11 +278,12 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
           />
         </g>
 
+        {/* Visual only. The real, focusable spin control is the HTML button
+            overlaid below — the SVG is role="img" so AT ignores its
+            descendants, and a clickable <g> isn't keyboard-operable. */}
         <g
-          onClick={canSpin ? onSpinClick : undefined}
-          style={{ cursor: canSpin ? "pointer" : "default" }}
-          className={canSpin ? "animate-spinner-breath" : undefined}
-          aria-hidden={!canSpin}
+          className={canSpin ? "motion-safe:animate-spinner-breath" : undefined}
+          aria-hidden
         >
           <circle
             cx={CX}
@@ -308,6 +309,22 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
           ) : null}
         </g>
       </svg>
+
+      {/* The actual spin control: a real, focusable, screen-reader-announced
+          button overlaid on the hub. Sized to the hub (HUB_R*2 / 400 = 22%
+          of the wheel). Transparent — the SVG hub is the visual. */}
+      {canSpin ? (
+        <button
+          type="button"
+          onClick={onSpinClick}
+          aria-label={t("actions.spin")}
+          className={cn(
+            "absolute left-1/2 top-1/2 h-[22%] w-[22%]",
+            "-translate-x-1/2 -translate-y-1/2 rounded-full",
+            "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-primary/70",
+          )}
+        />
+      ) : null}
     </div>
   );
 });
