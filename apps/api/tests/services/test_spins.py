@@ -267,3 +267,59 @@ async def test_trigger_spin_elimination_rejects_when_one_living(
     with pytest.raises(RoomServiceError) as exc:
         await trigger_spin(db, room=room, user_id=host_id)
     assert exc.value.code == "too_few_segments"
+
+
+async def test_trigger_spin_punishment_draws_and_sets_active_card(
+    db: AsyncSession,
+) -> None:
+    host_id = await _make_user(db, tg_id=400)
+    room = await create_room(
+        db, host_id=host_id, question_text="Q?", segments=_drafts(3),
+        spin_policy="anyone", game_mode="punishment", punishment_deck="mild",
+    )
+    await db.commit()
+    spin = await trigger_spin(db, room=room, user_id=host_id)
+    await db.commit()
+    pun = spin.mode_state_snapshot["punishment"]
+    assert pun["deck"] == "mild"
+    assert pun["lang"] in ("en", "uk")
+    assert 0 <= pun["card_index"] < 30
+    card = room.punishment_active_card
+    assert card is not None
+    assert card["text"]
+    assert card["victim_segment_id"] == spin.result_segment_id
+    assert card["spin_id"] == spin.id
+
+
+async def test_trigger_spin_punishment_blocks_while_card_pending(
+    db: AsyncSession,
+) -> None:
+    host_id = await _make_user(db, tg_id=401)
+    room = await create_room(
+        db, host_id=host_id, question_text="Q?", segments=_drafts(3),
+        spin_policy="anyone", game_mode="punishment", punishment_deck="mild",
+    )
+    await db.commit()
+    await trigger_spin(db, room=room, user_id=host_id)
+    await db.commit()
+    with pytest.raises(RoomServiceError) as exc:
+        await trigger_spin(db, room=room, user_id=host_id)
+    assert exc.value.code == "card_pending"
+
+
+async def test_draw_without_replacement_no_repeat_until_exhausted(
+    db: AsyncSession,
+) -> None:
+    host_id = await _make_user(db, tg_id=402)
+    room = await create_room(
+        db, host_id=host_id, question_text="Q?", segments=_drafts(3),
+        spin_policy="anyone", game_mode="punishment", punishment_deck="mild",
+    )
+    await db.commit()
+    seen: list[int] = []
+    for _ in range(30):
+        spin = await trigger_spin(db, room=room, user_id=host_id)
+        seen.append(spin.mode_state_snapshot["punishment"]["card_index"])
+        room.punishment_active_card = None  # simulate "done" so spin unblocks
+        await db.commit()
+    assert sorted(seen) == list(range(30))

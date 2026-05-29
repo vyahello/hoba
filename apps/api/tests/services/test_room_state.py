@@ -74,3 +74,20 @@ async def test_segment_out_carries_is_eliminated(db: AsyncSession) -> None:
     flags = {s.id: s.is_eliminated for s in state.active_question.segments}
     assert flags[seg.id] is True
     assert sum(1 for v in flags.values() if not v) == 1
+
+
+async def test_room_out_exposes_punishment_fields(db: AsyncSession) -> None:
+    host = await upsert_from_telegram(db, TelegramUser(id=7710, first_name="H"))
+    await db.flush()
+    room = await create_room(
+        db, host_id=host.id, question_text="Q?",
+        segments=[SegmentDraft(label="a"), SegmentDraft(label="b")],
+        game_mode="punishment",
+    )
+    await db.commit()
+    fetched = await get_room_by_code(db, room.code)
+    assert fetched is not None
+    state = await build_room_state(db, fetched, current_user_id=host.id)
+    assert state.room.punishment_deck == "mild"
+    assert state.room.punishment_done_count == 0
+    assert state.room.punishment_active_card is None
