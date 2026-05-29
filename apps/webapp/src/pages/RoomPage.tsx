@@ -27,7 +27,7 @@ import { computeCanSpin, isHost } from "@/features/rooms/permissions";
 import {
   attempts as bonAttemptsCount,
   isBestOfN,
-  roundOver,
+  roundOver as bonRoundOver,
   roundWinnerId,
   tally as bonTallyMap,
   target as bonTargetCount,
@@ -127,7 +127,7 @@ export function RoomPage(): JSX.Element {
   const bonTarget = bonTargetCount(snapshot);
   const bonTally = bonTallyMap(snapshot);
   const bonWinnerId = roundWinnerId(snapshot);
-  const bonOver = roundOver(snapshot);
+  const bonOver = bonRoundOver(snapshot);
   const bestOfNReset = useRoomStore((s) => s.bestOfNReset);
 
   // Each spin is a single full animation, then settle + reveal.

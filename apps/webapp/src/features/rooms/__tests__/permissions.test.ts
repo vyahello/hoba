@@ -28,6 +28,7 @@ function makeSnapshot(args: {
       punishment_done_count: 0,
       spin_count: 1,
       punishment_active_card: null,
+      bon_attempts: 0, bon_tally: null, bon_winner_segment_id: null,
       created_at: "2026-05-27T00:00:00Z",
       closed_at: null,
     },

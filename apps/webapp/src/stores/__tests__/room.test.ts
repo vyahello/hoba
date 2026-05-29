@@ -14,7 +14,7 @@ function snap(): RoomState {
       id: 1, code: "ABC123", host_id: 1, title: null, status: "active",
       game_mode: "elimination", spin_policy: "anyone", suggestion_policy: "off",
       is_locked: false, is_anonymous: false, current_turn_user_id: null,
-      punishment_deck: null, punishment_done_count: 0, punishment_active_card: null,
+      punishment_deck: null, punishment_done_count: 0, punishment_active_card: null, bon_attempts: 0, bon_tally: null, bon_winner_segment_id: null,
       spin_count: 1,
       created_at: "2026-05-29T00:00:00Z", closed_at: null,
     },
