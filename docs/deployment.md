@@ -290,11 +290,175 @@ docker image prune -af
 - **Bot menu button still points at ngrok URL:** you restarted the bot
   but `.env`'s `WEBAPP_URL` still has the dev URL. Update `.env`,
   `docker compose restart bot`, check `logs bot`.
-- **Webapp loads but `/api/v1/*` 502s:** API container crashed.
-  `docker compose logs api --tail 200` to see the trace.
 - **`room_not_found` from a share link** (Stage A regression): the
   Direct Link Mini App URL in BotFather `/myapps` still points at
   ngrok. Update it to the prod URL.
+
+See the next section for deep 502 / startup debugging.
+
+## 9b. Troubleshooting recipes (502 / restart loop / migration breakage)
+
+> Pulled from the 2026-05-29 mode-picker deploy session, where a
+> single 502 cascaded through four distinct issues. The order below
+> is the same diagnostic order used to find each one — start at the
+> top and stop at the first symptom that matches.
+
+### Diagnostic chain — narrow down before fixing
+
+Always start by isolating *which side* of the proxy stack is failing:
+
+```bash
+# 1. Is the api container even running?
+docker compose -f docker-compose.yml -f compose.shared.yaml ps api
+
+# 2. Can you reach the api directly inside the container's bind-mount?
+curl -isS http://127.0.0.1:8800/openapi.json | head -3
+
+# 3. What does the host nginx vhost actually look like?
+sudo nginx -T 2>/dev/null | grep -B 2 -A 30 "<your-domain>" | head -50
+```
+
+Interpretation matrix:
+
+| ps STATUS | curl 127.0.0.1:8800 | https:// curl | Where to look |
+|---|---|---|---|
+| Up | 200 OK | 200 OK | Browser cache. Hard-reload from phone. |
+| Up | 200 OK | 502 | **Host nginx vhost is broken** — see "Nginx vhost recovery" below. |
+| Up | Connection refused / reset | (any) | **Container alive but uvicorn not listening** — usually a reload loop. See "Uvicorn restart loop". |
+| Restarting (3) | (any) | 502 | **Lifespan startup failed** — `exited with code 3` from uvicorn. See "Lifespan exit code 3". |
+| Restarting (any other) | (any) | 502 | Crash in main process. `logs api --tail 80` for traceback. |
+
+### Recipe — Uvicorn restart loop from `--reload` watching `.venv`
+
+**Symptom.** Container shows `Up`, but `curl 127.0.0.1:8800` returns connection reset. Logs show repeated `Started server process [1]` / `Waiting for application startup` cycles every 2-5 seconds. Near the start of the cycle: `Will watch for changes in these directories: ['/app']` + `Started reloader process [1] using WatchFiles`. The reload list contains hundreds of paths from `.venv/lib/python3.12/...`.
+
+**Cause.** `apps/api/Dockerfile`'s `CMD` includes `--reload` (handy for dev HMR). On shared-VPS prod, `uv pip install --system` writes into `/app/.venv` inside the container, watchfiles sees those ~20k files as "changing" during startup, fires a reload, the cycle repeats. uvicorn never finishes startup → no listener on port 8000 → 502.
+
+**Fix.** Already in `compose.shared.yaml`: `api.command` overrides the Dockerfile CMD without `--reload`. If you ever see this symptom again, verify the override is still present:
+
+```bash
+grep -A 5 "  api:" compose.shared.yaml | grep "command"
+```
+
+Should show `command: ["uvicorn", "hoba_api.main:asgi", "--host", "0.0.0.0", "--port", "8000"]`. If missing, restore it from `git log -p compose.shared.yaml` history.
+
+### Recipe — Lifespan `exit code 3` (silent traceback)
+
+**Symptom.** `docker compose logs api` shows `INFO: Started server process [1]` → `Waiting for application startup` → migration starts → silence → `api-1 exited with code 3 (restarting)`. No Python traceback in the structured log.
+
+**Cause.** uvicorn's lifespan startup hook raised an exception. structlog's stdlib redirect captures the log output and hides the actual traceback because the exception bubbles up past the formatter.
+
+**Diagnostic.** Run alembic outside the uvicorn lifespan so the traceback prints directly:
+
+```bash
+docker compose -f docker-compose.yml -f compose.shared.yaml stop api
+docker compose -f docker-compose.yml -f compose.shared.yaml run --rm \
+    -e AUTO_MIGRATE=false api alembic upgrade head 2>&1 | tail -40
+```
+
+This dispatches a one-shot container with migrations disabled in the application boot (so they run via the explicit `alembic upgrade head` command instead). The Python traceback prints to stdout. Common errors to look for:
+
+- `ValueError: Constraint must have a name` — see "Alembic batch_alter_table FK".
+- `duplicate column name: <name>` — see "Partial migration corruption".
+- `OperationalError: no such table: <name>` — DB is empty or wrong; wipe + recreate.
+
+### Recipe — Alembic `batch_alter_table` failure with anonymous FK
+
+**Symptom.** `ValueError: Constraint must have a name` raised from `alembic/operations/batch.py` line ~672, `add_constraint`.
+
+**Cause.** SQLite alters in alembic go through `batch_alter_table`, which rebuilds the table and copies all constraints. The constraint-copy step requires every constraint to have an explicit name. An anonymous `ForeignKey("users.id", ondelete="...")` in a `sa.Column` blows up.
+
+**Fix.** For migrations that only add a single nullable column with a FK, skip `batch_alter_table` entirely — SQLite natively supports `ALTER TABLE ADD COLUMN` with inline `REFERENCES`:
+
+```python
+def upgrade() -> None:
+    op.add_column(
+        "rooms",
+        sa.Column(
+            "current_turn_user_id",
+            sa.Integer(),
+            sa.ForeignKey("users.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+    )
+
+def downgrade() -> None:
+    op.drop_column("rooms", "current_turn_user_id")
+```
+
+For migrations that genuinely need `batch_alter_table` (renames, NOT NULL additions, type changes), name every FK / unique / check constraint explicitly:
+
+```python
+sa.ForeignKey("users.id", name="fk_rooms_current_turn_user_id_users", ondelete="SET NULL")
+```
+
+A longer-term fix would be to set a `naming_convention` on the SQLAlchemy `MetaData` so all auto-generated constraint names are deterministic; tracked in `docs/TODO.md`.
+
+### Recipe — Partial migration corruption (`duplicate column name`)
+
+**Symptom.** `OperationalError: duplicate column name: <name>` on the migration that *adds* that column. `alembic_version` is at the previous revision, but the schema already has the column.
+
+**Cause.** A previous migration attempt was killed mid-way. For `batch_alter_table`: the rebuild path emits `CREATE _alembic_tmp_X` → `INSERT ... SELECT` → `DROP X` → `RENAME _alembic_tmp_X TO X` → `UPDATE alembic_version`. If the process dies between `RENAME` and `UPDATE alembic_version`, the table has the new schema but the version marker is stale. The next migration attempt tries to add the column again and fails.
+
+**Fix — preserve data.** Tell alembic the migration is already applied:
+
+```bash
+docker compose -f docker-compose.yml -f compose.shared.yaml stop api
+docker compose -f docker-compose.yml -f compose.shared.yaml run --rm \
+    -e AUTO_MIGRATE=false api alembic stamp <target-revision>
+docker compose -f docker-compose.yml -f compose.shared.yaml up -d api
+```
+
+`alembic stamp` updates the version marker without running any SQL. On the next start, alembic sees `current=head` and skips the migration.
+
+**Fix — clean wipe (no real users yet).** Beware: a running container holds an open file descriptor on `data/hoba.db`. A naive `sudo rm` "succeeds" but the container keeps the unlinked inode until restart. Always `down` first:
+
+```bash
+docker compose -f docker-compose.yml -f compose.shared.yaml down
+sudo rm -fv data/hoba.db data/hoba.db-journal data/hoba.db-wal data/hoba.db-shm
+sudo ls -la data/    # confirm no hoba.db* before continuing
+docker compose -f docker-compose.yml -f compose.shared.yaml up -d
+```
+
+### Recipe — Nginx vhost recovery
+
+**Symptom.** `ps` shows api Up, direct `curl 127.0.0.1:8800` returns 200, but `https://<domain>` returns 502.
+
+**Diagnostic.** Check that the Hoba vhost is active and targets the right upstream:
+
+```bash
+ls -la /etc/nginx/sites-enabled/
+sudo nginx -T 2>/dev/null | grep -B 2 -A 30 "<your-domain>" | head -50
+```
+
+Expected: `proxy_pass http://127.0.0.1:8800;` for `/api/`, `/openapi.json`, `/socket.io/`. If the vhost is missing or the upstream port differs:
+
+```bash
+sudo cp ~/hoba/infra/nginx/hoba.conf /etc/nginx/sites-available/hoba
+sudo sed -i 's/hoba\.example\.com/<your-domain>/g' /etc/nginx/sites-available/hoba
+sudo ln -sf /etc/nginx/sites-available/hoba /etc/nginx/sites-enabled/hoba
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+### Recipe — Docker image cache during `--build`
+
+**Symptom.** You committed a fix, `git pull`'d on the VPS, ran `docker compose up -d --build api`, but the container still behaves like the old code.
+
+**Cause.** Docker's COPY layer cache can stick when file mtimes don't change predictably. `--build` rebuilds the image but reuses cached layers it considers identical.
+
+**Fix.** Force a no-cache rebuild for the specific service:
+
+```bash
+docker compose -f docker-compose.yml -f compose.shared.yaml stop api
+docker compose -f docker-compose.yml -f compose.shared.yaml build --no-cache api
+docker compose -f docker-compose.yml -f compose.shared.yaml up -d api
+```
+
+Verify the new code actually landed by checking a known string from the diff:
+
+```bash
+grep -E "<expected-new-string>" apps/api/path/to/file.py
+```
 
 ## 10. Backups + retention
 

@@ -36,6 +36,63 @@ From the roadmap Stage C charter, the questions worth answering:
 
 ## Session log
 
+### Owner-side deploy + verification — 2026-05-29 (Stage D mode-picker)
+
+Mode-picker UI slice deployed to production after a four-issue
+cascade. Owner verified the new flow on two phones once the api
+container stabilized.
+
+**Who:** Owner (Volodymyr).
+**Devices:** iPhone 14 (A15) + iPhone X (A11, iOS 16).
+**Deploy chain:** `git pull` → `docker compose up -d --build` → 502 →
+diagnose → fix → repeat ×4.
+
+**Issues hit during deploy:**
+
+1. **Uvicorn `--reload` loop** under `compose.shared.yaml`. The
+   Dockerfile CMD hardcodes `--reload`, and the in-container
+   `/app/.venv` from `uv pip install` triggered watchfiles every
+   2 s → server never finished startup → 502. Mitigated by adding
+   `command:` override in `compose.shared.yaml` (commit `7d9f70b`).
+   Proper Dockerfile fix tracked in `docs/TODO.md` stage:G.
+
+2. **Alembic 0004 `batch_alter_table` failed** on anonymous
+   ForeignKey — `ValueError: Constraint must have a name` from the
+   SQLite rebuild path. Migration rewritten to use `op.add_column`
+   directly (commit `0bf737f`). MetaData naming convention to
+   prevent recurrence tracked in `docs/TODO.md` stage:G.
+
+3. **Partial-migration corruption.** First `batch_alter_table`
+   attempt completed the table rebuild but was killed before
+   `alembic_version` updated. Subsequent attempts blew up with
+   `duplicate column name`. Recovered via
+   `alembic stamp 0004`.
+
+4. **`sudo rm data/hoba.db` while container was running** was a
+   no-op because the running container held an open fd on the
+   unlinked inode. Lesson: always `docker compose down` before
+   wiping the SQLite file.
+
+All four debug recipes folded into `docs/deployment.md` § 9b for
+the next time this surfaces.
+
+**Outcome:** api container clean-boots, `/openapi.json` returns 200
+from both inside the container and via `https://hobagame.duckdns.org`.
+Mode-picker tested end-to-end on iPhone 14: sheet opens with 4
+modes, Classic preselected, picking Elimination creates a room
+with the matching mode badge in the header. `Take turns` option
+visible in `RoomSettingsSheet`. Two-device flow not yet exercised
+in full (need a second human or a second phone session); single-
+device verification confirms the surface reaches the phone as
+intended.
+
+**Status:** Stage D mode-picker slice **deployed + working on
+prod**. Slice exit complete; next Stage D slice (per-mode
+gameplay — Elimination shatter, Punishment deck, Chaos events) is
+its own brainstorming arc.
+
+---
+
 ### Owner-side verification — 2026-05-28
 
 Owner ran the soft-launch end-to-end on two real devices and reports
