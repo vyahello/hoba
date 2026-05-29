@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import secrets
 from datetime import UTC, datetime, timedelta
+from typing import TypedDict
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +23,78 @@ from hoba_api.services.rooms import RoomServiceError
 from hoba_api.wheel.spin_math import compute_spin
 
 MIN_SEGMENTS_TO_SPIN = 2
+TIE_BREAK_CAP = 20
+
+
+class SeriesEntry(TypedDict):
+    segment_id: int
+    final_angle_deg: float
+    duration_ms: int
+    seed: int
+
+
+def _leaders(tally: dict[int, int]) -> list[int]:
+    """Segment ids tied at the current maximum hit count."""
+    if not tally:
+        return []
+    top = max(tally.values())
+    return [sid for sid, c in tally.items() if c == top]
+
+
+def run_spin_series(
+    spin_segments: list[Segment],
+    n: int,
+    starting_angle_deg: float,
+    weights: list[float] | None,
+    duration_multiplier: float,
+) -> tuple[list[SeriesEntry], Segment, int]:
+    """Run N chained spins; winner = most-frequent segment. Ties broken by
+    extra spins counted only when they land on a tied leader, until one leads
+    (capped). Returns (series, winner_segment, tie_break_count). Each entry's
+    angle chains forward so the wheel always travels forward. Pure except for
+    `secrets` seeding — no DB access.
+    """
+    series: list[SeriesEntry] = []
+    tally: dict[int, int] = {}
+    angle = starting_angle_deg
+
+    def _spin() -> Segment:
+        nonlocal angle
+        seed = secrets.randbits(31)
+        result = compute_spin(
+            segment_count=len(spin_segments),
+            seed=seed,
+            starting_angle_deg=angle,
+            weights=weights,
+        )
+        seg = spin_segments[result.result_segment_index]
+        series.append(
+            {
+                "segment_id": seg.id,
+                "final_angle_deg": result.final_angle_deg,
+                "duration_ms": round(result.duration_ms * duration_multiplier),
+                "seed": seed,
+            },
+        )
+        angle = result.final_angle_deg
+        return seg
+
+    for _ in range(n):
+        seg = _spin()
+        tally[seg.id] = tally.get(seg.id, 0) + 1
+
+    tie_break_count = 0
+    leaders = _leaders(tally)
+    while len(leaders) > 1 and tie_break_count < TIE_BREAK_CAP:
+        seg = _spin()
+        tie_break_count += 1
+        if seg.id in leaders:
+            tally[seg.id] += 1
+            leaders = _leaders({sid: tally[sid] for sid in leaders})
+
+    winner_id = leaders[0] if len(leaders) == 1 else secrets.choice(leaders)
+    winner = next(s for s in spin_segments if s.id == winner_id)
+    return series, winner, tie_break_count
 
 
 async def trigger_spin(
