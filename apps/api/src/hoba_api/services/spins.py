@@ -55,7 +55,6 @@ async def trigger_spin(
 
     # Best-of-N: while a round's winner is decided, block further spins until
     # the host resets. Only meaningful when spin_count > 1 (Classic).
-    import sys as _sys; print("GATE", room.game_mode, room.spin_count, room.bon_winner_segment_id, file=_sys.stderr)
     if room.spin_count > 1 and room.bon_winner_segment_id is not None:
         raise RoomServiceError("round_over")
 
