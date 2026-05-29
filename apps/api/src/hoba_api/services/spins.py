@@ -118,6 +118,14 @@ def user_can_spin(room: Room, user_id: int) -> bool:
     if room.spin_policy == "host_only":
         return room.host_id == user_id
     if room.spin_policy == "turn_based":
+        # Pre-first-spin: a turn_based lobby keeps a null cursor until the
+        # first spin seeds it to host_id. The host must be the effective
+        # turn-holder so they can kick off. This check runs in
+        # on_spin_trigger BEFORE trigger_spin's seed logic, so without
+        # this branch the host's own first spin is rejected and the room
+        # never starts. Mirrors the frontend `effectiveTurnUserId`.
+        if room.current_turn_user_id is None and room.status == "lobby":
+            return room.host_id == user_id
         return room.current_turn_user_id == user_id
     return False
 

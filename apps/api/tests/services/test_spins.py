@@ -146,12 +146,16 @@ _ = update_room
 
 
 def _make_room(
-    spin_policy: str, *, host_id: int = 1, current_turn: int | None = None,
+    spin_policy: str,
+    *,
+    host_id: int = 1,
+    current_turn: int | None = None,
+    status: str = "active",
 ) -> Room:
     room = Room(
         code="ABC123",
         host_id=host_id,
-        status="active",
+        status=status,
         game_mode="classic",
         spin_policy=spin_policy,
         suggestion_policy="off",
@@ -170,10 +174,23 @@ def test_user_can_spin_turn_based_cursor_mismatch() -> None:
     assert user_can_spin(room, user_id=99) is False
 
 
-def test_user_can_spin_turn_based_cursor_null_denies_everyone() -> None:
-    room = _make_room("turn_based", host_id=1, current_turn=None)
-    # Cursor unset → no one is "the current turn", including host.
+def test_user_can_spin_turn_based_cursor_null_active_denies_everyone() -> None:
+    # Active room whose cursor was cleared (advance_turn found no one
+    # online) → no one is "the current turn", including the host.
+    room = _make_room("turn_based", host_id=1, current_turn=None, status="active")
     assert user_can_spin(room, user_id=1) is False
+    assert user_can_spin(room, user_id=99) is False
+
+
+def test_user_can_spin_turn_based_lobby_null_cursor_allows_host() -> None:
+    # Pre-first-spin: a turn_based lobby has a null cursor until the first
+    # spin seeds it to host_id. The host must be allowed to kick off,
+    # because on_spin_trigger runs this permission check BEFORE
+    # trigger_spin gets a chance to seed the cursor — otherwise the room
+    # can never start (regression: "Only the host can spin right now"
+    # rejecting the host's own first spin).
+    room = _make_room("turn_based", host_id=1, current_turn=None, status="lobby")
+    assert user_can_spin(room, user_id=1) is True
     assert user_can_spin(room, user_id=99) is False
 
 

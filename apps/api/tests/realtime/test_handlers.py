@@ -328,6 +328,46 @@ async def test_spin_trigger_host_emits_announced_started(
     assert "result_segment_id" in payload
 
 
+@pytest.mark.asyncio
+async def test_spin_trigger_turn_based_lobby_allows_host_first_spin(
+    sio: FakeSocketIO, db: Any,
+) -> None:
+    # Regression: a room created turn_based (e.g. Punishment) starts in
+    # lobby with a null cursor. The host's FIRST spin must be allowed —
+    # on_spin_trigger's permission check runs BEFORE trigger_spin seeds
+    # the cursor, so user_can_spin has to treat the host as the lobby
+    # turn-holder. Previously this rejected the host with
+    # not_allowed_to_spin ("Only the host can spin right now"), so a
+    # Punishment room could never start.
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=70))
+    room = await create_room(
+        db,
+        host_id=host.id,
+        question_text="Q?",
+        segments=[
+            SegmentDraft(label="a", color_seed=0, weight=1),
+            SegmentDraft(label="b", color_seed=1, weight=1),
+        ],
+        spin_policy="turn_based",
+    )
+    await db.commit()
+    assert room.status == "lobby"
+    assert room.current_turn_user_id is None
+    code = room.code
+
+    await _connect(sio, "sid-h70", user_id=70)
+    await sio.call("room:join", "sid-h70", {"code": code})
+    sio.emitted.clear()
+
+    await sio.call("spin:trigger", "sid-h70", {})
+    assert not any(
+        e[1].get("code") == "not_allowed_to_spin"
+        for e in sio.events_named("error")
+    )
+    assert len(sio.events_named("spin:announced")) == 1
+    assert len(sio.events_named("spin:started")) == 1
+
+
 # ---------- turn_based: _emit_settled cursor advance + room:updated ------
 
 
