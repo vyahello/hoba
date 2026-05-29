@@ -37,3 +37,12 @@ def test_classic_visible_is_all_and_never_round_over() -> None:
     assert eff.eliminate_segment_ids == []
     assert eff.round_over is False
     assert e.is_round_over(ctx) is False
+
+
+def test_segment_is_eliminated_property() -> None:
+    from datetime import UTC, datetime
+    s = Segment(id=9, parent_id=1, parent_type="question", label="x",
+                color_seed=0, weight=1, position=0)
+    assert s.is_eliminated is False
+    s.eliminated_at = datetime.now(UTC)
+    assert s.is_eliminated is True

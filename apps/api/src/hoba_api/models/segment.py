@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy import (
     CheckConstraint,
+    DateTime,
     Index,
     Integer,
     String,
@@ -40,3 +43,13 @@ class Segment(Base, TimestampMixin):
     color_seed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     weight: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    # Set when this segment is eliminated (Elimination mode, spec §5.2).
+    # NULL = living. Other modes never write it.
+    eliminated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
+
+    @property
+    def is_eliminated(self) -> bool:
+        return self.eliminated_at is not None
