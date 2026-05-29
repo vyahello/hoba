@@ -31,6 +31,12 @@
     "title": "Choose a game mode",
     "create": "Create room"
   },
+  "elimination": {
+    "remaining": "{count, plural, one {# left} other {# left}}",
+    "survivor": "🏆 {label} survives!",
+    "new_round": "New round",
+    "eliminated_label": "Out"
+  },
   "modes": {
     "classic": {
       "label": "Classic",

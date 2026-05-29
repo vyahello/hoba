@@ -31,6 +31,12 @@
     "title": "Виберіть режим",
     "create": "Створити кімнату"
   },
+  "elimination": {
+    "remaining": "{count, plural, one {залишився #} few {залишилось #} many {залишилось #} other {залишилось #}}",
+    "survivor": "🏆 {label} виживає!",
+    "new_round": "Новий раунд",
+    "eliminated_label": "Вибув"
+  },
   "modes": {
     "classic": {
       "label": "Класичний",
