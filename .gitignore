@@ -38,6 +38,7 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+.claude/
 
 # ssh mcp
 ssh-mcp
