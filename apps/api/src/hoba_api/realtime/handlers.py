@@ -26,6 +26,7 @@ from hoba_api.models.question import Question
 from hoba_api.models.room import Room
 from hoba_api.models.segment import Segment
 from hoba_api.models.spin import Spin
+from hoba_api.models.user import User
 from hoba_api.modes import engine_for
 from hoba_api.modes.base import SpinContext
 from hoba_api.realtime.server import NAMESPACE
@@ -33,9 +34,11 @@ from hoba_api.redis_client import (
     cooldown_take,
     presence_remove,
     presence_set,
+    presence_user_ids,
     rate_limit_take,
 )
 from hoba_api.services.participants import join_room, refresh_presence
+from hoba_api.services.punishment import all_present_locked, resolve_predictions
 from hoba_api.services.room_state import build_room_state
 from hoba_api.services.rooms import RoomServiceError, get_room_by_code
 from hoba_api.services.spins import (
@@ -129,8 +132,7 @@ async def _emit_settled(
     mode_aftereffects: dict[str, Any] = {}
     new_cursor: int | None = None
     advanced = False
-    punishment_card: dict[str, Any] | None = None
-    done_count = 0
+    punishment_patch: dict[str, Any] | None = None
     bon_patch: dict[str, Any] | None = None
 
     async with SessionLocal() as session:
@@ -182,18 +184,24 @@ async def _emit_settled(
                             "round_over": effects.round_over,
                             "survivor_segment_id": survivor_id,
                         }
-            if (
-                room.game_mode == "punishment"
-                and room.punishment_active_card is not None
-            ):
-                card = room.punishment_active_card
-                punishment_card = dict(card)
+            if room.game_mode == "punishment":
+                host = await session.get(User, room.host_id)
+                host_lang = (host.language_code if host is not None else None) or "en"
+                cards = await resolve_predictions(
+                    session, room, result_segment_id, host_lang,
+                )
+                predictions = room.punishment_predictions or {}
                 mode_aftereffects = {
-                    "punishment_card": card["text"],
-                    "deck": card["deck"],
-                    "victim_segment_id": card["victim_segment_id"],
+                    "punishment_result_segment_id": result_segment_id,
+                    "punishment_predictions": predictions,
+                    "punishment_cards": cards,
+                    "everyone_escaped": len(cards) == 0 and bool(predictions),
                 }
-            done_count = room.punishment_done_count
+                punishment_patch = {
+                    "punishment_cards": cards,
+                    "punishment_result_segment_id": result_segment_id,
+                    "punishment_predictions": predictions,
+                }
 
             # Best-of-N (Classic, spin_count > 1): recompute the round from
             # the committed Spin rows rather than incrementing shared
@@ -259,15 +267,10 @@ async def _emit_settled(
             room=room_code,
             namespace=NAMESPACE,
         )
-    if punishment_card is not None:
+    if punishment_patch is not None:
         await sio.emit(
             "room:updated",
-            {
-                "patch": {
-                    "punishment_active_card": punishment_card,
-                    "punishment_done_count": done_count,
-                },
-            },
+            {"patch": punishment_patch},
             room=room_code,
             namespace=NAMESPACE,
         )
@@ -387,7 +390,7 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
         await sio.save_session(sid, sess, namespace=NAMESPACE)
 
     @sio.on("spin:trigger", namespace=NAMESPACE)
-    async def on_spin_trigger(sid: str, _data: dict[str, Any]) -> None:
+    async def on_spin_trigger(sid: str, data: dict[str, Any] | None = None) -> None:
         sess = await sio.get_session(sid, namespace=NAMESPACE)
         user_id = sess.get("user_id")
         room_code = sess.get("room_code")
@@ -395,6 +398,7 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
         if user_id is None or room_code is None or room_id is None:
             await sio.emit("error", {"code": "not_in_room"}, to=sid, namespace=NAMESPACE)
             return
+        force = bool((data or {}).get("force", False))
 
         async with SessionLocal() as session:
             room = await get_room_by_code(session, room_code)
@@ -417,6 +421,37 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                     namespace=NAMESPACE,
                 )
                 return
+
+            # Punishment v2 gate: the spin is host-driven and may only
+            # fire once every present player has locked a prediction (or
+            # the host force-spins, in which case non-lockers sit out).
+            # Runs after the generic permission check but before the
+            # throttles so a premature host tap doesn't burn a slot.
+            if room.game_mode == "punishment":
+                if room.host_id != user_id:
+                    await sio.emit(
+                        "error", {"code": "not_host"}, to=sid, namespace=NAMESPACE,
+                    )
+                    return
+                if room.punishment_cards is not None:
+                    await sio.emit(
+                        "error",
+                        {"code": "round_resolved"},
+                        to=sid,
+                        namespace=NAMESPACE,
+                    )
+                    return
+                present = await presence_user_ids(room_id)
+                if not force and not all_present_locked(
+                    room.punishment_predictions, present,
+                ):
+                    await sio.emit(
+                        "error",
+                        {"code": "predictions_pending"},
+                        to=sid,
+                        namespace=NAMESPACE,
+                    )
+                    return
 
             # Permission OK — now the throttles. Cooldown is cheaper
             # than the hourly counter and rejects repeat-tap floods

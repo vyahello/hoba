@@ -13,10 +13,8 @@ from hoba_api.models.question import Question
 from hoba_api.models.room import Room
 from hoba_api.models.segment import Segment
 from hoba_api.models.spin import Spin
-from hoba_api.models.user import User
 from hoba_api.modes import engine_for
 from hoba_api.modes.base import SpinContext
-from hoba_api.modes.punishment_decks import CARDS_PER_DECK, deck_cards
 from hoba_api.redis_client import presence_user_ids
 from hoba_api.services.rooms import RoomServiceError
 from hoba_api.wheel.spin_math import compute_spin
@@ -49,9 +47,6 @@ async def trigger_spin(
 
     if not user_can_spin(room, user_id):
         raise RoomServiceError("not_allowed_to_spin")
-
-    if room.game_mode == "punishment" and room.punishment_active_card is not None:
-        raise RoomServiceError("card_pending")
 
     # Best-of-N: while a round's winner is decided, block further spins until
     # the host resets. Only meaningful when spin_count > 1 (Classic).
@@ -136,52 +131,7 @@ async def trigger_spin(
 
     await session.flush()
 
-    if room.game_mode == "punishment":
-        deck = room.punishment_deck or "mild"
-        host = await session.get(User, room.host_id)
-        lang = host.language_code if host is not None else "en"
-        idx = await _draw_punishment_index(session, question.id)
-        # Reassign a NEW dict — SQLAlchemy JSON tracks identity, not
-        # in-place mutation.
-        snapshot = dict(spin.mode_state_snapshot)
-        snapshot["punishment"] = {"deck": deck, "lang": lang, "card_index": idx}
-        spin.mode_state_snapshot = snapshot
-        room.punishment_active_card = {
-            "text": deck_cards(deck, lang)[idx],
-            "deck": deck,
-            "victim_segment_id": winning_segment.id,
-            "spin_id": spin.id,
-        }
-        await session.flush()
-
     return spin
-
-
-async def _draw_punishment_index(
-    session: AsyncSession, question_id: int,
-) -> int:
-    """Pick a card index not yet drawn for this question (without
-    replacement). When all CARDS_PER_DECK have been drawn, reshuffle (the
-    pool resets to the full range). Drawn set = prior spins'
-    mode_state_snapshot['punishment']['card_index'] for this question."""
-    rows = (
-        await session.execute(
-            select(Spin.mode_state_snapshot).where(Spin.question_id == question_id),
-        )
-    ).scalars().all()
-    drawn: set[int] = set()
-    for snap in rows:
-        if not isinstance(snap, dict):
-            continue
-        pun = snap.get("punishment")
-        if isinstance(pun, dict):
-            idx = pun.get("card_index")
-            if isinstance(idx, int):
-                drawn.add(idx)
-    pool = [i for i in range(CARDS_PER_DECK) if i not in drawn]
-    if not pool:
-        pool = list(range(CARDS_PER_DECK))
-    return secrets.choice(pool)
 
 
 def user_can_spin(room: Room, user_id: int) -> bool:
