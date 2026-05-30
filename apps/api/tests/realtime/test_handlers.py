@@ -848,30 +848,21 @@ def _tg_user_for_handlers(user_id: int) -> Any:
     )
 
 
-async def _create_punishment_room(db: Any, host_id: int) -> Any:
-    return await create_room(
+# ---------- punishment mode (v3 turn-based personal-bet race) ----------------
+
+
+async def _create_punishment_room(db: Any, host_id: int, n: int = 3) -> Any:
+    room = await create_room(
         db, host_id=host_id, question_text="Q?",
-        segments=[SegmentDraft(label="a", color_seed=0, weight=1),
-                  SegmentDraft(label="b", color_seed=1, weight=1)],
-        spin_policy="anyone", game_mode="punishment", punishment_deck="mild",
+        segments=[
+            SegmentDraft(label="a", color_seed=0, weight=1),
+            SegmentDraft(label="b", color_seed=1, weight=1),
+            SegmentDraft(label="c", color_seed=2, weight=1),
+        ],
+        game_mode="punishment", punishment_deck="mild", spin_count=n,
     )
-
-
-async def _latest_spin(db: Any, room_id: int) -> Any:
-    from sqlalchemy import select
-
-    from hoba_api.models.question import Question
-    from hoba_api.models.spin import Spin
-
-    return (
-        await db.execute(
-            select(Spin)
-            .join(Question, Spin.question_id == Question.id)
-            .where(Question.room_id == room_id)
-            .order_by(Spin.id.desc())
-            .limit(1),
-        )
-    ).scalar_one()
+    await db.commit()
+    return room
 
 
 async def _punishment_segment_ids(db: Any, room_id: int) -> list[int]:
@@ -902,318 +893,29 @@ async def _punishment_segment_ids(db: Any, room_id: int) -> list[int]:
 
 
 @pytest.mark.asyncio
-async def test_punishment_non_host_spin_rejected(
+async def test_punishment_bet_broadcasts_public_bets(
     sio: FakeSocketIO, db: Any,
 ) -> None:
-    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=1890))
-    room = await _create_punishment_room(db, host_id=host.id)
-    await db.commit()
-    code = room.code
-    await _connect(sio, "sid-ph", user_id=1890)
-    await sio.call("room:join", "sid-ph", {"code": code})
-    guest_uid = await _connect(sio, "sid-pg", user_id=1891)
-    await sio.call("room:join", "sid-pg", {"code": code})
-    sio.emitted.clear()
-
-    await sio.call("spin:trigger", "sid-pg", {})
-    assert any(e[1].get("code") == "not_host" for e in sio.events_named("error"))
-    assert sio.events_named("spin:started") == []
-    assert guest_uid != host.id
-
-
-@pytest.mark.asyncio
-async def test_punishment_host_spin_blocked_until_all_locked(
-    sio: FakeSocketIO, db: Any,
-) -> None:
-    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=1990))
-    room = await _create_punishment_room(db, host_id=host.id)
-    await db.commit()
-    code = room.code
-    await _connect(sio, "sid-ph2", user_id=1990)
-    await sio.call("room:join", "sid-ph2", {"code": code})
-    # A second present player who has NOT locked a prediction.
-    await _connect(sio, "sid-pg2", user_id=1991)
-    await sio.call("room:join", "sid-pg2", {"code": code})
-    sio.emitted.clear()
-
-    await sio.call("spin:trigger", "sid-ph2", {})
-    assert any(
-        e[1].get("code") == "predictions_pending"
-        for e in sio.events_named("error")
-    )
-    assert sio.events_named("spin:started") == []
-
-
-@pytest.mark.asyncio
-async def test_punishment_host_force_spin_resolves_losers(
-    sio: FakeSocketIO, db: Any,
-) -> None:
-    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=2090))
-    guest = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=2091))
-    room = await _create_punishment_room(db, host_id=host.id)
-    await db.commit()
-    code = room.code
-    room_id = room.id
-    seg_ids = await _punishment_segment_ids(db, room_id)
-
-    await _connect(sio, "sid-ph3", user_id=2090)
-    await sio.call("room:join", "sid-ph3", {"code": code})
-    await _connect(sio, "sid-pg3", user_id=2091)
-    await sio.call("room:join", "sid-pg3", {"code": code})
-
-    # Host predicts seg[0], guest predicts seg[1]: whichever the wheel
-    # lands on, exactly one of them is wrong → exactly one card dealt.
     from hoba_api.services.rooms import get_room_by_code
 
-    refreshed = await get_room_by_code(db, code)
-    assert refreshed is not None
-    refreshed.punishment_predictions = {
-        str(host.id): seg_ids[0],
-        str(guest.id): seg_ids[1],
-    }
-    await db.commit()
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=5101))
+    room = await _create_punishment_room(db, host_id=host.id)
+    code, room_id = room.code, room.id
+    seg_ids = await _punishment_segment_ids(db, room_id)
+    host_uid = await _connect(sio, "sid-b1", user_id=5101)
+    await sio.call("room:join", "sid-b1", {"code": code})
     sio.emitted.clear()
 
-    # Force bypasses the all-locked gate: the spin proceeds (no
-    # predictions_pending error, spin:started fires). The settle that
-    # draws cards is scheduled as a background task with the real spin
-    # duration, so rather than racing it we drive the resolution
-    # deterministically via _emit_settled (matches the turn_based settle
-    # tests' convention).
-    await sio.call("spin:trigger", "sid-ph3", {"force": True})
-    assert not any(
-        e[1].get("code") == "predictions_pending"
-        for e in sio.events_named("error")
-    )
-    assert sio.events_named("spin:started")
-
-    spin = await _latest_spin(db, room_id)
-    result_seg = spin.result_segment_id
-    sio.emitted.clear()
-    await _emit_settled(  # type: ignore[arg-type]
-        sio, code, room_id,
-        spin_id=spin.id, result_segment_id=result_seg, duration_ms=0,
-    )
-
-    after = sio.events_named("spin:settled")[-1][1]["mode_aftereffects"]
-    assert after["punishment_result_segment_id"] == result_seg
-    cards = after["punishment_cards"]
-    # result lands on one of the 2 segments → exactly one prediction wrong.
-    assert len(cards) == 1
-    assert after["everyone_escaped"] is False
-    loser = host.id if seg_ids[0] != result_seg else guest.id
-    assert str(loser) in cards
+    await sio.call("punishment:bet", "sid-b1", {"segment_id": seg_ids[0]})
 
     patches = [
-        e[1]["patch"]
-        for e in sio.events_named("room:updated")
+        e[1]["patch"] for e in sio.events_named("room:updated")
         if isinstance(e[1], dict) and "patch" in e[1]
     ]
-    assert any("punishment_cards" in p for p in patches)
-
-    persisted = await get_room_by_code(db, code)
-    assert persisted is not None
-    await db.refresh(persisted)
-    assert persisted.punishment_cards is not None
-    assert str(loser) in persisted.punishment_cards
-
-
-@pytest.mark.asyncio
-async def test_punishment_spin_rejected_when_round_resolved(
-    sio: FakeSocketIO, db: Any,
-) -> None:
-    from hoba_api.services.rooms import get_room_by_code
-
-    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=2190))
-    room = await _create_punishment_room(db, host_id=host.id)
-    await db.commit()
-    code = room.code
-    await _connect(sio, "sid-ph4", user_id=2190)
-    await sio.call("room:join", "sid-ph4", {"code": code})
-    refreshed = await get_room_by_code(db, code)
-    assert refreshed is not None
-    refreshed.punishment_cards = {}
-    await db.commit()
-    sio.emitted.clear()
-
-    await sio.call("spin:trigger", "sid-ph4", {"force": True})
-    assert any(
-        e[1].get("code") == "round_resolved" for e in sio.events_named("error")
-    )
-    assert sio.events_named("spin:started") == []
-
-
-@pytest.mark.asyncio
-async def test_punishment_settle_all_correct_everyone_escaped(
-    sio: FakeSocketIO, db: Any,
-) -> None:
-    from hoba_api.services.rooms import get_room_by_code
-    from hoba_api.services.spins import trigger_spin
-
-    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=2290))
-    guest = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=2291))
-    room = await _create_punishment_room(db, host_id=host.id)
-    await db.commit()
-    room_id = room.id
-
-    # Spin first to learn where it lands, THEN point every prediction at
-    # the actual winner so the settle resolves to "everyone escaped".
-    spin = await trigger_spin(db, room=room, user_id=host.id)
-    await db.commit()
-    winner = spin.result_segment_id
-    fetched = await get_room_by_code(db, room.code)
-    assert fetched is not None
-    fetched.punishment_predictions = {
-        str(host.id): winner,
-        str(guest.id): winner,
-    }
-    await db.commit()
-    sio.emitted.clear()
-
-    await _emit_settled(  # type: ignore[arg-type]
-        sio, room.code, room_id,
-        spin_id=spin.id, result_segment_id=winner, duration_ms=0,
-    )
-
-    after = sio.events_named("spin:settled")[-1][1]["mode_aftereffects"]
-    assert after["punishment_cards"] == {}
-    assert after["everyone_escaped"] is True
-    persisted = await get_room_by_code(db, room.code)
-    assert persisted is not None
-    await db.refresh(persisted)
-    assert persisted.punishment_cards == {}
-
-
-@pytest.mark.asyncio
-async def test_best_of_n_tallies_each_attempt(sio: FakeSocketIO, db: Any) -> None:
-    from hoba_api.services.rooms import get_room_by_code
-    from hoba_api.services.spins import trigger_spin
-
-    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=520))
-    room = await create_room(
-        db, host_id=host.id, question_text="Q?",
-        segments=[SegmentDraft(label="a", color_seed=0, weight=1),
-                  SegmentDraft(label="b", color_seed=1, weight=1)],
-        spin_policy="anyone", game_mode="classic", spin_count=3,
-    )
-    await db.commit()
-    fetched = await get_room_by_code(db, room.code)
-    assert fetched is not None
-    spin = await trigger_spin(db, room=fetched, user_id=host.id)
-    await db.commit()
-    sio.emitted.clear()
-    await _emit_settled(  # type: ignore[arg-type]
-        sio, room.code, fetched.id,
-        spin_id=spin.id, result_segment_id=spin.result_segment_id, duration_ms=0,
-    )
-    patches = [e[1]["patch"] for e in sio.events_named("room:updated")
-               if isinstance(e[1], dict) and "patch" in e[1]]
-    bon = [p for p in patches if "bon_attempts" in p]
-    assert bon and bon[-1]["bon_attempts"] == 1
-    assert bon[-1]["bon_winner_segment_id"] is None
-
-
-@pytest.mark.asyncio
-async def test_bon_reset_clears_round(sio: FakeSocketIO, db: Any) -> None:
-    from hoba_api.services.rooms import get_room_by_code
-
-    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=521))
-    room = await create_room(
-        db, host_id=host.id, question_text="Q?",
-        segments=[SegmentDraft(label="a", color_seed=0, weight=1),
-                  SegmentDraft(label="b", color_seed=1, weight=1)],
-        spin_policy="anyone", game_mode="classic", spin_count=3,
-    )
-    room.bon_attempts = 3
-    room.bon_winner_segment_id = 1
-    await db.commit()
-    code = room.code
-    await _connect(sio, "sid-h521", user_id=521)
-    await sio.call("room:join", "sid-h521", {"code": code})
-    sio.emitted.clear()
-    await sio.call("bon:reset", "sid-h521")
-    assert sio.events_named("bon:reset")
-    refreshed = await get_room_by_code(db, code)
-    assert refreshed is not None
-    await db.refresh(refreshed)
-    assert refreshed.bon_attempts == 0
-    assert refreshed.bon_winner_segment_id is None
-
-
-@pytest.mark.asyncio
-async def test_best_of_n_finalizes_winner_after_n_spins(
-    sio: FakeSocketIO, db: Any,
-) -> None:
-    # Regression: with 2 segments + spin_count=3 the round always has a
-    # single leader after 3 spins, so the winner MUST finalize and the
-    # final settle must broadcast it (the user saw "5/5" with no winner).
-    from hoba_api.services.rooms import get_room_by_code
-    from hoba_api.services.spins import trigger_spin
-
-    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=530))
-    room = await create_room(
-        db, host_id=host.id, question_text="Q?",
-        segments=[SegmentDraft(label="a", color_seed=0, weight=1),
-                  SegmentDraft(label="b", color_seed=1, weight=1)],
-        spin_policy="anyone", game_mode="classic", spin_count=3,
-    )
-    await db.commit()
-    fetched = await get_room_by_code(db, room.code)
-    assert fetched is not None
-    last = None
-    for _ in range(3):
-        last = await trigger_spin(db, room=fetched, user_id=host.id)
-        await db.commit()
-    assert last is not None
-    sio.emitted.clear()
-    await _emit_settled(  # type: ignore[arg-type]
-        sio, room.code, fetched.id,
-        spin_id=last.id, result_segment_id=last.result_segment_id, duration_ms=0,
-    )
-    refreshed = await get_room_by_code(db, room.code)
-    assert refreshed is not None
-    await db.refresh(refreshed)
-    assert refreshed.bon_attempts == 3
-    assert refreshed.bon_winner_segment_id is not None
-    patches = [e[1]["patch"] for e in sio.events_named("room:updated")
-               if isinstance(e[1], dict) and "patch" in e[1]]
-    bon = [p for p in patches if "bon_winner_segment_id" in p]
-    assert bon and bon[-1]["bon_winner_segment_id"] is not None
-
-
-# ---------- punishment:predict / done / round:reset / leave -------------
-
-
-@pytest.mark.asyncio
-async def test_punishment_predict_locks_and_broadcasts_only_locked_ids(
-    sio: FakeSocketIO, db: Any,
-) -> None:
-    from hoba_api.services.rooms import get_room_by_code
-
-    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=3010))
-    room = await _create_punishment_room(db, host_id=host.id)
-    await db.commit()
-    code = room.code
-    room_id = room.id
-    seg_ids = await _punishment_segment_ids(db, room_id)
-
-    host_uid = await _connect(sio, "sid-pp1", user_id=3010)
-    await sio.call("room:join", "sid-pp1", {"code": code})
-    sio.emitted.clear()
-
-    await sio.call("punishment:predict", "sid-pp1", {"segment_id": seg_ids[0]})
-
-    patches = [
-        e[1]["patch"]
-        for e in sio.events_named("room:updated")
-        if isinstance(e[1], dict) and "patch" in e[1]
-    ]
-    locked_patches = [p for p in patches if "punishment_locked_user_ids" in p]
-    assert locked_patches, "expected a locked_user_ids patch"
-    assert locked_patches[-1]["punishment_locked_user_ids"] == [host_uid]
-    # Never leak the actual prediction map while predicting.
-    assert not any("punishment_predictions" in p for p in patches)
-
+    bet_patches = [p for p in patches if "punishment_bets" in p]
+    assert bet_patches
+    # Bets are PUBLIC — the broadcast carries the actual segment.
+    assert bet_patches[-1]["punishment_bets"] == {str(host_uid): seg_ids[0]}
     persisted = await get_room_by_code(db, code)
     assert persisted is not None
     await db.refresh(persisted)
@@ -1221,231 +923,160 @@ async def test_punishment_predict_locks_and_broadcasts_only_locked_ids(
 
 
 @pytest.mark.asyncio
-async def test_punishment_predict_rejected_when_round_resolved(
+async def test_punishment_spin_blocked_until_all_bet(
+    sio: FakeSocketIO, db: Any,
+) -> None:
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=5111))
+    await upsert_from_telegram(db, _tg_user_for_handlers(user_id=5112))
+    room = await _create_punishment_room(db, host_id=host.id)
+    code, room_id = room.code, room.id
+    seg_ids = await _punishment_segment_ids(db, room_id)
+    await _connect(sio, "sid-sp-h", user_id=5111)
+    await sio.call("room:join", "sid-sp-h", {"code": code})
+    await _connect(sio, "sid-sp-g", user_id=5112)
+    await sio.call("room:join", "sid-sp-g", {"code": code})
+    # Only the host bets; guest has not → spin must be blocked.
+    await sio.call("punishment:bet", "sid-sp-h", {"segment_id": seg_ids[0]})
+    sio.emitted.clear()
+
+    await sio.call("spin:trigger", "sid-sp-h", {})
+
+    assert any(e[1].get("code") == "bets_pending" for e in sio.events_named("error"))
+    assert sio.events_named("spin:started") == []
+
+
+@pytest.mark.asyncio
+async def test_punishment_spin_rejects_out_of_turn(
     sio: FakeSocketIO, db: Any,
 ) -> None:
     from hoba_api.services.rooms import get_room_by_code
 
-    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=3020))
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=5121))
+    await upsert_from_telegram(db, _tg_user_for_handlers(user_id=5122))
     room = await _create_punishment_room(db, host_id=host.id)
-    await db.commit()
-    code = room.code
-    seg_ids = await _punishment_segment_ids(db, room.id)
-    await _connect(sio, "sid-pp2", user_id=3020)
-    await sio.call("room:join", "sid-pp2", {"code": code})
-
-    refreshed = await get_room_by_code(db, code)
-    assert refreshed is not None
-    refreshed.punishment_cards = {}
-    await db.commit()
+    code, room_id = room.code, room.id
+    seg_ids = await _punishment_segment_ids(db, room_id)
+    host_uid = await _connect(sio, "sid-ot-h", user_id=5121)
+    await sio.call("room:join", "sid-ot-h", {"code": code})
+    await _connect(sio, "sid-ot-g", user_id=5122)
+    await sio.call("room:join", "sid-ot-g", {"code": code})
+    await sio.call("punishment:bet", "sid-ot-h", {"segment_id": seg_ids[0]})
+    await sio.call("punishment:bet", "sid-ot-g", {"segment_id": seg_ids[1]})
+    # Host starts the game (seeds cursor to first eligible bettor).
+    await sio.call("spin:trigger", "sid-ot-h", {})
+    persisted = await get_room_by_code(db, code)
+    assert persisted is not None
+    await db.refresh(persisted)
+    cursor = persisted.current_turn_user_id
+    other_sid = "sid-ot-g" if cursor == host_uid else "sid-ot-h"
     sio.emitted.clear()
-
-    await sio.call("punishment:predict", "sid-pp2", {"segment_id": seg_ids[0]})
-    assert any(
-        e[1].get("code") == "round_resolved" for e in sio.events_named("error")
-    )
+    await sio.call("spin:trigger", other_sid, {})
+    assert any(e[1].get("code") == "not_your_turn" for e in sio.events_named("error"))
 
 
 @pytest.mark.asyncio
-async def test_punishment_predict_rejected_for_off_wheel_segment(
-    sio: FakeSocketIO, db: Any,
-) -> None:
-    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=3030))
-    room = await _create_punishment_room(db, host_id=host.id)
-    await db.commit()
-    code = room.code
-    seg_ids = await _punishment_segment_ids(db, room.id)
-    await _connect(sio, "sid-pp3", user_id=3030)
-    await sio.call("room:join", "sid-pp3", {"code": code})
-    sio.emitted.clear()
-
-    await sio.call("punishment:predict", "sid-pp3", {"segment_id": max(seg_ids) + 999})
-    assert any(
-        e[1].get("code") == "invalid_segment" for e in sio.events_named("error")
-    )
-
-
-@pytest.mark.asyncio
-async def test_punishment_done_flips_card_and_emits_cleared(
+async def test_punishment_resolve_done_advances_turn(
     sio: FakeSocketIO, db: Any,
 ) -> None:
     from hoba_api.services.rooms import get_room_by_code
 
-    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=3040))
-    guest = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=3041))
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=5131))
+    guest = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=5132))
     room = await _create_punishment_room(db, host_id=host.id)
-    await db.commit()
-    code = room.code
-    await _connect(sio, "sid-pd1", user_id=3040)
-    await sio.call("room:join", "sid-pd1", {"code": code})
-
-    # Seed a resolved round with one loser card for the guest.
+    code, room_id = room.code, room.id
+    seg_ids = await _punishment_segment_ids(db, room_id)
+    host_uid = await _connect(sio, "sid-rd-h", user_id=5131)
+    await sio.call("room:join", "sid-rd-h", {"code": code})
+    guest_uid = await _connect(sio, "sid-rd-g", user_id=5132)
+    await sio.call("room:join", "sid-rd-g", {"code": code})
+    # Seed a pending punishment for the host directly.
     refreshed = await get_room_by_code(db, code)
     assert refreshed is not None
-    refreshed.punishment_cards = {
-        str(guest.id): {
-            "text": "do a dare",
-            "deck": "mild",
-            "card_index": 0,
-            "done": False,
-        },
+    refreshed.punishment_predictions = {
+        str(host_uid): seg_ids[0], str(guest_uid): seg_ids[0],
     }
-    refreshed.punishment_done_count = 0
+    refreshed.status = "active"
+    refreshed.current_turn_user_id = host_uid
+    refreshed.punishment_last_outcome = {
+        "spinner_id": host_uid,
+        "result_segment_id": seg_ids[1],
+        "kind": "punish",
+        "card": {"text": "x", "deck": "mild", "card_index": 0},
+        "resolved": False,
+    }
     await db.commit()
     sio.emitted.clear()
 
-    await sio.call("punishment:done", "sid-pd1", {"user_id": guest.id})
-
-    cleared = sio.events_named("punishment:cleared")
-    assert len(cleared) == 1
-    assert cleared[0][1] == {"user_id": guest.id}
-    patches = [
-        e[1]["patch"]
-        for e in sio.events_named("room:updated")
-        if isinstance(e[1], dict) and "patch" in e[1]
-    ]
-    card_patches = [p for p in patches if "punishment_cards" in p]
-    assert card_patches
-    assert card_patches[-1]["punishment_done_count"] == 1
-    assert card_patches[-1]["punishment_cards"][str(guest.id)]["done"] is True
+    await sio.call("punishment:resolve", "sid-rd-h", {"refuse": False})
 
     persisted = await get_room_by_code(db, code)
     assert persisted is not None
     await db.refresh(persisted)
     assert persisted.punishment_done_count == 1
-    assert persisted.punishment_cards[str(guest.id)]["done"] is True
+    assert persisted.punishment_last_outcome["resolved"] is True
+    assert persisted.current_turn_user_id == guest_uid  # advanced
 
 
 @pytest.mark.asyncio
-async def test_punishment_done_second_call_and_unknown_user_no_broadcast(
+async def test_punishment_resolve_refuse_blocked_at_zero(
     sio: FakeSocketIO, db: Any,
 ) -> None:
     from hoba_api.services.rooms import get_room_by_code
 
-    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=3050))
-    guest = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=3051))
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=5141))
     room = await _create_punishment_room(db, host_id=host.id)
-    await db.commit()
     code = room.code
-    await _connect(sio, "sid-pd2", user_id=3050)
-    await sio.call("room:join", "sid-pd2", {"code": code})
-
+    host_uid = await _connect(sio, "sid-rf-h", user_id=5141)
+    await sio.call("room:join", "sid-rf-h", {"code": code})
     refreshed = await get_room_by_code(db, code)
     assert refreshed is not None
-    refreshed.punishment_cards = {
-        str(guest.id): {
-            "text": "do a dare",
-            "deck": "mild",
-            "card_index": 0,
-            "done": False,
-        },
+    refreshed.status = "active"
+    refreshed.current_turn_user_id = host_uid
+    refreshed.punishment_match_counts = {str(host_uid): 0}
+    refreshed.punishment_last_outcome = {
+        "spinner_id": host_uid,
+        "result_segment_id": 999,
+        "kind": "punish",
+        "card": {"text": "x", "deck": "mild", "card_index": 0},
+        "resolved": False,
     }
     await db.commit()
-
-    # First call flips it.
-    await sio.call("punishment:done", "sid-pd2", {"user_id": guest.id})
     sio.emitted.clear()
 
-    # Second call for the same (already-done) user → no broadcast.
-    await sio.call("punishment:done", "sid-pd2", {"user_id": guest.id})
-    assert sio.events_named("punishment:cleared") == []
-    assert sio.events_named("room:updated") == []
+    await sio.call("punishment:resolve", "sid-rf-h", {"refuse": True})
 
-    # Unknown user (no card) → no broadcast.
-    await sio.call("punishment:done", "sid-pd2", {"user_id": 999999})
-    assert sio.events_named("punishment:cleared") == []
-    assert sio.events_named("room:updated") == []
+    assert any(e[1].get("code") == "cannot_refuse" for e in sio.events_named("error"))
 
 
 @pytest.mark.asyncio
-async def test_round_reset_punishment_clears_round_keeps_tally(
+async def test_round_reset_punishment_back_to_lobby(
     sio: FakeSocketIO, db: Any,
 ) -> None:
     from hoba_api.services.rooms import get_room_by_code
 
-    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=3060))
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=5151))
     room = await _create_punishment_room(db, host_id=host.id)
-    await db.commit()
     code = room.code
-    await _connect(sio, "sid-pr1", user_id=3060)
-    await sio.call("room:join", "sid-pr1", {"code": code})
-
+    await _connect(sio, "sid-rr-h", user_id=5151)
+    await sio.call("room:join", "sid-rr-h", {"code": code})
     refreshed = await get_room_by_code(db, code)
     assert refreshed is not None
+    refreshed.status = "active"
     refreshed.punishment_predictions = {str(host.id): 1}
-    refreshed.punishment_cards = {}
-    refreshed.punishment_result_segment_id = 1
+    refreshed.punishment_match_counts = {str(host.id): 2}
+    refreshed.punishment_winner_user_id = host.id
     refreshed.punishment_done_count = 4
     await db.commit()
     sio.emitted.clear()
 
-    await sio.call("round:reset", "sid-pr1")
-    assert sio.events_named("round:reset"), "expected a round:reset broadcast"
+    await sio.call("round:reset", "sid-rr-h")
 
+    assert sio.events_named("round:reset")
     persisted = await get_room_by_code(db, code)
     assert persisted is not None
     await db.refresh(persisted)
     assert persisted.punishment_predictions is None
-    assert persisted.punishment_cards is None
-    assert persisted.punishment_result_segment_id is None
-    # Tally preserved across the reset.
-    assert persisted.punishment_done_count == 4
-
-
-@pytest.mark.asyncio
-async def test_round_reset_punishment_non_host_rejected(
-    sio: FakeSocketIO, db: Any,
-) -> None:
-    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=3070))
-    room = await _create_punishment_room(db, host_id=host.id)
-    await db.commit()
-    code = room.code
-    await _connect(sio, "sid-ph7", user_id=3070)
-    await sio.call("room:join", "sid-ph7", {"code": code})
-    await _connect(sio, "sid-pg7", user_id=3071)
-    await sio.call("room:join", "sid-pg7", {"code": code})
-    sio.emitted.clear()
-
-    await sio.call("round:reset", "sid-pg7")
-    assert any(e[1].get("code") == "not_host" for e in sio.events_named("error"))
-
-
-@pytest.mark.asyncio
-async def test_punishment_leave_drops_prediction_and_broadcasts(
-    sio: FakeSocketIO, db: Any,
-) -> None:
-    from hoba_api.services.rooms import get_room_by_code
-
-    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=3080))
-    await upsert_from_telegram(db, _tg_user_for_handlers(user_id=3081))
-    room = await _create_punishment_room(db, host_id=host.id)
-    await db.commit()
-    code = room.code
-    seg_ids = await _punishment_segment_ids(db, room.id)
-
-    host_uid = await _connect(sio, "sid-pl1", user_id=3080)
-    await sio.call("room:join", "sid-pl1", {"code": code})
-    guest_uid = await _connect(sio, "sid-pl2", user_id=3081)
-    await sio.call("room:join", "sid-pl2", {"code": code})
-
-    # Both lock; then the guest leaves mid-prediction.
-    await sio.call("punishment:predict", "sid-pl1", {"segment_id": seg_ids[0]})
-    await sio.call("punishment:predict", "sid-pl2", {"segment_id": seg_ids[1]})
-    sio.emitted.clear()
-
-    await sio.call("room:leave", "sid-pl2")
-
-    patches = [
-        e[1]["patch"]
-        for e in sio.events_named("room:updated")
-        if isinstance(e[1], dict) and "patch" in e[1]
-    ]
-    locked_patches = [p for p in patches if "punishment_locked_user_ids" in p]
-    assert locked_patches, "expected an updated locked_user_ids patch on leave"
-    assert locked_patches[-1]["punishment_locked_user_ids"] == [host_uid]
-
-    persisted = await get_room_by_code(db, code)
-    assert persisted is not None
-    await db.refresh(persisted)
-    assert str(guest_uid) not in (persisted.punishment_predictions or {})
-    assert str(host_uid) in (persisted.punishment_predictions or {})
+    assert persisted.punishment_match_counts is None
+    assert persisted.punishment_winner_user_id is None
+    assert persisted.status == "lobby"
+    assert persisted.punishment_done_count == 4  # cumulative stat persists

@@ -92,10 +92,11 @@ async def test_room_out_exposes_punishment_fields(db: AsyncSession) -> None:
     assert state.room.punishment_done_count == 0
 
 
-async def test_build_room_state_redacts_predictions_while_predicting(
+async def test_build_room_state_exposes_public_punishment_state(
     db: AsyncSession,
 ) -> None:
-    host = await upsert_from_telegram(db, TelegramUser(id=7720, first_name="H"))
+    """v3: bets, match counts, winner and last outcome are all PUBLIC."""
+    host = await upsert_from_telegram(db, TelegramUser(id=9101, first_name="H"))
     await db.flush()
     room = await create_room(
         db, host_id=host.id, question_text="Q?",
@@ -106,42 +107,53 @@ async def test_build_room_state_redacts_predictions_while_predicting(
     fetched = await get_room_by_code(db, room.code)
     assert fetched is not None
     fetched.punishment_predictions = {"1": 10, "2": 11}
-    fetched.punishment_cards = None
-    await db.commit()
-
-    state = await build_room_state(db, fetched, current_user_id=2)
-    assert state.room.punishment_locked_user_ids == [1, 2]
-    assert state.room.punishment_my_prediction == 11
-    # Other players' picks must stay hidden while predicting.
-    assert state.room.punishment_predictions is None
-    assert state.room.punishment_result_segment_id is None
-    assert state.room.punishment_cards is None
-
-
-async def test_build_room_state_reveals_predictions_when_resolved(
-    db: AsyncSession,
-) -> None:
-    host = await upsert_from_telegram(db, TelegramUser(id=7730, first_name="H"))
-    await db.flush()
-    room = await create_room(
-        db, host_id=host.id, question_text="Q?",
-        segments=[SegmentDraft(label="a"), SegmentDraft(label="b")],
-        game_mode="punishment",
-    )
-    await db.commit()
-    fetched = await get_room_by_code(db, room.code)
-    assert fetched is not None
-    fetched.punishment_predictions = {"1": 10, "2": 11}
-    fetched.punishment_cards = {
-        "1": {"text": "x", "deck": "mild", "card_index": 0, "done": False},
+    fetched.punishment_match_counts = {"1": 2}
+    fetched.punishment_winner_user_id = 1
+    fetched.punishment_last_outcome = {
+        "spinner_id": 1,
+        "result_segment_id": 10,
+        "kind": "lucky",
+        "card": None,
+        "resolved": True,
     }
-    fetched.punishment_result_segment_id = 11
     await db.commit()
 
     state = await build_room_state(db, fetched, current_user_id=2)
-    assert state.room.punishment_predictions == {"1": 10, "2": 11}
-    assert state.room.punishment_result_segment_id == 11
-    assert state.room.punishment_cards is not None
-    assert state.room.punishment_cards["1"].text == "x"
-    # No longer needed once revealed.
-    assert state.room.punishment_my_prediction is None
+
+    assert state.room.punishment_bets == {"1": 10, "2": 11}
+    assert state.room.punishment_match_counts == {"1": 2}
+    assert state.room.punishment_winner_user_id == 1
+    assert state.room.punishment_last_outcome is not None
+    assert state.room.punishment_last_outcome.kind == "lucky"
+
+
+async def test_build_room_state_exposes_punish_card_outcome(
+    db: AsyncSession,
+) -> None:
+    host = await upsert_from_telegram(db, TelegramUser(id=9201, first_name="H"))
+    await db.flush()
+    room = await create_room(
+        db, host_id=host.id, question_text="Q?",
+        segments=[SegmentDraft(label="a"), SegmentDraft(label="b")],
+        game_mode="punishment",
+    )
+    await db.commit()
+    fetched = await get_room_by_code(db, room.code)
+    assert fetched is not None
+    fetched.punishment_last_outcome = {
+        "spinner_id": 2,
+        "result_segment_id": 11,
+        "kind": "punish",
+        "card": {"text": "do a dance", "deck": "mild", "card_index": 3},
+        "resolved": False,
+    }
+    await db.commit()
+
+    state = await build_room_state(db, fetched, current_user_id=2)
+
+    outcome = state.room.punishment_last_outcome
+    assert outcome is not None
+    assert outcome.kind == "punish"
+    assert outcome.card is not None
+    assert outcome.card.text == "do a dance"
+    assert outcome.resolved is False

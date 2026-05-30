@@ -1,6 +1,6 @@
-"""Tests for `hoba_api.services.punishment` (prediction-wager logic).
+"""Tests for `hoba_api.services.punishment` (v3 turn-based personal-bet race).
 
-Design: docs/superpowers/specs/2026-05-30-punishment-prediction-wager-design.md
+See docs/game-modes.md for the current mechanic.
 """
 
 from __future__ import annotations
@@ -9,10 +9,11 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from hoba_api.models.participant import Participant
 from hoba_api.models.question import Question
 from hoba_api.models.room import Room
 from hoba_api.models.segment import Segment
-from hoba_api.modes.punishment_decks import CARDS_PER_DECK
+from hoba_api.redis_client import presence_set
 from hoba_api.services import punishment
 from hoba_api.services.rooms import RoomServiceError, SegmentDraft, create_room
 
@@ -40,7 +41,7 @@ async def _segment_ids(db: AsyncSession, room: Room) -> list[int]:
             ),
         )
     ).scalar_one()
-    seg_ids = list(
+    return list(
         (
             await db.execute(
                 select(Segment.id)
@@ -50,262 +51,230 @@ async def _segment_ids(db: AsyncSession, room: Room) -> list[int]:
                 )
                 .order_by(Segment.position),
             )
-        )
-        .scalars()
-        .all(),
+        ).scalars().all(),
     )
-    return seg_ids
 
 
-async def _make_punishment_room(
-    db: AsyncSession, *, tg_base: int, segments: int = 4,
-) -> tuple[Room, list[int]]:
+async def _make_room(
+    db: AsyncSession, *, tg_base: int, players: int = 2, n: int = 3,
+) -> tuple[Room, list[int], list[int]]:
+    """Create a punishment room with `players` joined participants + N matches.
+
+    Returns (room, segment_ids, user_ids). All users are marked present.
+    """
     host_id = await _make_user(db, tg_id=tg_base)
     room = await create_room(
         db,
         host_id=host_id,
         question_text="?",
-        segments=_drafts(segments),
+        segments=_drafts(4),
         game_mode="punishment",
         punishment_deck="mild",
+        spin_count=n,
     )
+    user_ids = [host_id]
+    for i in range(1, players):
+        uid = await _make_user(db, tg_id=tg_base + i)
+        db.add(Participant(room_id=room.id, user_id=uid, role="guest"))
+        user_ids.append(uid)
     await db.commit()
+    for uid in user_ids:
+        await presence_set(room.id, uid)
     seg_ids = await _segment_ids(db, room)
-    return room, seg_ids
+    return room, seg_ids, user_ids
 
 
-# --- lock_prediction -------------------------------------------------------
+# --- betting --------------------------------------------------------------
 
 
-async def test_lock_prediction_stores(db: AsyncSession) -> None:
-    room, seg_ids = await _make_punishment_room(db, tg_base=100)
-
-    await punishment.lock_prediction(db, room, user_id=7, segment_id=seg_ids[0])
-
-    assert room.punishment_predictions == {"7": seg_ids[0]}
-
-
-async def test_lock_prediction_overwrites_on_relock(db: AsyncSession) -> None:
-    room, seg_ids = await _make_punishment_room(db, tg_base=110)
-
-    await punishment.lock_prediction(db, room, user_id=7, segment_id=seg_ids[0])
-    await punishment.lock_prediction(db, room, user_id=7, segment_id=seg_ids[1])
-
-    assert room.punishment_predictions == {"7": seg_ids[1]}
+async def test_place_bet_stores_and_overwrites(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=100)
+    await punishment.place_bet(db, room, users[0], seg[0])
+    assert room.punishment_predictions == {str(users[0]): seg[0]}
+    await punishment.place_bet(db, room, users[0], seg[1])
+    assert room.punishment_predictions == {str(users[0]): seg[1]}
 
 
-async def test_lock_prediction_rejects_when_resolved(db: AsyncSession) -> None:
-    room, seg_ids = await _make_punishment_room(db, tg_base=120)
-    room.punishment_cards = {}
+async def test_place_bet_rejects_after_start(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=110)
+    room.status = "active"
     await db.commit()
-
     with pytest.raises(RoomServiceError) as exc:
-        await punishment.lock_prediction(db, room, user_id=7, segment_id=seg_ids[0])
-    assert exc.value.code == "round_resolved"
+        await punishment.place_bet(db, room, users[0], seg[0])
+    assert exc.value.code == "game_started"
 
 
-async def test_lock_prediction_rejects_unknown_segment(db: AsyncSession) -> None:
-    room, seg_ids = await _make_punishment_room(db, tg_base=130)
-    bad_segment = max(seg_ids) + 9999
-
+async def test_place_bet_rejects_unknown_segment(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=120)
     with pytest.raises(RoomServiceError) as exc:
-        await punishment.lock_prediction(db, room, user_id=7, segment_id=bad_segment)
+        await punishment.place_bet(db, room, users[0], max(seg) + 999)
     assert exc.value.code == "invalid_segment"
 
 
-# --- drop_prediction -------------------------------------------------------
+async def test_all_present_bet_truth_table() -> None:
+    bets = {"1": 10, "2": 11}
+    assert punishment.all_present_bet(bets, {1, 2}) is True
+    assert punishment.all_present_bet(bets, {1, 2, 3}) is False
+    assert punishment.all_present_bet(None, {1}) is False
+    assert punishment.all_present_bet({}, set()) is False
 
 
-async def test_drop_prediction_removes(db: AsyncSession) -> None:
-    room, seg_ids = await _make_punishment_room(db, tg_base=140)
-    await punishment.lock_prediction(db, room, user_id=7, segment_id=seg_ids[0])
-    await punishment.lock_prediction(db, room, user_id=8, segment_id=seg_ids[1])
-
-    await punishment.drop_prediction(db, room, user_id=7)
-
-    assert room.punishment_predictions == {"8": seg_ids[1]}
+# --- turn order + resolve -------------------------------------------------
 
 
-async def test_drop_prediction_empties_to_none(db: AsyncSession) -> None:
-    room, seg_ids = await _make_punishment_room(db, tg_base=150)
-    await punishment.lock_prediction(db, room, user_id=7, segment_id=seg_ids[0])
-
-    await punishment.drop_prediction(db, room, user_id=7)
-
-    assert room.punishment_predictions is None
-
-
-async def test_drop_prediction_noop_when_absent(db: AsyncSession) -> None:
-    room, seg_ids = await _make_punishment_room(db, tg_base=160)
-    await punishment.lock_prediction(db, room, user_id=7, segment_id=seg_ids[0])
-
-    await punishment.drop_prediction(db, room, user_id=999)
-
-    assert room.punishment_predictions == {"7": seg_ids[0]}
+async def test_start_game_seeds_first_bettor(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=200)
+    await punishment.place_bet(db, room, users[0], seg[0])
+    await punishment.place_bet(db, room, users[1], seg[1])
+    await punishment.start_game(db, room)
+    assert room.current_turn_user_id in users
 
 
-# --- all_present_locked / waiting_on --------------------------------------
+async def test_resolve_lucky_increments_and_advances(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=210, n=3)
+    await punishment.place_bet(db, room, users[0], seg[0])
+    await punishment.place_bet(db, room, users[1], seg[1])
+    await punishment.start_game(db, room)
+    spinner = room.current_turn_user_id
+    assert spinner is not None
+    bet = room.punishment_predictions[str(spinner)]
 
-
-def test_all_present_locked_truth_table() -> None:
-    preds = {"1": 10, "2": 11}
-    assert punishment.all_present_locked(preds, {1, 2}) is True
-    assert punishment.all_present_locked(preds, {1, 2, 3}) is False
-    assert punishment.all_present_locked(preds, set()) is False
-    assert punishment.all_present_locked(None, {1}) is False
-    assert punishment.all_present_locked({}, {1}) is False
-    # A locked id that's no longer present doesn't block.
-    assert punishment.all_present_locked(preds, {1}) is True
-
-
-def test_waiting_on_sorted_missing_ids() -> None:
-    preds = {"2": 11}
-    assert punishment.waiting_on(preds, {1, 2, 3}) == [1, 3]
-    assert punishment.waiting_on(None, {3, 1, 2}) == [1, 2, 3]
-    assert punishment.waiting_on(preds, {2}) == []
-    assert punishment.waiting_on({}, set()) == []
-
-
-# --- resolve_predictions ---------------------------------------------------
-
-
-async def test_resolve_deals_card_to_each_loser(db: AsyncSession) -> None:
-    room, seg_ids = await _make_punishment_room(db, tg_base=200)
-    result = seg_ids[0]
-    # 7 correct, 8 + 9 wrong.
-    room.punishment_predictions = {
-        "7": result,
-        "8": seg_ids[1],
-        "9": seg_ids[2],
-    }
-    await db.commit()
-
-    cards = await punishment.resolve_predictions(
-        db, room, result_segment_id=result, host_lang="en",
+    outcome = await punishment.resolve_turn(
+        db, room, spinner, result_segment_id=bet, host_lang="en",
     )
 
-    assert set(cards.keys()) == {"8", "9"}
-    for entry in cards.values():
-        assert entry["deck"] == "mild"
-        assert entry["done"] is False
-        assert isinstance(entry["text"], str) and entry["text"]
-        assert isinstance(entry["card_index"], int)
-    assert room.punishment_cards == cards
-    assert room.punishment_result_segment_id == result
+    assert outcome["kind"] == "lucky"
+    assert room.punishment_match_counts == {str(spinner): 1}
+    assert room.current_turn_user_id != spinner  # advanced
+    assert room.punishment_winner_user_id is None
 
 
-async def test_resolve_no_card_for_correct_guessers(db: AsyncSession) -> None:
-    room, seg_ids = await _make_punishment_room(db, tg_base=210)
-    result = seg_ids[0]
-    room.punishment_predictions = {"7": result, "8": seg_ids[1]}
-    await db.commit()
+async def test_resolve_miss_deals_card_and_holds_turn(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=220, n=3)
+    await punishment.place_bet(db, room, users[0], seg[0])
+    await punishment.place_bet(db, room, users[1], seg[1])
+    await punishment.start_game(db, room)
+    spinner = room.current_turn_user_id
+    assert spinner is not None
+    missed = seg[2]  # not anyone's bet
 
-    cards = await punishment.resolve_predictions(
-        db, room, result_segment_id=result, host_lang="en",
+    outcome = await punishment.resolve_turn(
+        db, room, spinner, result_segment_id=missed, host_lang="en",
     )
 
-    assert "7" not in cards
-    assert "8" in cards
+    assert outcome["kind"] == "punish"
+    card = outcome["card"]
+    assert isinstance(card, dict) and card["text"]
+    assert outcome["resolved"] is False
+    assert room.current_turn_user_id == spinner  # turn HELD until resolved
 
 
-async def test_resolve_empty_when_everyone_correct(db: AsyncSession) -> None:
-    room, seg_ids = await _make_punishment_room(db, tg_base=220)
-    result = seg_ids[0]
-    room.punishment_predictions = {"7": result, "8": result}
+async def test_resolve_lucky_to_n_sets_winner(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=230, n=3)
+    await punishment.place_bet(db, room, users[0], seg[0])
+    await punishment.place_bet(db, room, users[1], seg[1])
+    await punishment.start_game(db, room)
+    winner = users[0]
+    # Already at N-1 matches; one more lucky hit wins.
+    room.punishment_match_counts = {str(winner): 2}
+    room.current_turn_user_id = winner
     await db.commit()
 
-    cards = await punishment.resolve_predictions(
-        db, room, result_segment_id=result, host_lang="en",
-    )
+    await punishment.resolve_turn(db, room, winner, seg[0], "en")
 
-    assert cards == {}
-    assert room.punishment_cards == {}
-    assert room.punishment_result_segment_id == result
+    assert room.punishment_match_counts[str(winner)] == 3
+    assert room.punishment_winner_user_id == winner
 
 
-async def test_resolve_distinct_cards_for_many_losers(db: AsyncSession) -> None:
-    room, seg_ids = await _make_punishment_room(db, tg_base=230)
-    result = seg_ids[0]
-    # 7 losers, all wrong (predicting a non-result segment).
-    wrong = seg_ids[1]
-    room.punishment_predictions = {str(uid): wrong for uid in range(1, 8)}
-    await db.commit()
-    assert CARDS_PER_DECK >= 7  # all should fit within one deck
-
-    cards = await punishment.resolve_predictions(
-        db, room, result_segment_id=result, host_lang="en",
-    )
-
-    assert len(cards) == 7
-    indices = [entry["card_index"] for entry in cards.values()]
-    assert len(set(indices)) == 7  # all distinct
+# --- resolve_punishment (done / refuse) -----------------------------------
 
 
-# --- mark_card_done --------------------------------------------------------
+async def test_done_advances_and_counts_dare(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=300, n=3)
+    await punishment.place_bet(db, room, users[0], seg[0])
+    await punishment.place_bet(db, room, users[1], seg[1])
+    await punishment.start_game(db, room)
+    spinner = room.current_turn_user_id
+    assert spinner is not None
+    await punishment.resolve_turn(db, room, spinner, seg[2], "en")  # miss
 
-
-async def test_mark_card_done_flips_and_tallies(db: AsyncSession) -> None:
-    room, seg_ids = await _make_punishment_room(db, tg_base=300)
-    room.punishment_predictions = {"8": seg_ids[1]}
-    await db.commit()
-    await punishment.resolve_predictions(
-        db, room, result_segment_id=seg_ids[0], host_lang="en",
-    )
-    assert room.punishment_done_count == 0
-
-    ok = await punishment.mark_card_done(db, room, user_id=8)
+    ok = await punishment.resolve_punishment(db, room, spinner, refuse=False)
 
     assert ok is True
-    assert room.punishment_cards is not None
-    assert room.punishment_cards["8"]["done"] is True
     assert room.punishment_done_count == 1
+    assert room.punishment_last_outcome is not None
+    assert room.punishment_last_outcome["resolved"] is True
+    assert room.current_turn_user_id != spinner  # advanced
 
 
-async def test_mark_card_done_false_for_unknown(db: AsyncSession) -> None:
-    room, seg_ids = await _make_punishment_room(db, tg_base=310)
-    room.punishment_predictions = {"8": seg_ids[1]}
+async def test_refuse_decrements_count(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=310, n=3)
+    await punishment.place_bet(db, room, users[0], seg[0])
+    await punishment.place_bet(db, room, users[1], seg[1])
+    await punishment.start_game(db, room)
+    spinner = room.current_turn_user_id
+    assert spinner is not None
+    # First earn a point (land on the spinner's own bet) so refuse is allowed.
+    own_bet = room.punishment_predictions[str(spinner)]
+    await punishment.resolve_turn(db, room, spinner, own_bet, "en")
+    room.current_turn_user_id = spinner
     await db.commit()
-    await punishment.resolve_predictions(
-        db, room, result_segment_id=seg_ids[0], host_lang="en",
-    )
+    await punishment.resolve_turn(db, room, spinner, seg[2], "en")  # miss
+    assert room.punishment_match_counts[str(spinner)] == 1
 
-    ok = await punishment.mark_card_done(db, room, user_id=999)
+    ok = await punishment.resolve_punishment(db, room, spinner, refuse=True)
+
+    assert ok is True
+    assert room.punishment_match_counts[str(spinner)] == 0
+    assert room.punishment_done_count == 0  # refusal isn't a performed dare
+
+
+async def test_refuse_blocked_at_zero(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=320, n=3)
+    await punishment.place_bet(db, room, users[0], seg[0])
+    await punishment.place_bet(db, room, users[1], seg[1])
+    await punishment.start_game(db, room)
+    spinner = room.current_turn_user_id
+    assert spinner is not None
+    await punishment.resolve_turn(db, room, spinner, seg[2], "en")  # miss, count 0
+
+    with pytest.raises(RoomServiceError) as exc:
+        await punishment.resolve_punishment(db, room, spinner, refuse=True)
+    assert exc.value.code == "cannot_refuse"
+
+
+async def test_resolve_punishment_noop_for_non_pending(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=330, n=3)
+    await punishment.place_bet(db, room, users[0], seg[0])
+    await punishment.place_bet(db, room, users[1], seg[1])
+    await punishment.start_game(db, room)
+
+    ok = await punishment.resolve_punishment(db, room, users[0], refuse=False)
 
     assert ok is False
-    assert room.punishment_done_count == 0
 
 
-async def test_mark_card_done_false_when_already_done(db: AsyncSession) -> None:
-    room, seg_ids = await _make_punishment_room(db, tg_base=320)
-    room.punishment_predictions = {"8": seg_ids[1]}
-    await db.commit()
-    await punishment.resolve_predictions(
-        db, room, result_segment_id=seg_ids[0], host_lang="en",
-    )
-    assert await punishment.mark_card_done(db, room, user_id=8) is True
+# --- reset_game -----------------------------------------------------------
 
-    ok = await punishment.mark_card_done(db, room, user_id=8)
 
-    assert ok is False
+async def test_reset_game_clears_round_keeps_done_count(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=400, n=3)
+    await punishment.place_bet(db, room, users[0], seg[0])
+    await punishment.place_bet(db, room, users[1], seg[1])
+    await punishment.start_game(db, room)
+    spinner = room.current_turn_user_id
+    assert spinner is not None
+    await punishment.resolve_turn(db, room, spinner, seg[2], "en")
+    await punishment.resolve_punishment(db, room, spinner, refuse=False)
     assert room.punishment_done_count == 1
+    room.status = "active"
 
-
-# --- reset_round -----------------------------------------------------------
-
-
-async def test_reset_round_clears_fields_keeps_tally(db: AsyncSession) -> None:
-    room, seg_ids = await _make_punishment_room(db, tg_base=400)
-    room.punishment_predictions = {"8": seg_ids[1]}
-    await db.commit()
-    await punishment.resolve_predictions(
-        db, room, result_segment_id=seg_ids[0], host_lang="en",
-    )
-    await punishment.mark_card_done(db, room, user_id=8)
-    assert room.punishment_done_count == 1
-
-    await punishment.reset_round(db, room)
+    await punishment.reset_game(db, room)
 
     assert room.punishment_predictions is None
-    assert room.punishment_cards is None
-    assert room.punishment_result_segment_id is None
-    assert room.punishment_done_count == 1  # tally persists across rounds
+    assert room.punishment_match_counts is None
+    assert room.punishment_winner_user_id is None
+    assert room.punishment_last_outcome is None
+    assert room.current_turn_user_id is None
+    assert room.status == "lobby"
+    assert room.punishment_done_count == 1  # cumulative stat persists

@@ -86,19 +86,35 @@ class Room(Base, TimestampMixin):
     punishment_active_card: Mapped[dict[str, object] | None] = mapped_column(
         JSON, nullable=True,
     )
-    # Prediction-wager round state (Punishment v2). See
-    # docs/superpowers/specs/2026-05-30-punishment-prediction-wager-design.md.
-    # Raw map {user_id(str): segment_id}; server-only source of truth, redacted
-    # per viewer in build_room_state.
-    punishment_predictions: Mapped[dict[str, object] | None] = mapped_column(
+    # Punishment v3 BETS: {user_id(str): segment_id}. Each player's fixed bet,
+    # placed before the game starts.
+    punishment_predictions: Mapped[dict[str, int] | None] = mapped_column(
         JSON, nullable=True,
     )
-    # Resolved cards {user_id(str): {text, deck, card_index, done}}; None while
-    # predicting, {} when everyone escaped.
+    # Deprecated v2 columns (kept undropped for SQLite safety; always NULL now).
     punishment_cards: Mapped[dict[str, object] | None] = mapped_column(
         JSON, nullable=True,
     )
     punishment_result_segment_id: Mapped[int | None] = mapped_column(nullable=True)
+
+    # Punishment v3 (turn-based personal-bet race). Reuses:
+    #   punishment_predictions {uid: segment_id} = each player's fixed BET,
+    #   spin_count = N matches needed to win, punishment_deck = dare deck.
+    # New state below:
+    #   match_counts {uid(str): int} — how many times each player's bet hit.
+    #   winner_user_id — set when someone reaches N; game over.
+    #   last_outcome — last spin result, shared to ALL players:
+    #     {spinner_id, result_segment_id, kind: "lucky"|"punish",
+    #      card: {text,deck,card_index}|None, resolved: bool}.
+    #   While kind=="punish" and not resolved, the turn does NOT advance and
+    #   spinning is blocked until the punished player resolves it.
+    punishment_match_counts: Mapped[dict[str, int] | None] = mapped_column(
+        JSON, nullable=True,
+    )
+    punishment_winner_user_id: Mapped[int | None] = mapped_column(nullable=True)
+    punishment_last_outcome: Mapped[dict[str, object] | None] = mapped_column(
+        JSON, nullable=True,
+    )
 
     # Best-of-N (Classic): number of MANUAL spin attempts per round.
     # 1 = single spin (current behavior).

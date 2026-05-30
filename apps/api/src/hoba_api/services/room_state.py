@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from hoba_api.models.room import Room
 from hoba_api.schemas.room import (
     ParticipantOut,
-    PunishmentCardOut,
+    PunishmentOutcomeOut,
     QuestionOut,
     RoomOut,
     RoomState,
@@ -31,29 +31,20 @@ async def build_room_state(
     spins = await list_room_spins(session, room.id, limit=1)
     last_spin = spins[0] if spins else None
 
-    # Punishment prediction secrecy: predictions are SECRET while the round
-    # is in the predicting phase (`punishment_cards IS None`) and REVEALED
-    # once resolved. Override the naive model_validate values per-viewer.
-    preds_raw = room.punishment_predictions or {}
-    resolved = room.punishment_cards is not None
-    locked_ids = sorted(int(k) for k in preds_raw)
-    cards_out: dict[str, PunishmentCardOut] | None = None
-    if resolved and room.punishment_cards is not None:
-        cards_out = {
-            k: PunishmentCardOut.model_validate(v)
-            for k, v in room.punishment_cards.items()
-        }
+    # Punishment v3: bets, match counts, winner and the last outcome are all
+    # PUBLIC (anti-cheat — everyone sees who bet what and every result).
+    bets = dict(room.punishment_predictions) if room.punishment_predictions else None
+    outcome = (
+        PunishmentOutcomeOut.model_validate(room.punishment_last_outcome)
+        if room.punishment_last_outcome
+        else None
+    )
     room_out = RoomOut.model_validate(room).model_copy(
         update={
-            "punishment_locked_user_ids": locked_ids,
-            "punishment_my_prediction": (
-                preds_raw.get(str(current_user_id)) if not resolved else None
-            ),
-            "punishment_predictions": dict(preds_raw) if resolved else None,
-            "punishment_result_segment_id": (
-                room.punishment_result_segment_id if resolved else None
-            ),
-            "punishment_cards": cards_out,
+            "punishment_bets": bets,
+            "punishment_match_counts": room.punishment_match_counts,
+            "punishment_winner_user_id": room.punishment_winner_user_id,
+            "punishment_last_outcome": outcome,
         },
     )
 

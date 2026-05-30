@@ -71,7 +71,14 @@ class PunishmentCardOut(BaseModel):
     text: str
     deck: str
     card_index: int
-    done: bool
+
+
+class PunishmentOutcomeOut(BaseModel):
+    spinner_id: int
+    result_segment_id: int
+    kind: Literal["lucky", "punish"]
+    card: PunishmentCardOut | None = None
+    resolved: bool
 
 
 class RoomOut(BaseModel):
@@ -90,14 +97,13 @@ class RoomOut(BaseModel):
     current_turn_user_id: int | None
     punishment_deck: PunishmentDeck | None
     punishment_done_count: int
-    # Prediction-wager secrecy layer (set per-viewer in build_room_state):
-    # while predicting, only who-has-locked + the viewer's own pick are
-    # exposed; the full predictions map + result + cards appear once resolved.
-    punishment_locked_user_ids: list[int] = []
-    punishment_my_prediction: int | None = None
-    punishment_predictions: dict[str, int] | None = None
-    punishment_result_segment_id: int | None = None
-    punishment_cards: dict[str, PunishmentCardOut] | None = None
+    # Punishment v3 (turn-based personal-bet race). Bets are PUBLIC (anti-cheat):
+    # everyone sees who bet on what. match_counts, winner, and last_outcome are
+    # all shared to every player.
+    punishment_bets: dict[str, int] | None = None
+    punishment_match_counts: dict[str, int] | None = None
+    punishment_winner_user_id: int | None = None
+    punishment_last_outcome: PunishmentOutcomeOut | None = None
     spin_count: int
     bon_attempts: int
     bon_tally: dict[str, int] | None

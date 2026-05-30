@@ -39,12 +39,13 @@ from hoba_api.redis_client import (
 )
 from hoba_api.services.participants import join_room, refresh_presence
 from hoba_api.services.punishment import (
-    all_present_locked,
-    drop_prediction,
-    lock_prediction,
-    mark_card_done,
-    reset_round,
-    resolve_predictions,
+    all_present_bet,
+    drop_bet,
+    place_bet,
+    reset_game,
+    resolve_punishment,
+    resolve_turn,
+    start_game,
 )
 from hoba_api.services.room_state import build_room_state
 from hoba_api.services.rooms import RoomServiceError, get_room_by_code
@@ -194,21 +195,19 @@ async def _emit_settled(
             if room.game_mode == "punishment":
                 host = await session.get(User, room.host_id)
                 host_lang = (host.language_code if host is not None else None) or "en"
-                cards = await resolve_predictions(
-                    session, room, result_segment_id, host_lang,
-                )
-                predictions = room.punishment_predictions or {}
-                mode_aftereffects = {
-                    "punishment_result_segment_id": result_segment_id,
-                    "punishment_predictions": predictions,
-                    "punishment_cards": cards,
-                    "everyone_escaped": len(cards) == 0 and bool(predictions),
-                }
-                punishment_patch = {
-                    "punishment_cards": cards,
-                    "punishment_result_segment_id": result_segment_id,
-                    "punishment_predictions": predictions,
-                }
+                spin = await session.get(Spin, spin_id)
+                spinner_id = spin.triggered_by if spin is not None else None
+                if spinner_id is not None:
+                    outcome = await resolve_turn(
+                        session, room, spinner_id, result_segment_id, host_lang,
+                    )
+                    mode_aftereffects = {"punishment_outcome": outcome}
+                    punishment_patch = {
+                        "punishment_match_counts": room.punishment_match_counts,
+                        "punishment_winner_user_id": room.punishment_winner_user_id,
+                        "punishment_last_outcome": outcome,
+                        "current_turn_user_id": room.current_turn_user_id,
+                    }
 
             # Best-of-N (Classic, spin_count > 1): recompute the round from
             # the committed Spin rows rather than incrementing shared
@@ -252,7 +251,10 @@ async def _emit_settled(
                     "bon_winner_segment_id": winner_id,
                 }
 
-            if room.spin_policy == "turn_based":
+            # Punishment runs its own turn logic in resolve_turn (it must NOT
+            # advance on an unresolved dare), so only the generic modes advance
+            # the cursor here.
+            if room.spin_policy == "turn_based" and room.game_mode != "punishment":
                 new_cursor = await advance_turn(session, room)
                 advanced = True
             await session.commit()
@@ -331,16 +333,14 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                     if (
                         room is not None
                         and room.game_mode == "punishment"
-                        and room.punishment_cards is None
+                        and room.status == "lobby"
                         and str(user_id) in (room.punishment_predictions or {})
                     ):
-                        await drop_prediction(session, room, user_id)
-                        locked_ids = sorted(
-                            int(k) for k in (room.punishment_predictions or {})
-                        )
+                        await drop_bet(session, room, user_id)
+                        bets = dict(room.punishment_predictions or {})
                         await sio.emit(
                             "room:updated",
-                            {"patch": {"punishment_locked_user_ids": locked_ids}},
+                            {"patch": {"punishment_bets": bets}},
                             room=room_code,
                             namespace=NAMESPACE,
                         )
@@ -422,16 +422,14 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                 if (
                     room is not None
                     and room.game_mode == "punishment"
-                    and room.punishment_cards is None
+                    and room.status == "lobby"
                     and str(user_id) in (room.punishment_predictions or {})
                 ):
-                    await drop_prediction(session, room, user_id)
-                    locked_ids = sorted(
-                        int(k) for k in (room.punishment_predictions or {})
-                    )
+                    await drop_bet(session, room, user_id)
+                    bets = dict(room.punishment_predictions or {})
                     await sio.emit(
                         "room:updated",
-                        {"patch": {"punishment_locked_user_ids": locked_ids}},
+                        {"patch": {"punishment_bets": bets}},
                         room=room_code,
                         namespace=NAMESPACE,
                     )
@@ -448,7 +446,6 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
         if user_id is None or room_code is None or room_id is None:
             await sio.emit("error", {"code": "not_in_room"}, to=sid, namespace=NAMESPACE)
             return
-        force = bool((data or {}).get("force", False))
 
         async with SessionLocal() as session:
             room = await get_room_by_code(session, room_code)
@@ -457,13 +454,58 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                     "error", {"code": "room_not_found"}, to=sid, namespace=NAMESPACE,
                 )
                 return
-            # Permission check before the throttles. A guest in a
-            # host_only room (e.g. after the host flipped policy
-            # mid-room and the guest's snapshot hasn't caught up)
-            # must NOT burn the 1.5 s cooldown slot for the room —
-            # otherwise their next tap returns rate_limited instead
-            # of the more accurate not_allowed_to_spin.
-            if not user_can_spin(room, user_id):
+            # Punishment v3 gate: turn-based personal-bet race. Players spin
+            # in turn; a miss deals a dare that BLOCKS the turn until resolved.
+            # This whole block stands in for the generic user_can_spin check
+            # (which is run for every other mode in the elif just below).
+            if room.game_mode == "punishment":
+                if room.punishment_winner_user_id is not None:
+                    await sio.emit(
+                        "error", {"code": "game_over"}, to=sid, namespace=NAMESPACE,
+                    )
+                    return
+                outcome = room.punishment_last_outcome
+                if (
+                    outcome is not None
+                    and outcome.get("kind") == "punish"
+                    and not outcome.get("resolved")
+                ):
+                    await sio.emit(
+                        "error",
+                        {"code": "punishment_pending"},
+                        to=sid,
+                        namespace=NAMESPACE,
+                    )
+                    return
+                # Betting phase (lobby): everyone present must bet, then seed
+                # the turn cursor to the first eligible bettor.
+                if room.status == "lobby":
+                    present = await presence_user_ids(room_id)
+                    if not all_present_bet(room.punishment_predictions, present):
+                        await sio.emit(
+                            "error",
+                            {"code": "bets_pending"},
+                            to=sid,
+                            namespace=NAMESPACE,
+                        )
+                        return
+                    await start_game(session, room)
+                    await session.commit()
+                if room.current_turn_user_id != user_id:
+                    await sio.emit(
+                        "error",
+                        {"code": "not_your_turn"},
+                        to=sid,
+                        namespace=NAMESPACE,
+                    )
+                    return
+            elif not user_can_spin(room, user_id):
+                # Permission check before the throttles. A guest in a
+                # host_only room (e.g. after the host flipped policy
+                # mid-room and the guest's snapshot hasn't caught up)
+                # must NOT burn the 1.5 s cooldown slot for the room —
+                # otherwise their next tap returns rate_limited instead
+                # of the more accurate not_allowed_to_spin.
                 await sio.emit(
                     "error",
                     {"code": "not_allowed_to_spin"},
@@ -471,37 +513,6 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                     namespace=NAMESPACE,
                 )
                 return
-
-            # Punishment v2 gate: the spin is host-driven and may only
-            # fire once every present player has locked a prediction (or
-            # the host force-spins, in which case non-lockers sit out).
-            # Runs after the generic permission check but before the
-            # throttles so a premature host tap doesn't burn a slot.
-            if room.game_mode == "punishment":
-                if room.host_id != user_id:
-                    await sio.emit(
-                        "error", {"code": "not_host"}, to=sid, namespace=NAMESPACE,
-                    )
-                    return
-                if room.punishment_cards is not None:
-                    await sio.emit(
-                        "error",
-                        {"code": "round_resolved"},
-                        to=sid,
-                        namespace=NAMESPACE,
-                    )
-                    return
-                present = await presence_user_ids(room_id)
-                if not force and not all_present_locked(
-                    room.punishment_predictions, present,
-                ):
-                    await sio.emit(
-                        "error",
-                        {"code": "predictions_pending"},
-                        to=sid,
-                        namespace=NAMESPACE,
-                    )
-                    return
 
             # Permission OK — now the throttles. Cooldown is cheaper
             # than the hourly counter and rejects repeat-tap floods
@@ -612,10 +623,9 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                 await sio.emit("error", {"code": "not_host"}, to=sid, namespace=NAMESPACE)
                 return
             if room.game_mode == "punishment":
-                # Clear the round's prediction/card/result state (tally is
-                # preserved by reset_round). Elimination revival below is a
-                # no-op for punishment since it never eliminates segments.
-                await reset_round(session, room)
+                # New game: clear bets/counts/winner/outcome, back to lobby so
+                # players re-bet (cumulative done_count is preserved).
+                await reset_game(session, room)
             question = (
                 await session.execute(
                     select(Question).where(
@@ -639,8 +649,8 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
         await sio.emit("round:reset", {}, room=room_code, namespace=NAMESPACE)
         log.info("ws.round.reset", user_id=user_id, code=room_code)
 
-    @sio.on("punishment:predict", namespace=NAMESPACE)
-    async def on_punishment_predict(sid: str, data: dict[str, Any]) -> None:
+    @sio.on("punishment:bet", namespace=NAMESPACE)
+    async def on_punishment_bet(sid: str, data: dict[str, Any]) -> None:
         sess = await sio.get_session(sid, namespace=NAMESPACE)
         user_id = sess.get("user_id")
         room_code = sess.get("room_code")
@@ -656,25 +666,24 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                 )
                 return
             try:
-                await lock_prediction(
+                await place_bet(
                     session, room, user_id, int((data or {})["segment_id"]),
                 )
             except RoomServiceError as exc:
                 await sio.emit("error", {"code": exc.code}, to=sid, namespace=NAMESPACE)
                 return
-            locked_ids = sorted(int(k) for k in (room.punishment_predictions or {}))
-        # Broadcast only the locked id set — never the chosen segments while
-        # the round is still predicting (per-viewer secrecy, spec §5).
+            bets = dict(room.punishment_predictions or {})
+        # Bets are PUBLIC (anti-cheat) — everyone sees who bet on what.
         await sio.emit(
             "room:updated",
-            {"patch": {"punishment_locked_user_ids": locked_ids}},
+            {"patch": {"punishment_bets": bets}},
             room=room_code,
             namespace=NAMESPACE,
         )
-        log.info("ws.punishment.predict", user_id=user_id, code=room_code)
+        log.info("ws.punishment.bet", user_id=user_id, code=room_code)
 
-    @sio.on("punishment:done", namespace=NAMESPACE)
-    async def on_punishment_done(sid: str, data: dict[str, Any]) -> None:
+    @sio.on("punishment:resolve", namespace=NAMESPACE)
+    async def on_punishment_resolve(sid: str, data: dict[str, Any]) -> None:
         sess = await sio.get_session(sid, namespace=NAMESPACE)
         user_id = sess.get("user_id")
         room_code = sess.get("room_code")
@@ -682,34 +691,35 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
         if user_id is None or room_code is None or room_id is None:
             await sio.emit("error", {"code": "not_in_room"}, to=sid, namespace=NAMESPACE)
             return
-        target = int((data or {})["user_id"])
+        refuse = bool((data or {}).get("refuse", False))
         async with SessionLocal() as session:
             room = await session.get(Room, room_id)
             if room is None:
                 return  # nothing pending — no-op
-            changed = await mark_card_done(session, room, target)
+            try:
+                changed = await resolve_punishment(
+                    session, room, user_id, refuse=refuse,
+                )
+            except RoomServiceError as exc:
+                await sio.emit("error", {"code": exc.code}, to=sid, namespace=NAMESPACE)
+                return
             if not changed:
-                return  # no card / already done — silent no-op
-            cards = room.punishment_cards
-            done_count = room.punishment_done_count
+                return  # no pending punishment for this user — silent no-op
+            patch = {
+                "punishment_match_counts": room.punishment_match_counts,
+                "punishment_last_outcome": room.punishment_last_outcome,
+                "punishment_done_count": room.punishment_done_count,
+                "current_turn_user_id": room.current_turn_user_id,
+            }
         await sio.emit(
             "room:updated",
-            {
-                "patch": {
-                    "punishment_cards": cards,
-                    "punishment_done_count": done_count,
-                },
-            },
+            {"patch": patch},
             room=room_code,
             namespace=NAMESPACE,
         )
-        await sio.emit(
-            "punishment:cleared",
-            {"user_id": target},
-            room=room_code,
-            namespace=NAMESPACE,
+        log.info(
+            "ws.punishment.resolve", user_id=user_id, refuse=refuse, code=room_code,
         )
-        log.info("ws.punishment.done", user_id=user_id, target=target, code=room_code)
 
     @sio.on("bon:reset", namespace=NAMESPACE)
     async def on_bon_reset(sid: str) -> None:
