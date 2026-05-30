@@ -15,6 +15,7 @@ import { create } from "zustand";
 
 import { reactionLaneFor } from "@/features/rooms/reactionLanes";
 import {
+  type PunishmentCard,
   type PunishmentDeck,
   type RoomState as ServerRoomState,
 } from "@/lib/api";
@@ -44,6 +45,10 @@ export interface SpinSettledEvent {
     punishment_card?: string;
     deck?: PunishmentDeck;
     victim_segment_id?: number;
+    punishment_result_segment_id?: number;
+    punishment_predictions?: Record<string, number>;
+    punishment_cards?: Record<string, PunishmentCard>;
+    everyone_escaped?: boolean;
   };
 }
 
@@ -79,8 +84,10 @@ interface RoomStore {
   setSnapshot(state: ServerRoomState): void;
   /** Emit round:reset to the server (host-only, Elimination mode). */
   resetRound(): void;
-  /** Emit punishment:done (any participant) to clear the pending card. */
-  markPunishmentDone(): void;
+  /** Emit punishment:predict to lock the viewer's guess for this round. */
+  predictPunishment(segmentId: number): void;
+  /** Emit punishment:done for a specific user's card (any participant). */
+  markPunishmentDone(userId: number): void;
   /** Emit bon:reset (host) to start a new best-of-N round. */
   bestOfNReset(): void;
 }
@@ -233,6 +240,15 @@ function wireListeners(s: Socket): void {
     if (snap !== null) setState({ snapshot: reviveAllSegments(snap) });
   });
 
+  // punishment:cleared is a per-card "done" signal. The authoritative state
+  // (card.done flip + done_count bump) arrives in the accompanying
+  // room:updated patch, which the generic merge above already applies — so
+  // this handler is intentionally a no-op subscription, kept explicit so the
+  // server event is acknowledged rather than silently dropped.
+  s.on("punishment:cleared", () => {
+    /* state flows through the paired room:updated patch */
+  });
+
   s.on(
     "reaction:received",
     (payload: { emoji: string; user_id: number; at: string }) => {
@@ -311,8 +327,22 @@ export const useRoomStore = create<RoomStore>((_set, get) => ({
     socket?.emit("round:reset");
   },
 
-  markPunishmentDone(): void {
-    socket?.emit("punishment:done");
+  predictPunishment(segmentId: number): void {
+    socket?.emit("punishment:predict", { segment_id: segmentId });
+    // Optimistic local highlight; reconciled by the next server snapshot/patch.
+    const snap = useRoomStore.getState().snapshot;
+    if (snap !== null) {
+      useRoomStore.setState({
+        snapshot: {
+          ...snap,
+          room: { ...snap.room, punishment_my_prediction: segmentId },
+        },
+      });
+    }
+  },
+
+  markPunishmentDone(userId: number): void {
+    socket?.emit("punishment:done", { user_id: userId });
   },
 
   bestOfNReset(): void {

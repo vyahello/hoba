@@ -12,10 +12,10 @@ function snap(overrides: Partial<RoomState["room"]> = {}): RoomState {
       is_locked: false, is_anonymous: false, current_turn_user_id: null,
       created_at: "2026-05-29T00:00:00Z", closed_at: null,
       punishment_deck: "mild", punishment_done_count: 2,
+      punishment_locked_user_ids: [], punishment_my_prediction: null,
+      punishment_predictions: null, punishment_result_segment_id: null,
+      punishment_cards: null,
       bon_attempts: 0, bon_tally: null, bon_winner_segment_id: null, spin_count: 1,
-      punishment_active_card: {
-        text: "Do a dance", deck: "mild", victim_segment_id: 5, spin_id: 9,
-      },
       ...overrides,
     },
     participants: [], active_question: null, last_spin: null, me_user_id: 1,
@@ -23,17 +23,17 @@ function snap(overrides: Partial<RoomState["room"]> = {}): RoomState {
 }
 
 describe("punishment helpers", () => {
-  it("reads active card / done count / pending / mode", () => {
+  it("reads done count / mode", () => {
     const s = snap();
     expect(isPunishment(s)).toBe(true);
     expect(doneCount(s)).toBe(2);
-    expect(hasPendingCard(s)).toBe(true);
-    expect(activeCard(s)?.text).toBe("Do a dance");
   });
 
-  it("no pending card when null", () => {
-    expect(hasPendingCard(snap({ punishment_active_card: null }))).toBe(false);
-    expect(activeCard(snap({ punishment_active_card: null }))).toBeNull();
+  // activeCard / hasPendingCard are inert stopgaps during the v2 migration
+  // (the legacy single-victim card model is gone); the v2 card UI lands later.
+  it("legacy card helpers are inert", () => {
+    expect(hasPendingCard(snap())).toBe(false);
+    expect(activeCard(snap())).toBeNull();
   });
 
   it("null snapshot safe", () => {

@@ -59,6 +59,13 @@ export type SuggestionPolicy = "off" | "approval" | "free";
 export type RoomStatus = "lobby" | "active" | "closed";
 export type ParticipantRole = "host" | "guest";
 
+export interface PunishmentCard {
+  text: string;
+  deck: PunishmentDeck;
+  card_index: number;
+  done: boolean;
+}
+
 export interface ServerSegment {
   id: number;
   label: string;
@@ -110,12 +117,11 @@ export interface ServerRoom {
   current_turn_user_id: number | null;
   punishment_deck: PunishmentDeck | null;
   punishment_done_count: number;
-  punishment_active_card: {
-    text: string;
-    deck: PunishmentDeck;
-    victim_segment_id: number;
-    spin_id: number;
-  } | null;
+  punishment_locked_user_ids: number[];
+  punishment_my_prediction: number | null;
+  punishment_predictions: Record<string, number> | null;
+  punishment_result_segment_id: number | null;
+  punishment_cards: Record<string, PunishmentCard> | null;
   spin_count: number;
   bon_attempts: number;
   bon_tally: Record<string, number> | null;
