@@ -7,10 +7,12 @@ The full product + engineering specification is at **`docs/spec.md`**.
 **You MUST read it before starting any new phase.** Re-read the relevant phase section before each `go on phase N` / `go on stage X` command. If chat instructions ever conflict with `docs/spec.md`, ask which wins.
 
 ## Current phase
-> **Stage D in progress — Elimination mode + turn-based foundation live on prod (as of 2026-05-29).**
+> **Stage D in progress — Elimination + turn-based foundation live on prod; Punishment v2 (prediction wager) committed 2026-05-30, pending owner deploy.**
 > Stage C closed 2026-05-28 with owner-override GO on Phase 7+. Stage D has shipped: the turn-based foundation slice, the mode-picker UI slice, a real-device bug-fix pass, and **Elimination mode** (first per-mode gameplay + the `GameModeEngine` abstraction in `apps/api/src/hoba_api/modes/`: base Protocol, `ClassicEngine`, `EliminationEngine`, registry — unknown modes fall back to Classic).
 >
-> **Next Stage D slice: Punishment mode (spec §5.3).** Reuses the `GameModeEngine` scaffold from the Elimination slice — add a `PunishmentEngine` + registry entry. Scope: localized card decks (`mild`/`spicy`/`chaos`, 3×30×2 langs), card-draw broadcast on settle, "Done" tally. Then Chaos (§5.4). Each new slice gets its own brainstorming arc only when owner says "next slice".
+> **Punishment v2 (prediction wager) committed 2026-05-30 — pending owner deploy + real-device verify.** Players secretly predict the landing segment; host spins (or "Spin anyway"); wrong guessers each draw their own dare; all-correct = "Everyone escaped 🍀". Detail in [`docs/changelog.md`](docs/changelog.md) (Slice 4).
+>
+> **Next Stage D slice: Chaos mode (spec §5.4)** — a pre-spin event announced to the room (e.g. "Double spin", "Reverse order") before the wheel fires. Each new slice gets its own brainstorming arc only when owner says "next slice".
 >
 > **Production live on `hobagame.duckdns.org`** (Hetzner shared VPS; host nginx TLS terminator; containers on `127.0.0.1:8800/5800/6800`; static-bundle webapp). Infra topology and deploy walkthrough live in `docs/deployment.md`.
 >

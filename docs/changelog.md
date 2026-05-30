@@ -4,7 +4,11 @@
 
 ---
 
-## Stage D — in progress (Elimination mode + foundation)
+## Stage D — in progress (Punishment v2 + Elimination + foundation)
+
+### Slice 4 — Punishment v2: prediction wager (2026-05-30) — SHIPPED, pending owner deploy
+
+Reworked Punishment from victim-segment into a **prediction-wager** game: each round every present player secretly predicts the landing segment; the host spins once all present have locked (or "Spin anyway"); wrong guessers each draw their own dare (per-card Done), correct = safe, all-correct = "Everyone escaped 🍀"; room-wide tally; host "New round". Server-authoritative secrecy via per-viewer redaction in `build_room_state`. Alembic 0010 (`punishment_predictions` / `punishment_cards` / `punishment_result_segment_id`; legacy `punishment_active_card` left undropped — SQLite rebuild safety). Backend `services/punishment.py` (predict/resolve/draw, one distinct card per loser); host-gated spin + resolve-at-settle; `punishment:predict` / `punishment:done` / `round:reset` events; default spin policy `host_only`. Frontend `features/rooms/punishment.ts`, `components/room/PunishmentPanel.tsx`, store actions (`predictPunishment`, `markPunishmentDone(userId)`, `triggerSpin(force)`); EN+UK i18n. Built subagent-driven (Opus); 221 backend / 109 frontend tests, all gates green. Spec `docs/superpowers/specs/2026-05-30-punishment-prediction-wager-design.md`, plan `docs/superpowers/plans/2026-05-30-punishment-prediction-wager.md`, doc `docs/game-modes.md`. Commits `5c91eab … a4b9104`. Follow-ups in `docs/TODO.md` (drop `punishment_active_card` at Stage G; hard-disconnect doesn't auto-drop a pending prediction — force-start is the escape hatch).
 
 ### Slice 3 — Elimination mode (2026-05-29) — SHIPPED
 First per-mode gameplay (spec §5.2) + the `GameModeEngine` abstraction (`apps/api/src/hoba_api/modes/`: base Protocol, `ClassicEngine`, `EliminationEngine`, registry — unknown/unbuilt modes fall back to Classic). `Segment.eliminated_at` (Alembic 0005) + `SegmentOut.is_eliminated`; engine-driven `trigger_spin` (spins over living segments, dramatic 1.5× at 2 left); eliminate-at-settle + `spin:settled.mode_aftereffects`; `round:reset` host action. Frontend: living-only wheel, winner hero, eliminated greyscale strip, brand-first "Хоба!→out" reveal.
