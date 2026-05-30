@@ -99,7 +99,7 @@
     "fallback": "Щось зламалось."
   },
   "punishment": {
-    "tally": "{count, plural, one {# покарання виконано} few {# покарання виконано} many {# покарань виконано} other {# покарання виконано}}",
+    "my_tally": "{count, plural, one {Ти виконав # покарання} few {Ти виконав # покарання} many {Ти виконав # покарань} other {Ти виконав # покарань}}",
     "done": "Виконую ✓",
     "refuse": "Відмовитись (−1)",
     "approve_prompt": "{name} виконав завдання?",
@@ -116,7 +116,7 @@
     "lucky_you": "Тобі",
     "lucky_tail": "повезло — випало {item} 🍀",
     "must_do": "{name} має виконати: {card}",
-    "winner_title": "{name} переміг! 🏆",
+    "winner_title": "{item} — переможець! 🏆",
     "spin_count_label": "Перемог для виграшу",
     "deck_mild": {
       "label": "Лагідний",

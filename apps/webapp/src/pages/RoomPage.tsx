@@ -36,7 +36,6 @@ import {
   allPresentBet,
   approverUserId,
   bettorIds,
-  doneCount,
   isMyApproval,
   isMyPunishment,
   isPunishment,
@@ -136,7 +135,8 @@ export function RoomPage(): JSX.Element {
   // Punishment view-state (turn-based personal-bet race).
   const isPunish = isPunishment(snapshot);
   const punishPhase = punishmentPhase(snapshot); // "betting" | "playing" | "over"
-  const punishDone = doneCount(snapshot);
+  const myDoneCount =
+    snapshot != null ? perPlayerDoneCount(snapshot, snapshot.me_user_id) : 0;
   const placeBet = useRoomStore((s) => s.placeBet);
   const resolvePunishment = useRoomStore((s) => s.resolvePunishment);
   const approvePunishment = useRoomStore((s) => s.approvePunishment);
@@ -469,7 +469,7 @@ export function RoomPage(): JSX.Element {
         ) : null}
         {isPunish ? (
           <span className="text-sm font-medium text-ink-light-2 dark:text-ink-dark-2">
-            {t("room:punishment.tally", { count: punishDone })}
+            {t("room:punishment.my_tally", { count: myDoneCount })}
           </span>
         ) : null}
         {/* Prominent "whose turn" banner for turn_based rooms — sits high so
@@ -623,7 +623,9 @@ export function RoomPage(): JSX.Element {
             </span>
             <h2 className="font-display font-extrabold text-2xl text-brand-amber-3">
               {t("room:punishment.winner_title", {
-                name: nameFor(punishWinnerId),
+                item: segLabel(
+                  snapshot.room.punishment_bets?.[String(punishWinnerId)] ?? -1,
+                ),
               })}
             </h2>
             {callerIsHost ? (
@@ -723,7 +725,6 @@ export function RoomPage(): JSX.Element {
             </p>
             <div className="flex flex-wrap justify-center gap-2 text-xs">
               {punishBettors.map((uid) => {
-                const done = perPlayerDoneCount(snapshot, uid);
                 const betSeg = snapshot.room.punishment_bets?.[String(uid)];
                 return (
                   <span
@@ -733,7 +734,6 @@ export function RoomPage(): JSX.Element {
                     {nameFor(uid)}
                     {betSeg !== undefined ? ` (${segLabel(betSeg)})` : ""}{" "}
                     {matchCount(snapshot, uid)}/{matchesToWin(snapshot)}
-                    {done > 0 ? ` · ✓${done}` : ""}
                   </span>
                 );
               })}

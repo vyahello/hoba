@@ -99,7 +99,7 @@
     "fallback": "Something went wrong."
   },
   "punishment": {
-    "tally": "{count, plural, one {# punishment done} other {# punishments done}}",
+    "my_tally": "{count, plural, one {You've done # punishment} other {You've done # punishments}}",
     "done": "I'll do it ✓",
     "refuse": "Refuse (−1)",
     "approve_prompt": "Did {name} do it?",
@@ -116,7 +116,7 @@
     "lucky_you": "You",
     "lucky_tail": "got lucky — it landed on {item} 🍀",
     "must_do": "{name} must do: {card}",
-    "winner_title": "{name} wins! 🏆",
+    "winner_title": "{item} wins! 🏆",
     "spin_count_label": "Matches to win",
     "deck_mild": {
       "label": "Mild",
