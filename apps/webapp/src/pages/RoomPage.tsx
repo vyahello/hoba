@@ -550,39 +550,6 @@ export function RoomPage(): JSX.Element {
               </p>
             )}
           </div>
-        ) : punishEscaped ? (
-          // Everyone guessed right — celebratory hero, no cards dealt.
-          <div className="max-w-md mx-auto w-full flex flex-col items-center justify-center text-center py-10 gap-4">
-            <motion.div
-              initial={{ scale: 0.3, opacity: 0, skewX: -18, rotate: -10 }}
-              animate={{ scale: 1, opacity: 1, skewX: -11, rotate: -4 }}
-              transition={{ type: "spring", damping: 9, stiffness: 240 }}
-              className="origin-center"
-            >
-              <HobaWord />
-            </motion.div>
-            <motion.span
-              initial={{ scale: 0.4, rotate: -10, opacity: 0 }}
-              animate={{ scale: 1, rotate: 0, opacity: 1 }}
-              transition={{ delay: 0.15, type: "spring", damping: 12, stiffness: 220 }}
-              className="text-7xl leading-none"
-              aria-hidden
-            >
-              🍀
-            </motion.span>
-            <h2 className="font-display font-extrabold text-3xl text-brand-amber-3">
-              {t("room:punishment.everyone_escaped")}
-            </h2>
-            {callerIsHost ? (
-              <Button variant="primary" size="lg" className="mt-2" onClick={resetRound}>
-                {t("room:punishment.new_round")}
-              </Button>
-            ) : (
-              <p className="text-sm text-ink-light-2 dark:text-ink-dark-2">
-                {t("room:elimination.waiting_new_round")}
-              </p>
-            )}
-          </div>
         ) : (
           <motion.div ref={wheelScope}>
             <Wheel
@@ -597,7 +564,7 @@ export function RoomPage(): JSX.Element {
               // having locked a guess ("Spin anyway" below is the force path).
               onSpinClick={
                 isPunish
-                  ? callerIsHost && punishPredicting && punishAllLocked
+                  ? canStartPunish || canSpinPunish
                     ? () => {
                         triggerSpin();
                       }
@@ -613,22 +580,51 @@ export function RoomPage(): JSX.Element {
           </motion.div>
         )}
 
-        {punishPredicting && activeQuestion !== null ? (
+        {/* Punishment: winner hero (game over). */}
+        {punishOver && punishWinnerId !== null ? (
+          <div className="max-w-md mx-auto w-full flex flex-col items-center justify-center text-center py-6 gap-3">
+            <motion.div
+              initial={{ scale: 0.3, opacity: 0, skewX: -18, rotate: -10 }}
+              animate={{ scale: 1, opacity: 1, skewX: -11, rotate: -4 }}
+              transition={{ type: "spring", damping: 9, stiffness: 240 }}
+              className="origin-center"
+            >
+              <HobaWord />
+            </motion.div>
+            <span className="text-6xl leading-none" aria-hidden>
+              🏆
+            </span>
+            <h2 className="font-display font-extrabold text-2xl text-brand-amber-3">
+              {t("room:punishment.winner_title", {
+                name: nameFor(punishWinnerId),
+              })}
+            </h2>
+            {callerIsHost ? (
+              <Button variant="primary" size="lg" className="mt-2" onClick={resetRound}>
+                {t("room:punishment.new_round")}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {/* Punishment: betting phase — pick your option (public). */}
+        {punishBetting && activeQuestion !== null ? (
           <div className="flex flex-col items-center gap-3">
-            {/* Chip row — one chip per visible segment. Anyone present may
-                lock/change their guess; the chosen chip highlights. */}
+            <p className="text-sm font-semibold text-ink-light-1 dark:text-ink-dark-1">
+              {t("room:punishment.pick_hint")}
+            </p>
             <div className="flex flex-wrap gap-2 justify-center px-2">
               {activeQuestion.segments
                 .filter((s) => !s.is_eliminated)
                 .map((s) => {
-                  const picked = myPunishPrediction === s.id;
+                  const picked = myBetSeg === s.id;
                   return (
                     <button
                       key={s.id}
                       type="button"
                       onClick={() => {
                         haptics.light();
-                        predictPunishment(s.id);
+                        placeBet(s.id);
                       }}
                       aria-pressed={picked}
                       className={`min-h-11 px-4 py-2 rounded-full text-sm font-semibold transition active:scale-[0.97] ${
@@ -643,121 +639,101 @@ export function RoomPage(): JSX.Element {
                   );
                 })}
             </div>
+            {punishBettors.length > 0 ? (
+              <div className="flex flex-col items-center gap-0.5 text-xs text-ink-light-2 dark:text-ink-dark-2">
+                {punishBettors.map((uid) => (
+                  <span key={uid}>
+                    {nameFor(uid)} →{" "}
+                    {segLabel(snapshot.room.punishment_bets?.[String(uid)] ?? -1)}
+                  </span>
+                ))}
+              </div>
+            ) : null}
             <p className="text-sm font-semibold text-ink-light-2 dark:text-ink-dark-2">
-              {t("room:punishment.predicting_status", {
-                locked: punishLocked,
+              {t("room:punishment.bet_status", {
+                bet: punishBettors.length,
                 total: presentUserIds.length,
               })}
             </p>
             {punishWaiting.length > 0 ? (
               <p className="text-xs text-ink-light-2 dark:text-ink-dark-2 text-center px-4">
-                {t("room:punishment.waiting_on", {
+                {t("room:punishment.waiting_bets", {
                   names: punishWaiting.map(nameFor).join(", "),
                 })}
               </p>
-            ) : null}
-            {callerIsHost ? (
-              punishAllLocked ? null : punishLocked > 0 ? (
-                <Button
-                  variant="secondary"
-                  size="md"
-                  onClick={() => {
-                    triggerSpin(true);
-                  }}
-                >
-                  {t("room:punishment.spin_anyway")}
-                </Button>
-              ) : (
-                <p className="text-xs text-ink-light-2 dark:text-ink-dark-2">
-                  {t("room:punishment.spin_when_ready")}
-                </p>
-              )
-            ) : (
+            ) : !canStartPunish && punishStarter !== null ? (
               <p className="text-xs text-ink-light-2 dark:text-ink-dark-2">
-                {t("room:punishment.waiting_for_host")}
+                {t("room:punishment.waiting_start", {
+                  name: nameFor(punishStarter),
+                })}
               </p>
-            )}
+            ) : null}
           </div>
         ) : null}
 
-        {punishResolved && !punishEscaped ? (
-          <div className="flex flex-col gap-2 max-w-md mx-auto w-full">
-            {punishCards.map((c) => (
-              <div
-                key={c.userId}
-                className={`rounded-xl p-4 flex flex-col gap-2 ${
-                  c.done
-                    ? "bg-surface-light-2/60 dark:bg-surface-dark-2/60 opacity-60"
-                    : "bg-gradient-to-br from-brand-primary to-brand-amber-3 text-white shadow-spin"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span
-                    className={`text-xs font-semibold uppercase tracking-wide ${
-                      c.done ? "text-ink-light-2 dark:text-ink-dark-2" : "opacity-85"
-                    }`}
-                  >
-                    {t(`room:punishment.deck_${c.deck}.label`)}
-                  </span>
-                </div>
-                <p
-                  className={`text-base font-display font-bold leading-snug ${
-                    c.done
-                      ? "line-through text-ink-light-1 dark:text-ink-dark-1"
-                      : ""
-                  }`}
-                >
-                  {t("room:punishment.reveal_wrong", {
-                    name: nameFor(c.userId),
-                    card: c.text,
+        {/* Punishment: playing phase — turn, standings, last outcome. */}
+        {punishPlaying ? (
+          <div className="flex flex-col items-center gap-3 max-w-md mx-auto w-full">
+            <p className="text-sm font-semibold text-brand-violet-2">
+              {isMyPunishTurn
+                ? t("room:punishment.your_turn_spin")
+                : t("room:punishment.turn_of", {
+                    name: nameFor(punishCurrentTurn ?? 0),
                   })}
-                </p>
-                {!c.done ? (
-                  <Button
-                    variant="accent"
-                    size="md"
-                    className="self-start"
-                    onClick={() => {
-                      markPunishmentDone(c.userId);
-                    }}
-                  >
-                    {t("room:punishment.done")}
-                  </Button>
-                ) : null}
-              </div>
-            ))}
-            {/* Safe guessers (correct predictions) — quiet reveal. */}
-            {snapshot.room.punishment_predictions !== null
-              ? Object.entries(snapshot.room.punishment_predictions)
-                  .filter(
-                    ([, seg]) =>
-                      seg === snapshot.room.punishment_result_segment_id,
-                  )
-                  .map(([uid]) => (
-                    <p
-                      key={uid}
-                      className="text-sm text-ink-light-2 dark:text-ink-dark-2 px-1"
-                    >
-                      {t("room:punishment.reveal_safe", {
-                        name: nameFor(Number(uid)),
-                      })}
-                    </p>
-                  ))
-              : null}
-            {callerIsHost ? (
-              <Button
-                variant="primary"
-                size="lg"
-                className="mt-2 self-center"
-                onClick={resetRound}
-              >
-                {t("room:punishment.new_round")}
-              </Button>
-            ) : (
-              <p className="text-sm text-ink-light-2 dark:text-ink-dark-2 text-center">
-                {t("room:elimination.waiting_new_round")}
-              </p>
-            )}
+            </p>
+            <div className="flex flex-wrap justify-center gap-2 text-xs">
+              {punishBettors.map((uid) => (
+                <span
+                  key={uid}
+                  className="rounded-full bg-surface-light-2 dark:bg-surface-dark-2 px-2.5 py-1 text-ink-light-1 dark:text-ink-dark-1"
+                >
+                  {nameFor(uid)} {matchCount(snapshot, uid)}/{matchesToWin(snapshot)}
+                </span>
+              ))}
+            </div>
+            {punishOutcome !== null ? (
+              punishOutcome.kind === "lucky" ? (
+                <div className="rounded-xl bg-brand-amber-3/15 px-4 py-3 text-center text-sm font-semibold text-brand-amber-3">
+                  {t("room:punishment.lucky", {
+                    name: nameFor(punishOutcome.spinner_id),
+                    item: segLabel(punishOutcome.result_segment_id),
+                  })}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 rounded-xl bg-gradient-to-br from-brand-primary to-brand-amber-3 p-4 text-center text-white shadow-spin">
+                  <p className="text-base font-display font-bold leading-snug">
+                    {t("room:punishment.must_do", {
+                      name: nameFor(punishOutcome.spinner_id),
+                      card: punishOutcome.card?.text ?? "",
+                    })}
+                  </p>
+                  {mustResolveMyPunish ? (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="accent"
+                        size="md"
+                        onClick={() => {
+                          resolvePunishment(false);
+                        }}
+                      >
+                        {t("room:punishment.done")}
+                      </Button>
+                      {myMatchCount > 0 ? (
+                        <Button
+                          variant="secondary"
+                          size="md"
+                          onClick={() => {
+                            resolvePunishment(true);
+                          }}
+                        >
+                          {t("room:punishment.refuse")}
+                        </Button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              )
+            ) : null}
           </div>
         ) : null}
 

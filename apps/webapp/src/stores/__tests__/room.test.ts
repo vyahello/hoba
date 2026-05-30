@@ -63,43 +63,46 @@ describe("room store reducers", () => {
 });
 
 describe("room store punishment actions", () => {
-  it("predictPunishment emits punishment:predict and sets optimistic my_prediction", () => {
+  it("placeBet emits punishment:bet and sets optimistic public bet", () => {
     fakeSocket.emit.mockClear();
     // Socket is created lazily on joinRoom; this wires the shared fake.
     useRoomStore.getState().joinRoom("ABC123");
     useRoomStore.setState({ snapshot: snap() });
 
-    useRoomStore.getState().predictPunishment(2);
+    useRoomStore.getState().placeBet(2);
 
-    expect(fakeSocket.emit).toHaveBeenCalledWith("punishment:predict", {
+    expect(fakeSocket.emit).toHaveBeenCalledWith("punishment:bet", {
       segment_id: 2,
     });
+    // me_user_id is 1 in the snap fixture.
     expect(
-      useRoomStore.getState().snapshot?.room.punishment_my_prediction,
+      useRoomStore.getState().snapshot?.room.punishment_bets?.["1"],
     ).toBe(2);
   });
 
-  it("predictPunishment is emit-only when there is no snapshot", () => {
+  it("placeBet is emit-only when there is no snapshot", () => {
     fakeSocket.emit.mockClear();
     useRoomStore.getState().joinRoom("ABC123");
     useRoomStore.setState({ snapshot: null });
 
-    useRoomStore.getState().predictPunishment(3);
+    useRoomStore.getState().placeBet(3);
 
-    expect(fakeSocket.emit).toHaveBeenCalledWith("punishment:predict", {
+    expect(fakeSocket.emit).toHaveBeenCalledWith("punishment:bet", {
       segment_id: 3,
     });
     expect(useRoomStore.getState().snapshot).toBeNull();
   });
 
-  it("markPunishmentDone emits punishment:done targeting a user", () => {
+  it("resolvePunishment emits done (no payload) and refuse", () => {
     fakeSocket.emit.mockClear();
     useRoomStore.getState().joinRoom("ABC123");
 
-    useRoomStore.getState().markPunishmentDone(42);
+    useRoomStore.getState().resolvePunishment(false);
+    expect(fakeSocket.emit).toHaveBeenCalledWith("punishment:resolve", {});
 
-    expect(fakeSocket.emit).toHaveBeenCalledWith("punishment:done", {
-      user_id: 42,
+    useRoomStore.getState().resolvePunishment(true);
+    expect(fakeSocket.emit).toHaveBeenCalledWith("punishment:resolve", {
+      refuse: true,
     });
   });
 });

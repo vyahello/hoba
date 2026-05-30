@@ -26,7 +26,8 @@
     "my_turn": "Your turn",
     "waiting_named": "Waiting for {name}",
     "waiting_unnamed": "Waiting for next player",
-    "no_one": "Waiting for someone to join"
+    "no_one": "Waiting for someone to join",
+    "someone": "Someone"
   },
   "mode_picker": {
     "title": "Choose a game mode",
@@ -95,16 +96,17 @@
   "punishment": {
     "tally": "{count, plural, one {# punishment done} other {# punishments done}}",
     "done": "Done ✓",
-    "predicting_status": "🔮 {locked}/{total} locked in",
-    "waiting_on": "Waiting on {names}",
-    "pick_hint": "Tap to predict where it lands",
-    "spin_when_ready": "Waiting for everyone to guess",
-    "waiting_for_host": "Waiting for the host to spin",
-    "spin_anyway": "Spin anyway",
-    "reveal_safe": "{name} — safe ✨",
-    "reveal_wrong": "{name} guessed wrong → {card}",
-    "everyone_escaped": "Everyone escaped! 🍀",
-    "new_round": "New round",
+    "refuse": "Refuse (−1)",
+    "new_round": "New game",
+    "pick_hint": "Pick your option",
+    "bet_status": "{bet}/{total} chose",
+    "waiting_bets": "Waiting on {names}",
+    "waiting_start": "Waiting for {name} to start",
+    "your_turn_spin": "Your turn — spin!",
+    "turn_of": "{name}'s turn",
+    "lucky": "Hoba! {name} got lucky — it landed on {item} 🍀",
+    "must_do": "{name} must do: {card}",
+    "winner_title": "{name} wins! 🏆",
     "deck_mild": {
       "label": "Mild",
       "tagline": "Silly, all-ages dares"

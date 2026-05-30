@@ -15,7 +15,6 @@ import { create } from "zustand";
 
 import { reactionLaneFor } from "@/features/rooms/reactionLanes";
 import {
-  type PunishmentDeck,
   type PunishmentOutcome,
   type RoomState as ServerRoomState,
 } from "@/lib/api";

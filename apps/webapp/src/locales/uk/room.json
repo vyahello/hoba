@@ -26,7 +26,8 @@
     "my_turn": "Ваш хід",
     "waiting_named": "Чекаємо на {name}",
     "waiting_unnamed": "Чекаємо наступного гравця",
-    "no_one": "Чекаємо, поки хтось приєднається"
+    "no_one": "Чекаємо, поки хтось приєднається",
+    "someone": "Хтось"
   },
   "mode_picker": {
     "title": "Виберіть режим",
@@ -95,16 +96,17 @@
   "punishment": {
     "tally": "{count, plural, one {# покарання виконано} few {# покарання виконано} many {# покарань виконано} other {# покарання виконано}}",
     "done": "Готово ✓",
-    "predicting_status": "🔮 Вгадали {locked}/{total}",
-    "waiting_on": "Чекаємо на {names}",
-    "pick_hint": "Тапни, щоб вгадати, де зупиниться",
-    "spin_when_ready": "Чекаємо, поки всі вгадають",
-    "waiting_for_host": "Чекаємо, поки ведучий крутне",
-    "spin_anyway": "Все одно крутити",
-    "reveal_safe": "{name} — пронесло ✨",
-    "reveal_wrong": "{name} не вгадав → {card}",
-    "everyone_escaped": "Усіх пронесло! 🍀",
-    "new_round": "Новий раунд",
+    "refuse": "Відмовитись (−1)",
+    "new_round": "Нова гра",
+    "pick_hint": "Обери свою опцію",
+    "bet_status": "{bet}/{total} обрали",
+    "waiting_bets": "Чекаємо на {names}",
+    "waiting_start": "Чекаємо, поки {name} почне",
+    "your_turn_spin": "Твій хід — крути!",
+    "turn_of": "Хід гравця {name}",
+    "lucky": "Хоба! {name} щасливчик — випало {item} 🍀",
+    "must_do": "{name} має виконати: {card}",
+    "winner_title": "{name} переміг! 🏆",
     "deck_mild": {
       "label": "Лагідний",
       "tagline": "Жартівливі завдання для всіх"
