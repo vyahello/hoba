@@ -38,7 +38,14 @@ from hoba_api.redis_client import (
     rate_limit_take,
 )
 from hoba_api.services.participants import join_room, refresh_presence
-from hoba_api.services.punishment import all_present_locked, resolve_predictions
+from hoba_api.services.punishment import (
+    all_present_locked,
+    drop_prediction,
+    lock_prediction,
+    mark_card_done,
+    reset_round,
+    resolve_predictions,
+)
 from hoba_api.services.room_state import build_room_state
 from hoba_api.services.rooms import RoomServiceError, get_room_by_code
 from hoba_api.services.spins import (
@@ -316,6 +323,27 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                     namespace=NAMESPACE,
                     skip_sid=sid,
                 )
+                # Mirror the room:leave drop-on-leave: a player who
+                # disconnects mid-prediction must leave the required-guess
+                # set so the host's all-locked gate can still resolve.
+                async with SessionLocal() as session:
+                    room = await session.get(Room, room_id)
+                    if (
+                        room is not None
+                        and room.game_mode == "punishment"
+                        and room.punishment_cards is None
+                        and str(user_id) in (room.punishment_predictions or {})
+                    ):
+                        await drop_prediction(session, room, user_id)
+                        locked_ids = sorted(
+                            int(k) for k in (room.punishment_predictions or {})
+                        )
+                        await sio.emit(
+                            "room:updated",
+                            {"patch": {"punishment_locked_user_ids": locked_ids}},
+                            room=room_code,
+                            namespace=NAMESPACE,
+                        )
         log.info("ws.disconnect", sid=sid, user_id=user_id)
 
     @sio.on("room:join", namespace=NAMESPACE)
@@ -385,6 +413,28 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
             namespace=NAMESPACE,
             skip_sid=sid,
         )
+        # Punishment: drop the departing player's prediction while the round
+        # is still predicting so the host's "waiting on" list shrinks. Only
+        # broadcast when the locked set actually changed.
+        if room_id is not None:
+            async with SessionLocal() as session:
+                room = await session.get(Room, room_id)
+                if (
+                    room is not None
+                    and room.game_mode == "punishment"
+                    and room.punishment_cards is None
+                    and str(user_id) in (room.punishment_predictions or {})
+                ):
+                    await drop_prediction(session, room, user_id)
+                    locked_ids = sorted(
+                        int(k) for k in (room.punishment_predictions or {})
+                    )
+                    await sio.emit(
+                        "room:updated",
+                        {"patch": {"punishment_locked_user_ids": locked_ids}},
+                        room=room_code,
+                        namespace=NAMESPACE,
+                    )
         sess.pop("room_id", None)
         sess.pop("room_code", None)
         await sio.save_session(sid, sess, namespace=NAMESPACE)
@@ -561,6 +611,11 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
             if room.host_id != user_id:
                 await sio.emit("error", {"code": "not_host"}, to=sid, namespace=NAMESPACE)
                 return
+            if room.game_mode == "punishment":
+                # Clear the round's prediction/card/result state (tally is
+                # preserved by reset_round). Elimination revival below is a
+                # no-op for punishment since it never eliminates segments.
+                await reset_round(session, room)
             question = (
                 await session.execute(
                     select(Question).where(
@@ -584,8 +639,8 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
         await sio.emit("round:reset", {}, room=room_code, namespace=NAMESPACE)
         log.info("ws.round.reset", user_id=user_id, code=room_code)
 
-    @sio.on("punishment:done", namespace=NAMESPACE)
-    async def on_punishment_done(sid: str) -> None:
+    @sio.on("punishment:predict", namespace=NAMESPACE)
+    async def on_punishment_predict(sid: str, data: dict[str, Any]) -> None:
         sess = await sio.get_session(sid, namespace=NAMESPACE)
         user_id = sess.get("user_id")
         room_code = sess.get("room_code")
@@ -595,25 +650,66 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
             return
         async with SessionLocal() as session:
             room = await session.get(Room, room_id)
-            if room is None or room.punishment_active_card is None:
+            if room is None:
+                await sio.emit(
+                    "error", {"code": "room_not_found"}, to=sid, namespace=NAMESPACE,
+                )
+                return
+            try:
+                await lock_prediction(
+                    session, room, user_id, int((data or {})["segment_id"]),
+                )
+            except RoomServiceError as exc:
+                await sio.emit("error", {"code": exc.code}, to=sid, namespace=NAMESPACE)
+                return
+            locked_ids = sorted(int(k) for k in (room.punishment_predictions or {}))
+        # Broadcast only the locked id set — never the chosen segments while
+        # the round is still predicting (per-viewer secrecy, spec §5).
+        await sio.emit(
+            "room:updated",
+            {"patch": {"punishment_locked_user_ids": locked_ids}},
+            room=room_code,
+            namespace=NAMESPACE,
+        )
+        log.info("ws.punishment.predict", user_id=user_id, code=room_code)
+
+    @sio.on("punishment:done", namespace=NAMESPACE)
+    async def on_punishment_done(sid: str, data: dict[str, Any]) -> None:
+        sess = await sio.get_session(sid, namespace=NAMESPACE)
+        user_id = sess.get("user_id")
+        room_code = sess.get("room_code")
+        room_id = sess.get("room_id")
+        if user_id is None or room_code is None or room_id is None:
+            await sio.emit("error", {"code": "not_in_room"}, to=sid, namespace=NAMESPACE)
+            return
+        target = int((data or {})["user_id"])
+        async with SessionLocal() as session:
+            room = await session.get(Room, room_id)
+            if room is None:
                 return  # nothing pending — no-op
-            room.punishment_done_count += 1
-            room.punishment_active_card = None
+            changed = await mark_card_done(session, room, target)
+            if not changed:
+                return  # no card / already done — silent no-op
+            cards = room.punishment_cards
             done_count = room.punishment_done_count
-            await session.commit()
         await sio.emit(
             "room:updated",
             {
                 "patch": {
-                    "punishment_active_card": None,
+                    "punishment_cards": cards,
                     "punishment_done_count": done_count,
                 },
             },
             room=room_code,
             namespace=NAMESPACE,
         )
-        await sio.emit("punishment:cleared", {}, room=room_code, namespace=NAMESPACE)
-        log.info("ws.punishment.done", user_id=user_id, code=room_code)
+        await sio.emit(
+            "punishment:cleared",
+            {"user_id": target},
+            room=room_code,
+            namespace=NAMESPACE,
+        )
+        log.info("ws.punishment.done", user_id=user_id, target=target, code=room_code)
 
     @sio.on("bon:reset", namespace=NAMESPACE)
     async def on_bon_reset(sid: str) -> None:
