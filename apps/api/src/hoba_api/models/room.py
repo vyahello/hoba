@@ -81,9 +81,24 @@ class Room(Base, TimestampMixin):
     )
     # Pending card, room-shared (survives reconnects, gates spinning):
     # {"text", "deck", "victim_segment_id", "spin_id"} or NULL when none.
+    # Deprecated: superseded by punishment_cards. Intentionally NOT dropped to
+    # avoid a SQLite table-rebuild on the live DB; always NULL going forward.
     punishment_active_card: Mapped[dict[str, object] | None] = mapped_column(
         JSON, nullable=True,
     )
+    # Prediction-wager round state (Punishment v2). See
+    # docs/superpowers/specs/2026-05-30-punishment-prediction-wager-design.md.
+    # Raw map {user_id(str): segment_id}; server-only source of truth, redacted
+    # per viewer in build_room_state.
+    punishment_predictions: Mapped[dict[str, object] | None] = mapped_column(
+        JSON, nullable=True,
+    )
+    # Resolved cards {user_id(str): {text, deck, card_index, done}}; None while
+    # predicting, {} when everyone escaped.
+    punishment_cards: Mapped[dict[str, object] | None] = mapped_column(
+        JSON, nullable=True,
+    )
+    punishment_result_segment_id: Mapped[int | None] = mapped_column(nullable=True)
 
     # Best-of-N (Classic): number of MANUAL spin attempts per round.
     # 1 = single spin (current behavior).
