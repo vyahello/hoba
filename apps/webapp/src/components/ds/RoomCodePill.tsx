@@ -45,7 +45,7 @@ export function RoomCodePill({
         "font-mono font-bold text-2xl tracking-[0.3em] uppercase",
         "px-6 py-3 rounded-lg",
         "bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1",
-        "ring-2 ring-brand-primary/60 animate-code-pulse",
+        "ring-2 ring-brand-primary/60 motion-safe:animate-code-pulse",
         className,
       )}
     >

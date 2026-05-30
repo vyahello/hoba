@@ -24,11 +24,18 @@ export function AuroraBackground({
         className,
       )}
     >
+      {/* Perf (iPhone X / A11, iOS Safari): `will-change-transform` promotes
+          this to its own compositor layer so the (expensive) blur is
+          rasterized ONCE and the drift becomes a transform-only composite —
+          without it Safari re-blurs a full-screen layer every frame, which
+          steals GPU from the spin and causes the "hangs at moments" jank.
+          blur-2xl over blur-3xl halves the raster cost; `motion-safe` drops
+          the animation entirely for reduced-motion users. */}
       <div
         className={cn(
-          "absolute -inset-[20%]",
+          "absolute -inset-[16%] transform-gpu will-change-transform",
           "bg-aurora-light dark:bg-aurora-dark",
-          "blur-3xl opacity-90 animate-aurora-drift",
+          "blur-2xl opacity-90 motion-safe:animate-aurora-drift",
         )}
       />
     </div>

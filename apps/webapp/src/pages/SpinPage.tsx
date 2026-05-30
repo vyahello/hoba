@@ -271,7 +271,7 @@ export function SpinPage(): JSX.Element {
                 setResultRevealed(false);
                 setState("settled");
               }}
-              className="absolute inset-0 z-10 px-4 pt-3 pb-6 flex flex-col items-center justify-center bg-bg-light/85 dark:bg-bg-dark/85 backdrop-blur-sm cursor-pointer"
+              className="absolute inset-0 z-10 px-4 pt-3 pb-6 flex flex-col items-center justify-center bg-bg-light/95 dark:bg-bg-dark/95 cursor-pointer"
               aria-live="polite"
               role="status"
             >

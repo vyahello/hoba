@@ -912,7 +912,7 @@ export function RoomPage(): JSX.Element {
                 onClick={() => {
                   setRevealed(false);
                 }}
-                className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-bg-light/85 dark:bg-bg-dark/85 backdrop-blur-sm cursor-pointer"
+                className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-bg-light/95 dark:bg-bg-dark/95 cursor-pointer"
                 aria-live="polite"
                 role="status"
               >
@@ -942,7 +942,7 @@ export function RoomPage(): JSX.Element {
                 onClick={() => {
                   setRevealed(false);
                 }}
-                className="absolute inset-0 z-30 px-4 pt-3 pb-6 flex flex-col items-center justify-center bg-bg-light/90 dark:bg-bg-dark/90 backdrop-blur-sm cursor-pointer"
+                className="absolute inset-0 z-30 px-4 pt-3 pb-6 flex flex-col items-center justify-center bg-bg-light/95 dark:bg-bg-dark/95 cursor-pointer"
                 aria-live="polite"
                 role="status"
               >
