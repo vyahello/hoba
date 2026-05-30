@@ -32,7 +32,17 @@ import {
   tally as bonTallyMap,
   target as bonTargetCount,
 } from "@/features/rooms/bestOfN";
-import { activeCard, doneCount } from "@/features/rooms/punishment";
+import {
+  allPresentLocked,
+  doneCount,
+  isEveryoneEscaped,
+  isPunishment,
+  lockedUserIds,
+  myPrediction,
+  pendingCards,
+  punishmentPhase,
+  waitingOnUserIds,
+} from "@/features/rooms/punishment";
 import { computeTurnState } from "@/features/rooms/turnState";
 import { Wheel } from "@/features/wheel/Wheel";
 import {
@@ -115,11 +125,37 @@ export function RoomPage(): JSX.Element {
   const roundOver = isElimination && isRoundOver(activeQuestion);
   const survivor = roundOver ? livingSegments(activeQuestion)[0] : undefined;
 
-  // Punishment view-state.
-  const isPunish = snapshot?.room.game_mode === "punishment";
-  const pendingCard = activeCard(snapshot);
+  // Punishment view-state (prediction wager).
+  const isPunish = isPunishment(snapshot);
+  const punishPhase = punishmentPhase(snapshot);
   const punishDone = doneCount(snapshot);
+  const predictPunishment = useRoomStore((s) => s.predictPunishment);
   const markPunishmentDone = useRoomStore((s) => s.markPunishmentDone);
+  // "Present" = everyone currently in the room snapshot. Participant rows are
+  // added on room:participant_joined and removed on _left, so the list mirrors
+  // live presence (the same source the header count + avatars use). The server
+  // is the authority on the all-locked gate; this only drives the UI hint.
+  const presentUserIds = useMemo(
+    () => snapshot?.participants.map((p) => p.user_id) ?? [],
+    [snapshot],
+  );
+  const nameFor = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const p of snapshot?.participants ?? []) {
+      map.set(p.user_id, p.display_name ?? `#${p.user_id}`);
+    }
+    return (id: number): string => map.get(id) ?? `#${id}`;
+  }, [snapshot]);
+  const punishLocked = lockedUserIds(snapshot).length;
+  const punishWaiting = isPunish
+    ? waitingOnUserIds(snapshot, presentUserIds)
+    : [];
+  const punishAllLocked = allPresentLocked(snapshot, presentUserIds);
+  const myPunishPrediction = myPrediction(snapshot);
+  const punishResolved = isPunish && punishPhase === "resolved";
+  const punishPredicting = isPunish && punishPhase === "predicting";
+  const punishCards = pendingCards(snapshot);
+  const punishEscaped = isEveryoneEscaped(snapshot);
 
   // Best-of-N view-state.
   const isBon = isBestOfN(snapshot);
@@ -488,6 +524,39 @@ export function RoomPage(): JSX.Element {
               </p>
             )}
           </div>
+        ) : punishEscaped ? (
+          // Everyone guessed right — celebratory hero, no cards dealt.
+          <div className="max-w-md mx-auto w-full flex flex-col items-center justify-center text-center py-10 gap-4">
+            <motion.div
+              initial={{ scale: 0.3, opacity: 0, skewX: -18, rotate: -10 }}
+              animate={{ scale: 1, opacity: 1, skewX: -11, rotate: -4 }}
+              transition={{ type: "spring", damping: 9, stiffness: 240 }}
+              className="origin-center"
+            >
+              <HobaWord />
+            </motion.div>
+            <motion.span
+              initial={{ scale: 0.4, rotate: -10, opacity: 0 }}
+              animate={{ scale: 1, rotate: 0, opacity: 1 }}
+              transition={{ delay: 0.15, type: "spring", damping: 12, stiffness: 220 }}
+              className="text-7xl leading-none"
+              aria-hidden
+            >
+              🍀
+            </motion.span>
+            <h2 className="font-display font-extrabold text-3xl text-brand-amber-3">
+              {t("room:punishment.everyone_escaped")}
+            </h2>
+            {callerIsHost ? (
+              <Button variant="primary" size="lg" className="mt-2" onClick={resetRound}>
+                {t("room:punishment.new_round")}
+              </Button>
+            ) : (
+              <p className="text-sm text-ink-light-2 dark:text-ink-dark-2">
+                {t("room:elimination.waiting_new_round")}
+              </p>
+            )}
+          </div>
         ) : (
           <motion.div ref={wheelScope}>
             <Wheel
@@ -498,11 +567,173 @@ export function RoomPage(): JSX.Element {
               // Only attach the hub-tap handler when this user is actually
               // allowed to spin (host_only policy) — otherwise the hub
               // would invite a tap that the server then rejects.
-              onSpinClick={canSpin && !pendingCard && !bonOver ? triggerSpin : undefined}
+              // In Punishment the hub is host-only and gated on everyone
+              // having locked a guess ("Spin anyway" below is the force path).
+              onSpinClick={
+                isPunish
+                  ? callerIsHost && punishPredicting && punishAllLocked
+                    ? () => {
+                        triggerSpin();
+                      }
+                    : undefined
+                  : canSpin && !bonOver
+                    ? () => {
+                        triggerSpin();
+                      }
+                    : undefined
+              }
               className="max-w-md mx-auto"
             />
           </motion.div>
         )}
+
+        {punishPredicting && activeQuestion !== null ? (
+          <div className="flex flex-col items-center gap-3">
+            {/* Chip row — one chip per visible segment. Anyone present may
+                lock/change their guess; the chosen chip highlights. */}
+            <div className="flex flex-wrap gap-2 justify-center px-2">
+              {activeQuestion.segments
+                .filter((s) => !s.is_eliminated)
+                .map((s) => {
+                  const picked = myPunishPrediction === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => {
+                        haptics.light();
+                        predictPunishment(s.id);
+                      }}
+                      aria-pressed={picked}
+                      className={`min-h-11 px-4 py-2 rounded-full text-sm font-semibold transition active:scale-[0.97] ${
+                        picked
+                          ? "bg-brand-primary text-white shadow-spin"
+                          : "bg-surface-light-2 text-ink-light-1 dark:bg-surface-dark-2 dark:text-ink-dark-1"
+                      }`}
+                    >
+                      {s.emoji ? `${s.emoji} ` : ""}
+                      {s.label}
+                    </button>
+                  );
+                })}
+            </div>
+            <p className="text-sm font-semibold text-ink-light-2 dark:text-ink-dark-2">
+              {t("room:punishment.predicting_status", {
+                locked: punishLocked,
+                total: presentUserIds.length,
+              })}
+            </p>
+            {punishWaiting.length > 0 ? (
+              <p className="text-xs text-ink-light-2 dark:text-ink-dark-2 text-center px-4">
+                {t("room:punishment.waiting_on", {
+                  names: punishWaiting.map(nameFor).join(", "),
+                })}
+              </p>
+            ) : null}
+            {callerIsHost ? (
+              punishAllLocked ? null : punishLocked > 0 ? (
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={() => {
+                    triggerSpin(true);
+                  }}
+                >
+                  {t("room:punishment.spin_anyway")}
+                </Button>
+              ) : (
+                <p className="text-xs text-ink-light-2 dark:text-ink-dark-2">
+                  {t("room:punishment.spin_when_ready")}
+                </p>
+              )
+            ) : (
+              <p className="text-xs text-ink-light-2 dark:text-ink-dark-2">
+                {t("room:punishment.waiting_for_host")}
+              </p>
+            )}
+          </div>
+        ) : null}
+
+        {punishResolved && !punishEscaped ? (
+          <div className="flex flex-col gap-2 max-w-md mx-auto w-full">
+            {punishCards.map((c) => (
+              <div
+                key={c.userId}
+                className={`rounded-xl p-4 flex flex-col gap-2 ${
+                  c.done
+                    ? "bg-surface-light-2/60 dark:bg-surface-dark-2/60 opacity-60"
+                    : "bg-gradient-to-br from-brand-primary to-brand-amber-3 text-white shadow-spin"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    className={`text-xs font-semibold uppercase tracking-wide ${
+                      c.done ? "text-ink-light-2 dark:text-ink-dark-2" : "opacity-85"
+                    }`}
+                  >
+                    {t(`room:punishment.deck_${c.deck}.label`)}
+                  </span>
+                </div>
+                <p
+                  className={`text-base font-display font-bold leading-snug ${
+                    c.done
+                      ? "line-through text-ink-light-1 dark:text-ink-dark-1"
+                      : ""
+                  }`}
+                >
+                  {t("room:punishment.reveal_wrong", {
+                    name: nameFor(c.userId),
+                    card: c.text,
+                  })}
+                </p>
+                {!c.done ? (
+                  <Button
+                    variant="accent"
+                    size="md"
+                    className="self-start"
+                    onClick={() => {
+                      markPunishmentDone(c.userId);
+                    }}
+                  >
+                    {t("room:punishment.done")}
+                  </Button>
+                ) : null}
+              </div>
+            ))}
+            {/* Safe guessers (correct predictions) — quiet reveal. */}
+            {snapshot.room.punishment_predictions !== null
+              ? Object.entries(snapshot.room.punishment_predictions)
+                  .filter(
+                    ([, seg]) =>
+                      seg === snapshot.room.punishment_result_segment_id,
+                  )
+                  .map(([uid]) => (
+                    <p
+                      key={uid}
+                      className="text-sm text-ink-light-2 dark:text-ink-dark-2 px-1"
+                    >
+                      {t("room:punishment.reveal_safe", {
+                        name: nameFor(Number(uid)),
+                      })}
+                    </p>
+                  ))
+              : null}
+            {callerIsHost ? (
+              <Button
+                variant="primary"
+                size="lg"
+                className="mt-2 self-center"
+                onClick={resetRound}
+              >
+                {t("room:punishment.new_round")}
+              </Button>
+            ) : (
+              <p className="text-sm text-ink-light-2 dark:text-ink-dark-2 text-center">
+                {t("room:elimination.waiting_new_round")}
+              </p>
+            )}
+          </div>
+        ) : null}
 
         {isBon ? (
           <div className="flex flex-col items-center gap-1.5">
@@ -551,14 +782,9 @@ export function RoomPage(): JSX.Element {
               the sole spin control. Only status/turn lines live here. */}
           {/* Classic host_only guests get the "host spins" hint here.
               turn_based "whose turn" now shows as a banner up top. */}
-          {!canSpin && idleish && turnState.kind === "not_turn_based" && !roundOver ? (
+          {!isPunish && !canSpin && idleish && turnState.kind === "not_turn_based" && !roundOver ? (
             <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-3">
               {t("room:spin.host_only_hint")}
-            </p>
-          ) : null}
-          {isPunish && pendingCard ? (
-            <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-2">
-              {t("room:punishment.pending_hint")}
             </p>
           ) : null}
         </div>
@@ -574,50 +800,6 @@ export function RoomPage(): JSX.Element {
             snapshot={snapshot}
           />
         ) : null}
-
-        <AnimatePresence>
-          {isPunish && pendingCard ? (
-            <motion.div
-              key="punish-card"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="absolute inset-0 z-30 px-4 pt-3 pb-6 flex flex-col items-center justify-center gap-5 bg-bg-light/92 dark:bg-bg-dark/92 backdrop-blur-sm"
-              aria-live="polite"
-              role="status"
-            >
-              <motion.div
-                initial={{ scale: 0.6, y: 20, opacity: 0 }}
-                animate={{ scale: 1, y: 0, opacity: 1 }}
-                transition={{ type: "spring", damping: 16, stiffness: 240 }}
-                className="w-full max-w-sm rounded-2xl p-6 shadow-spin bg-gradient-to-br from-brand-primary to-brand-amber-3 text-white"
-              >
-                <p className="text-xs uppercase tracking-widest opacity-85 mb-2">
-                  {t(`room:punishment.deck_${pendingCard.deck}.label`)}
-                </p>
-                {(() => {
-                  const victim = snapshot?.active_question?.segments.find(
-                    (s) => s.id === pendingCard.victim_segment_id,
-                  );
-                  return victim !== undefined ? (
-                    <p className="text-sm font-semibold mb-3">
-                      {t("room:punishment.victim_card", {
-                        victim: `${victim.emoji ? `${victim.emoji} ` : ""}${victim.label}`,
-                      })}
-                    </p>
-                  ) : null;
-                })()}
-                <p className="text-2xl font-display font-extrabold leading-snug">
-                  {pendingCard.text}
-                </p>
-              </motion.div>
-              <Button variant="accent" size="xl" onClick={markPunishmentDone}>
-                {t("room:punishment.done")}
-              </Button>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
 
         <AnimatePresence>
           {revealed && winningSegment !== undefined && !roundOver && !bonOver && !isPunish ? (

@@ -3,10 +3,8 @@ import { describe, expect, it } from "vitest";
 import { type PunishmentCard, type RoomState } from "@/lib/api";
 
 import {
-  activeCard,
   allPresentLocked,
   doneCount,
-  hasPendingCard,
   isEveryoneEscaped,
   isPunishment,
   lockedUserIds,
@@ -55,19 +53,6 @@ describe("punishment helpers", () => {
   it("doneCount reads count, 0 when absent", () => {
     expect(doneCount(makeSnap({ punishment_done_count: 2 }))).toBe(2);
     expect(doneCount(makeSnap({}))).toBe(0);
-  });
-
-  // STOPGAP: activeCard/hasPendingCard are inert until the RoomPage v2
-  // rewrite (plan Task 10). They always report "no pending card".
-  it("activeCard is inert (always null)", () => {
-    expect(activeCard(makeSnap({ punishment_cards: { 2: card() } }))).toBeNull();
-    expect(activeCard(null)).toBeNull();
-  });
-
-  it("hasPendingCard is inert (always false)", () => {
-    expect(hasPendingCard(makeSnap({ punishment_cards: { 2: card() } }))).toBe(
-      false,
-    );
   });
 });
 
