@@ -95,8 +95,6 @@
   "punishment": {
     "tally": "{count, plural, one {# покарання виконано} few {# покарання виконано} many {# покарань виконано} other {# покарання виконано}}",
     "done": "Готово ✓",
-    "victim_card": "🎯 {victim}",
-    "pending_hint": "Виконайте картку, щоб продовжити",
     "predicting_status": "🔮 Вгадали {locked}/{total}",
     "waiting_on": "Чекаємо на {names}",
     "pick_hint": "Тапни, щоб вгадати, де зупиниться",

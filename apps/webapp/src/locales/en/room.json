@@ -95,8 +95,6 @@
   "punishment": {
     "tally": "{count, plural, one {# punishment done} other {# punishments done}}",
     "done": "Done ✓",
-    "victim_card": "🎯 {victim}",
-    "pending_hint": "Resolve the card to keep going",
     "predicting_status": "🔮 {locked}/{total} locked in",
     "waiting_on": "Waiting on {names}",
     "pick_hint": "Tap to predict where it lands",

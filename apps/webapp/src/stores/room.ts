@@ -73,7 +73,11 @@ interface RoomStore {
 
   joinRoom(code: string): void;
   leaveRoom(): void;
-  triggerSpin(): void;
+  /**
+   * Trigger a spin. `force: true` is the host "Spin anyway" path in
+   * Punishment mode — spin before every present player has locked a guess.
+   */
+  triggerSpin(force?: boolean): void;
   sendReaction(emoji: string): void;
   resetSpinState(): void;
   /**
@@ -306,8 +310,8 @@ export const useRoomStore = create<RoomStore>((_set, get) => ({
     });
   },
 
-  triggerSpin(): void {
-    socket?.emit("spin:trigger", {});
+  triggerSpin(force = false): void {
+    socket?.emit("spin:trigger", force ? { force: true } : {});
   },
 
   sendReaction(emoji: string): void {
