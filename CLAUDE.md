@@ -7,10 +7,10 @@ The full product + engineering specification is at **`docs/spec.md`**.
 **You MUST read it before starting any new phase.** Re-read the relevant phase section before each `go on phase N` / `go on stage X` command. If chat instructions ever conflict with `docs/spec.md`, ask which wins.
 
 ## Current phase
-> **Stage D in progress — Elimination + turn-based foundation live on prod; Punishment v2 (prediction wager) committed 2026-05-30, pending owner deploy.**
+> **Stage D in progress — Elimination + turn-based foundation live on prod; Punishment reworked into a turn-based personal-bet race (v3/v4), committed 2026-05-30, pending owner deploy.**
 > Stage C closed 2026-05-28 with owner-override GO on Phase 7+. Stage D has shipped: the turn-based foundation slice, the mode-picker UI slice, a real-device bug-fix pass, and **Elimination mode** (first per-mode gameplay + the `GameModeEngine` abstraction in `apps/api/src/hoba_api/modes/`: base Protocol, `ClassicEngine`, `EliminationEngine`, registry — unknown modes fall back to Classic).
 >
-> **Punishment v2 (prediction wager) committed 2026-05-30 — pending owner deploy + real-device verify.** Players secretly predict the landing segment; host spins (or "Spin anyway"); wrong guessers each draw their own dare; all-correct = "Everyone escaped 🍀". Detail in [`docs/changelog.md`](docs/changelog.md) (Slice 4).
+> **Punishment — turn-based personal-bet race (v3/v4), committed 2026-05-30 — pending owner deploy + real-device verify.** Each present player locks one **unique** bet before the game; players spin **in turn** (host first); your own bet hitting scores a match (first to host-picked **N** = 1/3/5/7 wins; N=1 = first correct guess ends it); any other landing deals the spinner their own dare. Dare → "I'll do it" → a random *other* player approves **Yes/No** (No reopens the card); "Refuse (−1)" only with points. Per-player + room-wide done counters. This **supersedes the v2 prediction-wager** (Slice 4). Detail in [`docs/changelog.md`](docs/changelog.md) (Slice 5) + [`docs/game-modes.md`](docs/game-modes.md).
 >
 > **Next Stage D slice: Chaos mode (spec §5.4)** — a pre-spin event announced to the room (e.g. "Double spin", "Reverse order") before the wheel fires. Each new slice gets its own brainstorming arc only when owner says "next slice".
 >

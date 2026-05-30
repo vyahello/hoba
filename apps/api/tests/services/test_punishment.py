@@ -223,6 +223,32 @@ async def test_done_sets_pending_then_approve_advances(db: AsyncSession) -> None
     assert room.current_turn_user_id != spinner  # advanced after approval
 
 
+async def test_reject_reopens_card_and_holds_turn(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=305, n=3)
+    await punishment.place_bet(db, room, users[0], seg[0])
+    await punishment.place_bet(db, room, users[1], seg[1])
+    await punishment.start_game(db, room)
+    spinner = room.current_turn_user_id
+    assert spinner is not None
+    await punishment.resolve_turn(db, room, spinner, seg[2], "en")  # miss
+    await punishment.resolve_punishment(db, room, spinner, refuse=False)  # Done
+    assert room.punishment_last_outcome is not None
+    approver_id = room.punishment_last_outcome["approver_user_id"]
+
+    ok = await punishment.reject_punishment(db, room, approver_id)
+
+    assert ok is True
+    out = room.punishment_last_outcome
+    assert out["pending_approval"] is False
+    assert out["approver_user_id"] is None
+    assert out["resolved"] is False  # the dare card comes back
+    assert room.punishment_done_count == 0  # not counted as performed
+    assert room.current_turn_user_id == spinner  # turn still blocked
+
+    # A non-approver (or stale call) is a no-op.
+    assert await punishment.reject_punishment(db, room, spinner) is False
+
+
 async def test_refuse_decrements_count(db: AsyncSession) -> None:
     room, seg, users = await _make_room(db, tg_base=310, n=3)
     await punishment.place_bet(db, room, users[0], seg[0])

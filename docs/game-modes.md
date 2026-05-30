@@ -97,33 +97,38 @@ When `mode_aftereffects` is absent (Classic, other modes), clients treat the set
 
 ---
 
-## Punishment (§5.3) — Live (prediction wager)
+## Punishment (§5.3) — Live (turn-based personal-bet race)
 
-A wager game. Each round every present player **secretly predicts** which segment the wheel will land on; the **host** spins; all guesses reveal at once; every player who guessed **wrong** draws their **own** dare card; correct guessers are safe. If everyone guessed right, nobody draws ("Everyone escaped 🍀"). A room-wide **"Punishments done: N"** tally counts resolved cards across the session.
+A turn-based race. Before the game each present player locks **one fixed bet** (a segment); picks must be **unique** (two players can't both bet 🍣). Players then spin **in turn** — the **host always goes first** — and the first to score **N matches** wins. The host picks N (= `1 / 3 / 5 / 7`) in the mode picker; **N = 1** means the first correct guess wins and the game ends immediately.
 
-This replaced the original "winning segment = victim" mechanic, which never mapped to a real person (segments are usually options like 🍕/🍔, not players).
+This is the third Punishment design. It supersedes the v2 "prediction wager" (secret guess + a single host spin) and the original "winning segment = victim" (segments are options like 🍕/🍔, never real people).
 
 ### The loop
 
-1. **Predicting.** Players tap a chip (one per segment) to lock a secret guess. The server stores it and broadcasts only *who* has locked (`punishment_locked_user_ids`) — never the pick. The header shows "🔮 k/N locked · waiting on …".
-2. **Spin gate.** Host-only. The hub SPIN unlocks once every present participant has locked. The host always has a **"Spin anyway"** button (`spin:trigger { force: true }`) to proceed with whoever's in; non-guessers sit out (no dare). A player who **leaves** is auto-dropped from the required set (explicit `room:leave`; a hard disconnect without leave lingers until rejoin/leave or a host force-spin — the force-start is the intended escape hatch).
-3. **Resolve (settle).** All guesses reveal. Losers each draw a **distinct** card (host language, draw-without-replacement within the resolve). `spin:settled.mode_aftereffects` carries `punishment_result_segment_id`, `punishment_predictions`, `punishment_cards`, `everyone_escaped`; a `room:updated` patch persists the resolved state for reconnects.
-4. **Done.** Each loser card has its own **Done ✓** (tappable by anyone) → `punishment:done { user_id }` flips it and increments the tally.
-5. **New round** (host) → `round:reset` clears predictions/cards/result (tally persists).
+1. **Betting (lobby).** Each present player taps a chip to lock a bet. Picks are unique; if there are **more players than segments** a duplicate is allowed (so betting can't deadlock). The game can't start until everyone present has bet.
+2. **Turn.** Only the player whose turn it is may spin — host first, then join order over online bettors, wrapping. `spin:trigger` starts the game on the host's first spin (`start_game` seeds the host as `current_turn_user_id`); a spin out of turn is rejected (`not_your_turn`).
+3. **Resolve spin.**
+   - **Lucky** — the wheel lands on the spinner's own bet → match count +1, turn advances. Reaching N sets the winner.
+   - **Punish** — lands on anything else → the spinner draws their **own** dare card (host language). The turn stays blocked until the dare is resolved.
+4. **Resolve the dare** (the punished player):
+   - **Виконую / I'll do it** → a **random other online player** becomes the approver (never the performer — same rule when the host is performing). The dare card disappears and the approver is asked *"Did {name} do it?"* with **Yes / No**:
+     - **Yes** → per-player + room-wide done counters increment; turn advances.
+     - **No** → the dare card **reappears** for the performer and the turn stays blocked until it's actually approved (`punishment:reject`).
+   - **Відмовитись (−1) / Refuse** → offered only when the player has points; costs −1 match and resolves immediately (no approval). Hidden at 0 points.
+   - Solo / everyone else offline → the dare auto-approves.
+5. **New game** (host) → `reset_game` clears bets / counts / winner / outcome / turn; the cumulative done counters persist.
+
+Standings show each player's `matches/N` plus a `✓done` badge (per-player performed-dare count).
 
 ### Decks
 
-Host picks `mild` / `spicy` / `chaos` in the mode picker. Cards are server-authored content (180 cards: 3 decks × 30 × EN/UK), dealt in the **host's** language, and never sent to the client except the dealt card text (bypasses `t()` like user-entered segment labels).
-
-### Secrecy (server-authoritative)
-
-`build_room_state(room, me_user_id)` redacts per viewer: while **predicting** a client gets only `punishment_locked_user_ids` + its own `punishment_my_prediction`; the full `punishment_predictions` map crosses the wire only when **resolved**.
+Host picks `mild` / `spicy` / `chaos` in the mode picker. Cards are server-authored content (180 cards: 3 decks × 30 × EN/UK), dealt in the **host's** language, and sent to the client only as the dealt card text (bypasses `t()` like user-entered segment labels).
 
 ### Model
 
-Room columns (Alembic 0010): `punishment_predictions` (raw `{uid: seg_id}`), `punishment_cards` (`{uid: {text, deck, card_index, done}}`; `null` predicting, `{}` escaped), `punishment_result_segment_id`, plus the existing `punishment_deck` / `punishment_done_count`. The legacy `punishment_active_card` column is retained but unused (not dropped — SQLite table-rebuild safety). Engine `apps/api/src/hoba_api/modes/punishment.py` stays minimal; predict/resolve/draw is service-level in `apps/api/src/hoba_api/services/punishment.py`. Frontend helpers: `apps/webapp/src/features/rooms/punishment.ts`; UI: `apps/webapp/src/components/room/PunishmentPanel.tsx` + the RoomPage punishment branch.
+Room columns: `punishment_predictions` (`{uid: seg_id}` = the bets), `spin_count` (N = matches to win), `punishment_match_counts` (`{uid: int}`), `punishment_winner_user_id`, `punishment_last_outcome` (`{spinner_id, result_segment_id, kind, card, resolved, pending_approval, approver_user_id}`), `punishment_done_count` (room-wide) + `punishment_done_counts` (`{uid: int}` per-player), `punishment_unique_bets` (always `True` for punishment rooms — no per-room toggle), plus `punishment_deck`. Alembic `0011_punishment_match_race` + `0012_punishment_v4`. Legacy v2 columns (`punishment_cards`, `punishment_result_segment_id`, `punishment_active_card`) are retained but unused (SQLite rebuild safety). Turn / race / approval logic is service-level in `apps/api/src/hoba_api/services/punishment.py`; the `modes/punishment.py` engine stays minimal. WS events: `punishment:bet`, `punishment:resolve {refuse}`, `punishment:approve`, `punishment:reject`, and turn-gated `spin:trigger`. Frontend helpers: `apps/webapp/src/features/rooms/punishment.ts`; the UI is inlined in the RoomPage punishment branch.
 
-**Spin policy default:** `host_only`.
+**Spin policy default:** `turn_based`.
 
 ---
 

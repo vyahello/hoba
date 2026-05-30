@@ -87,6 +87,8 @@ interface RoomStore {
   resolvePunishment(refuse: boolean): void;
   /** The chosen approver confirms the punished player did their dare. */
   approvePunishment(): void;
+  /** The chosen approver rejects the dare — the player must do it again. */
+  rejectPunishment(): void;
   /** Emit bon:reset (host) to start a new best-of-N round. */
   bestOfNReset(): void;
 }
@@ -345,6 +347,10 @@ export const useRoomStore = create<RoomStore>((_set, get) => ({
 
   approvePunishment(): void {
     socket?.emit("punishment:approve", {});
+  },
+
+  rejectPunishment(): void {
+    socket?.emit("punishment:reject", {});
   },
 
   bestOfNReset(): void {

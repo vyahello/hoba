@@ -312,6 +312,34 @@ async def approve_punishment(
     return True
 
 
+async def reject_punishment(
+    session: AsyncSession, room: Room, user_id: int,
+) -> bool:
+    """The chosen approver rejects the dare: the player must perform it again.
+
+    Clears the pending-approval flag so the punished player's card reappears
+    (Done/Refuse) and the turn stays blocked — the game does not advance until
+    the dare is actually approved. Returns False if the caller is not the
+    designated approver or there is no pending approval.
+    """
+    outcome = room.punishment_last_outcome
+    if (
+        outcome is None
+        or outcome.get("kind") != "punish"
+        or outcome.get("resolved")
+        or not outcome.get("pending_approval")
+        or outcome.get("approver_user_id") != user_id
+    ):
+        return False
+
+    reverted = dict(outcome)
+    reverted["pending_approval"] = False
+    reverted["approver_user_id"] = None
+    room.punishment_last_outcome = reverted
+    await session.commit()
+    return True
+
+
 async def reset_game(session: AsyncSession, room: Room) -> None:
     """Start a fresh game: clear bets, counts, winner, outcome, turn cursor.
 

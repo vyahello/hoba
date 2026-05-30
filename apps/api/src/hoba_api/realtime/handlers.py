@@ -43,6 +43,7 @@ from hoba_api.services.punishment import (
     approve_punishment,
     drop_bet,
     place_bet,
+    reject_punishment,
     reset_game,
     resolve_punishment,
     resolve_turn,
@@ -754,6 +755,34 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
             namespace=NAMESPACE,
         )
         log.info("ws.punishment.approve", user_id=user_id, code=room_code)
+
+    @sio.on("punishment:reject", namespace=NAMESPACE)
+    async def on_punishment_reject(sid: str, data: dict[str, Any] | None = None) -> None:
+        sess = await sio.get_session(sid, namespace=NAMESPACE)
+        user_id = sess.get("user_id")
+        room_code = sess.get("room_code")
+        room_id = sess.get("room_id")
+        if user_id is None or room_code is None or room_id is None:
+            await sio.emit("error", {"code": "not_in_room"}, to=sid, namespace=NAMESPACE)
+            return
+        async with SessionLocal() as session:
+            room = await session.get(Room, room_id)
+            if room is None:
+                return
+            changed = await reject_punishment(session, room, user_id)
+            if not changed:
+                await sio.emit(
+                    "error", {"code": "not_approver"}, to=sid, namespace=NAMESPACE,
+                )
+                return
+            patch = {"punishment_last_outcome": room.punishment_last_outcome}
+        await sio.emit(
+            "room:updated",
+            {"patch": patch},
+            room=room_code,
+            namespace=NAMESPACE,
+        )
+        log.info("ws.punishment.reject", user_id=user_id, code=room_code)
 
     @sio.on("bon:reset", namespace=NAMESPACE)
     async def on_bon_reset(sid: str) -> None:

@@ -140,6 +140,7 @@ export function RoomPage(): JSX.Element {
   const placeBet = useRoomStore((s) => s.placeBet);
   const resolvePunishment = useRoomStore((s) => s.resolvePunishment);
   const approvePunishment = useRoomStore((s) => s.approvePunishment);
+  const rejectPunishment = useRoomStore((s) => s.rejectPunishment);
   // "Present" = everyone currently in the room snapshot. Participant rows are
   // added on room:participant_joined and removed on _left, so the list mirrors
   // live presence (the same source the header count + avatars use).
@@ -181,11 +182,11 @@ export function RoomPage(): JSX.Element {
     snapshot != null ? matchCount(snapshot, snapshot.me_user_id) : 0;
   // The starter (first bettor in join order) takes the first spin; the server
   // seeds the turn cursor to them at game start. Everyone else waits.
-  const punishStarter = useMemo(() => {
-    if (!isPunish) return null;
-    const placed = new Set(punishBettors);
-    return presentUserIds.find((u) => placed.has(u)) ?? null;
-  }, [isPunish, presentUserIds, punishBettors]);
+  // The host always takes the first turn (mirrors the server's start_game,
+  // which seeds the host as current_turn). Deriving this from presence order
+  // is wrong — that order differs per client, so each device would think it
+  // is the starter and show an active spin button.
+  const punishStarter = isPunish ? (snapshot?.room.host_id ?? null) : null;
   const canStartPunish =
     punishBetting && punishAllBet && punishStarter === snapshot?.me_user_id;
   const canSpinPunish =
@@ -716,15 +717,26 @@ export function RoomPage(): JSX.Element {
                           name: nameFor(punishPending.spinner_id),
                         })}
                       </p>
-                      <Button
-                        variant="accent"
-                        size="md"
-                        onClick={() => {
-                          approvePunishment();
-                        }}
-                      >
-                        {t("room:punishment.approve")}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="accent"
+                          size="md"
+                          onClick={() => {
+                            approvePunishment();
+                          }}
+                        >
+                          {t("room:punishment.approve_yes")}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="md"
+                          onClick={() => {
+                            rejectPunishment();
+                          }}
+                        >
+                          {t("room:punishment.approve_no")}
+                        </Button>
+                      </div>
                     </>
                   ) : (
                     <p className="text-sm text-ink-light-2 dark:text-ink-dark-2">
