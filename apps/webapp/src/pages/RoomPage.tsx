@@ -164,6 +164,24 @@ export function RoomPage(): JSX.Element {
   };
   const myBetSeg = myBet(snapshot);
   const punishBettors = bettorIds(snapshot);
+  // Segments already locked by OTHER players (for the betting chips): which
+  // are taken and by whom. Picks are unique, so a chip another player holds is
+  // shown as unavailable — unless every segment is taken (more players than
+  // segments), where the server allows a duplicate and we keep them tappable.
+  const punishTakenByOther = new Map<number, number>();
+  if (snapshot != null) {
+    for (const [uidStr, segId] of Object.entries(
+      snapshot.room.punishment_bets ?? {},
+    )) {
+      if (Number(uidStr) !== snapshot.me_user_id) {
+        punishTakenByOther.set(segId, Number(uidStr));
+      }
+    }
+  }
+  const punishFreeExists =
+    activeQuestion?.segments.some(
+      (s) => !s.is_eliminated && !punishTakenByOther.has(s.id),
+    ) ?? false;
   const punishWaiting = isPunish ? waitingOnBetIds(snapshot, presentUserIds) : [];
   const punishAllBet = allPresentBet(snapshot, presentUserIds);
   const punishBetting = isPunish && punishPhase === "betting";
@@ -627,11 +645,17 @@ export function RoomPage(): JSX.Element {
                 .filter((s) => !s.is_eliminated)
                 .map((s) => {
                   const picked = myBetSeg === s.id;
+                  const ownerUid = punishTakenByOther.get(s.id);
+                  // Taken by someone else AND a free option still exists → lock it.
+                  const unavailable =
+                    ownerUid !== undefined && !picked && punishFreeExists;
                   return (
                     <button
                       key={s.id}
                       type="button"
+                      disabled={unavailable}
                       onClick={() => {
+                        if (unavailable) return;
                         haptics.light();
                         placeBet(s.id);
                       }}
@@ -639,11 +663,18 @@ export function RoomPage(): JSX.Element {
                       className={`min-h-11 px-4 py-2 rounded-full text-sm font-semibold transition active:scale-[0.97] ${
                         picked
                           ? "bg-brand-primary text-white shadow-spin"
-                          : "bg-surface-light-2 text-ink-light-1 dark:bg-surface-dark-2 dark:text-ink-dark-1"
+                          : unavailable
+                            ? "bg-surface-light-2 text-ink-light-2 line-through opacity-50 dark:bg-surface-dark-2 dark:text-ink-dark-2"
+                            : "bg-surface-light-2 text-ink-light-1 dark:bg-surface-dark-2 dark:text-ink-dark-1"
                       }`}
                     >
                       {s.emoji ? `${s.emoji} ` : ""}
                       {s.label}
+                      {ownerUid !== undefined ? (
+                        <span className="ml-1 no-underline opacity-80">
+                          · {nameFor(ownerUid)}
+                        </span>
+                      ) : null}
                     </button>
                   );
                 })}
@@ -693,12 +724,14 @@ export function RoomPage(): JSX.Element {
             <div className="flex flex-wrap justify-center gap-2 text-xs">
               {punishBettors.map((uid) => {
                 const done = perPlayerDoneCount(snapshot, uid);
+                const betSeg = snapshot.room.punishment_bets?.[String(uid)];
                 return (
                   <span
                     key={uid}
                     className="rounded-full bg-surface-light-2 dark:bg-surface-dark-2 px-2.5 py-1 text-ink-light-1 dark:text-ink-dark-1"
                   >
-                    {nameFor(uid)}{" "}
+                    {nameFor(uid)}
+                    {betSeg !== undefined ? ` (${segLabel(betSeg)})` : ""}{" "}
                     {matchCount(snapshot, uid)}/{matchesToWin(snapshot)}
                     {done > 0 ? ` · ✓${done}` : ""}
                   </span>

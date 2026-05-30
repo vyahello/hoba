@@ -28,7 +28,10 @@ MAX_SEGMENTS = 12
 
 MODE_DEFAULT_SPIN_POLICY: dict[str, str] = {
     "elimination": "host_only",
-    "punishment": "host_only",
+    # Punishment is a turn-based personal-bet race: the host goes first, then
+    # each player spins on their turn. It MUST be turn_based — host_only would
+    # let `trigger_spin`'s `user_can_spin` reject every non-host on their turn.
+    "punishment": "turn_based",
     "chaos": "anyone",
     "rigged": "host_only",
 }
@@ -38,7 +41,7 @@ def _derive_spin_policy(explicit: str | None, game_mode: str) -> str:
     """Pick the effective spin_policy given an optional explicit value.
 
     Explicit value (anything non-None) wins. Otherwise derive from mode:
-    Elimination → host_only, Punishment → host_only, Chaos → anyone,
+    Elimination → host_only, Punishment → turn_based, Chaos → anyone,
     Rigged → host_only. Anything else (including classic) falls back to
     `anyone` — the party-game social default since 2026-05-26.
     """

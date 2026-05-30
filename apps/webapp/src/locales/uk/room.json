@@ -32,7 +32,7 @@
   "mode_picker": {
     "title": "Виберіть режим",
     "create": "Створити кімнату",
-    "deck_title": "Виберіть колоду"
+    "deck_title": "Рівень завдань"
   },
   "elimination": {
     "remaining": "{count, plural, one {залишився #} few {залишилось #} many {залишилось #} other {залишилось #}}",
@@ -131,7 +131,7 @@
     }
   },
   "spin_count": {
-    "label": "Спінів"
+    "label": "Обертів"
   },
   "best_of_n": {
     "attempt": "Спроба {k}/{n}",

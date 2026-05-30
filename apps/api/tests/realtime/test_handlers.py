@@ -1031,6 +1031,44 @@ async def test_punishment_resolve_done_advances_turn(
 
 
 @pytest.mark.asyncio
+async def test_punishment_guest_can_spin_on_their_turn(
+    sio: FakeSocketIO, db: Any,
+) -> None:
+    # Regression: Punishment defaulted to host_only, so `trigger_spin`'s
+    # `user_can_spin` rejected every non-host with not_allowed_to_spin even
+    # on their own turn. Punishment must be turn_based end-to-end.
+    from hoba_api.services.rooms import get_room_by_code
+
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=5151))
+    await upsert_from_telegram(db, _tg_user_for_handlers(user_id=5152))
+    room = await _create_punishment_room(db, host_id=host.id)
+    code = room.code
+    seg_ids = await _punishment_segment_ids(db, room.id)
+    host_uid = await _connect(sio, "sid-gt-h", user_id=5151)
+    await sio.call("room:join", "sid-gt-h", {"code": code})
+    guest_uid = await _connect(sio, "sid-gt-g", user_id=5152)
+    await sio.call("room:join", "sid-gt-g", {"code": code})
+    refreshed = await get_room_by_code(db, code)
+    assert refreshed is not None
+    assert refreshed.spin_policy == "turn_based"
+    refreshed.punishment_predictions = {
+        str(host_uid): seg_ids[0], str(guest_uid): seg_ids[1],
+    }
+    refreshed.status = "active"
+    refreshed.current_turn_user_id = guest_uid  # the guest's turn
+    await db.commit()
+    sio.emitted.clear()
+
+    await sio.call("spin:trigger", "sid-gt-g", {})
+
+    assert not any(
+        e[1].get("code") in ("not_allowed_to_spin", "not_your_turn")
+        for e in sio.events_named("error")
+    )
+    assert len(sio.events_named("spin:started")) == 1
+
+
+@pytest.mark.asyncio
 async def test_punishment_resolve_refuse_blocked_at_zero(
     sio: FakeSocketIO, db: Any,
 ) -> None:
