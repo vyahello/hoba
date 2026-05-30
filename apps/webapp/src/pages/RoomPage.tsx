@@ -814,11 +814,18 @@ export function RoomPage(): JSX.Element {
                 </div>
               )
             ) : punishOutcome?.kind === "lucky" ? (
-              <div className="rounded-xl bg-brand-amber-3/15 px-4 py-3 text-center text-sm font-semibold text-brand-amber-3">
-                {t("room:punishment.lucky", {
-                  name: nameFor(punishOutcome.spinner_id),
-                  item: segLabel(punishOutcome.result_segment_id),
-                })}
+              <div className="flex flex-col items-center gap-1 rounded-xl bg-brand-amber-3/15 px-4 py-3 text-center">
+                <HobaWord sizeClass="text-4xl" />
+                <p className="text-sm font-semibold text-ink-light-1 dark:text-ink-dark-1">
+                  <span className="font-display font-bold text-brand-violet-2">
+                    {punishOutcome.spinner_id === snapshot.me_user_id
+                      ? t("room:punishment.lucky_you")
+                      : nameFor(punishOutcome.spinner_id)}
+                  </span>{" "}
+                  {t("room:punishment.lucky_tail", {
+                    item: segLabel(punishOutcome.result_segment_id),
+                  })}
+                </p>
               </div>
             ) : null}
           </div>
