@@ -1,30 +1,30 @@
 """Punishment v3 — turn-based personal-bet race.
 
-Design: docs/superpowers/specs/2026-05-30-punishment-prediction-wager-design.md
-(v3 supersedes the v2 prediction-wager described there; see
-docs/game-modes.md for the current mechanic).
-
 Each player picks a fixed BET (a segment) before the game starts. The game
 cannot begin until every present player has bet. Then players spin in turn:
 - the wheel lands on the spinner's bet  -> "lucky": their match count +1, no
   dare, turn advances; first to N (= room.spin_count) wins.
 - the wheel lands on anything else      -> "punish": a dare card is dealt to
-  the spinner; the turn does NOT advance until they resolve it by either
-  performing it ("done") or refusing ("refuse", which costs -1 of their match
-  count; refusal is only allowed when the count is > 0).
+  the spinner; the turn does NOT advance until they resolve it.
 
-Every outcome (lucky or punish) is broadcast to ALL players (anti-cheat).
+Resolution flow for a punish:
+  1. Spinner presses "Done" (refuse=False) → pending_approval=True; a random
+     OTHER present player is chosen as approver; turn stays blocked.
+  2. Approver presses "Approve" → resolved=True; done_count incremented; turn
+     advances.
+  Alternatively: spinner presses "Refuse" (refuse=True) → -1 match count;
+  resolved immediately (no approval step); turn advances.
 
-State lives on the Room row (reused + new columns):
+State lives on the Room row:
 - punishment_predictions {uid(str): segment_id} -> the bets
-- spin_count -> N (matches needed to win)
+- spin_count -> N (matches needed to win; 1 = first lucky spin wins)
 - punishment_match_counts {uid(str): int}
 - punishment_winner_user_id
-- punishment_last_outcome {spinner_id, result_segment_id, kind, card, resolved}
-- punishment_done_count -> cumulative dares actually performed (a fun stat)
-
-JSON columns track identity, not in-place mutation, so every mutation
-reassigns a fresh dict.
+- punishment_last_outcome {spinner_id, result_segment_id, kind, card,
+                            resolved, pending_approval, approver_user_id}
+- punishment_done_count -> cumulative dares approved (global)
+- punishment_done_counts {uid(str): int} -> per-player approved dares
+- punishment_unique_bets -> bool, each player must pick a unique segment
 """
 
 from __future__ import annotations
@@ -70,14 +70,22 @@ async def place_bet(
 ) -> None:
     """Record (or change) `user_id`'s bet. Allowed only before the game starts.
 
-    Raises `game_started` once spinning has begun (room left lobby), and
-    `invalid_segment` if `segment_id` is not on the active question's wheel.
+    Raises `game_started` once spinning has begun, `invalid_segment` if the
+    segment isn't on the wheel, and `segment_taken` when unique-bets mode is
+    on and the segment is held by another player AND a free segment still
+    remains. When every other segment is already taken (more players than
+    segments) the duplicate is allowed so betting can never deadlock.
     """
     if room.status != "lobby" or room.punishment_winner_user_id is not None:
         raise RoomServiceError("game_started")
-    if segment_id not in await _active_segment_ids(session, room):
+    active = await _active_segment_ids(session, room)
+    if segment_id not in active:
         raise RoomServiceError("invalid_segment")
     bets = dict(room.punishment_predictions or {})
+    if room.punishment_unique_bets:
+        taken = {sid for uid, sid in bets.items() if uid != str(user_id)}
+        if segment_id in taken and (active - taken):
+            raise RoomServiceError("segment_taken")
     bets[str(user_id)] = segment_id
     room.punishment_predictions = bets
     await session.commit()
@@ -143,9 +151,14 @@ async def _advance_turn(session: AsyncSession, room: Room) -> int | None:
 
 
 async def start_game(session: AsyncSession, room: Room) -> None:
-    """Seed the turn cursor to the first eligible bettor at game start."""
+    """Seed the turn cursor to host (if they have a bet), else first eligible."""
     if room.current_turn_user_id is None:
-        await _advance_turn(session, room)
+        bets = room.punishment_predictions or {}
+        online = await presence_user_ids(room.id)
+        if str(room.host_id) in bets and room.host_id in online:
+            room.current_turn_user_id = room.host_id
+        else:
+            await _advance_turn(session, room)
 
 
 async def resolve_turn(
@@ -158,13 +171,13 @@ async def resolve_turn(
     """Resolve one spin for the player whose turn it was.
 
     Lucky (bet hit) -> +1 match, advance turn, maybe set winner.
-    Punish (bet missed) -> deal a dare card, DO NOT advance (blocked until the
-    punished player resolves it). Returns the broadcast `last_outcome`.
+    Punish (bet missed) -> deal a dare card, DO NOT advance (blocked until
+    the punished player resolves it). Returns the broadcast `last_outcome`.
     """
     bets = room.punishment_predictions or {}
     counts = dict(room.punishment_match_counts or {})
     bet = bets.get(str(spinner_id))
-    needed = room.spin_count if room.spin_count > 1 else 3
+    needed = room.spin_count
 
     if bet is not None and bet == result_segment_id:
         counts[str(spinner_id)] = counts.get(str(spinner_id), 0) + 1
@@ -175,6 +188,8 @@ async def resolve_turn(
             "kind": "lucky",
             "card": None,
             "resolved": True,
+            "pending_approval": False,
+            "approver_user_id": None,
         }
         if counts[str(spinner_id)] >= needed:
             room.punishment_winner_user_id = spinner_id
@@ -195,6 +210,8 @@ async def resolve_turn(
             "kind": "punish",
             "card": card,
             "resolved": False,
+            "pending_approval": False,
+            "approver_user_id": None,
         }
 
     room.punishment_last_outcome = outcome
@@ -207,9 +224,11 @@ async def resolve_punishment(
 ) -> bool:
     """The punished player performs ("done") or refuses ("refuse") their dare.
 
-    `refuse=True` costs -1 of their match count and is only allowed when the
-    count is > 0. Either way the turn then advances. Returns False (no-op) if
-    there is no pending punishment for this user.
+    `refuse=True` costs -1 match count and resolves immediately (no approval).
+    `refuse=False` (done) sets pending_approval=True and picks a random other
+    present player as the approver — turn stays blocked until they approve.
+
+    Returns False (no-op) if there is no pending punishment for this user.
     """
     outcome = room.punishment_last_outcome
     if (
@@ -226,13 +245,69 @@ async def resolve_punishment(
             raise RoomServiceError("cannot_refuse")
         counts[str(user_id)] = counts[str(user_id)] - 1
         room.punishment_match_counts = counts
+        resolved = dict(outcome)
+        resolved["resolved"] = True
+        resolved["pending_approval"] = False
+        resolved["approver_user_id"] = None
+        room.punishment_last_outcome = resolved
+        await _advance_turn(session, room)
     else:
-        room.punishment_done_count += 1
+        online = await presence_user_ids(room.id)
+        others = [uid for uid in online if uid != user_id]
+        if others:
+            approver_id: int | None = others[secrets.randbelow(len(others))]
+            pending = dict(outcome)
+            pending["pending_approval"] = True
+            pending["approver_user_id"] = approver_id
+            room.punishment_last_outcome = pending
+        else:
+            # Solo / everyone else offline: auto-approve immediately.
+            await _complete_approval(session, room, user_id, outcome)
+    await session.commit()
+    return True
+
+
+async def _complete_approval(
+    session: AsyncSession,
+    room: Room,
+    spinner_id: int,
+    outcome: dict[str, object],
+) -> None:
+    """Shared logic for finalising a dare (used by approve + auto-approve)."""
+    room.punishment_done_count += 1
+    done_counts = dict(room.punishment_done_counts or {})
+    done_counts[str(spinner_id)] = done_counts.get(str(spinner_id), 0) + 1
+    room.punishment_done_counts = done_counts
 
     resolved = dict(outcome)
     resolved["resolved"] = True
+    resolved["pending_approval"] = False
     room.punishment_last_outcome = resolved
+
     await _advance_turn(session, room)
+
+
+async def approve_punishment(
+    session: AsyncSession, room: Room, user_id: int,
+) -> bool:
+    """The chosen approver confirms the punished player performed their dare.
+
+    Returns False if the caller is not the designated approver or there is
+    no pending approval.
+    """
+    outcome = room.punishment_last_outcome
+    if (
+        outcome is None
+        or outcome.get("kind") != "punish"
+        or outcome.get("resolved")
+        or not outcome.get("pending_approval")
+        or outcome.get("approver_user_id") != user_id
+    ):
+        return False
+
+    raw_spinner = outcome["spinner_id"]
+    spinner_id = int(raw_spinner) if isinstance(raw_spinner, (int, str)) else 0
+    await _complete_approval(session, room, spinner_id, outcome)
     await session.commit()
     return True
 
@@ -240,8 +315,9 @@ async def resolve_punishment(
 async def reset_game(session: AsyncSession, room: Room) -> None:
     """Start a fresh game: clear bets, counts, winner, outcome, turn cursor.
 
-    `punishment_done_count` (cumulative dares performed) is preserved as a
-    session-long stat. Room returns to lobby so players can re-bet.
+    `punishment_done_count` and `punishment_done_counts` (cumulative dares
+    performed) are preserved as session-long stats. Room returns to lobby so
+    players can re-bet.
     """
     room.punishment_predictions = None
     room.punishment_match_counts = None

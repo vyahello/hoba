@@ -74,6 +74,10 @@ export interface PunishmentOutcome {
   card: PunishmentCard | null;
   /** False while a `punish` card is pending the spinner's done/refuse. */
   resolved: boolean;
+  /** True after spinner presses "Done" — awaiting approver confirmation. */
+  pending_approval?: boolean;
+  /** The user_id of the randomly-chosen approver (only set when pending_approval). */
+  approver_user_id?: number | null;
 }
 
 export interface ServerSegment {
@@ -127,6 +131,8 @@ export interface ServerRoom {
   current_turn_user_id: number | null;
   punishment_deck: PunishmentDeck | null;
   punishment_done_count: number;
+  punishment_done_counts?: Record<string, number> | null;
+  punishment_unique_bets?: boolean;
   // Punishment v3 (turn-based personal-bet race). All PUBLIC (anti-cheat).
   punishment_bets: Record<string, number> | null;
   punishment_match_counts: Record<string, number> | null;

@@ -79,6 +79,8 @@ class PunishmentOutcomeOut(BaseModel):
     kind: Literal["lucky", "punish"]
     card: PunishmentCardOut | None = None
     resolved: bool
+    pending_approval: bool = False
+    approver_user_id: int | None = None
 
 
 class RoomOut(BaseModel):
@@ -97,6 +99,8 @@ class RoomOut(BaseModel):
     current_turn_user_id: int | None
     punishment_deck: PunishmentDeck | None
     punishment_done_count: int
+    punishment_done_counts: dict[str, int] | None = None
+    punishment_unique_bets: bool = False
     # Punishment v3 (turn-based personal-bet race). Bets are PUBLIC (anti-cheat):
     # everyone sees who bet on what. match_counts, winner, and last_outcome are
     # all shared to every player.

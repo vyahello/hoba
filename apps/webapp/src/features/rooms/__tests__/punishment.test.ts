@@ -90,8 +90,8 @@ describe("punishment v3 helpers", () => {
     expect(matchCount(snap(room), 1)).toBe(2);
     expect(matchCount(snap(room), 9)).toBe(0);
     expect(matchesToWin(snap(room))).toBe(5);
-    // spin_count 1 floors to 3.
-    expect(matchesToWin(snap(makeRoom({ spin_count: 1 })))).toBe(3);
+    // spin_count 1 = first correct guess wins (host may pick 1 attempt).
+    expect(matchesToWin(snap(makeRoom({ spin_count: 1 })))).toBe(1);
   });
 
   it("winnerUserId + doneCount", () => {

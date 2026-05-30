@@ -981,7 +981,7 @@ async def test_punishment_resolve_done_advances_turn(
     from hoba_api.services.rooms import get_room_by_code
 
     host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=5131))
-    guest = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=5132))
+    await upsert_from_telegram(db, _tg_user_for_handlers(user_id=5132))
     room = await _create_punishment_room(db, host_id=host.id)
     code, room_id = room.code, room.id
     seg_ids = await _punishment_segment_ids(db, room_id)
@@ -1009,12 +1009,25 @@ async def test_punishment_resolve_done_advances_turn(
 
     await sio.call("punishment:resolve", "sid-rd-h", {"refuse": False})
 
+    # After "done": pending_approval set, turn still blocked.
     persisted = await get_room_by_code(db, code)
     assert persisted is not None
     await db.refresh(persisted)
-    assert persisted.punishment_done_count == 1
-    assert persisted.punishment_last_outcome["resolved"] is True
-    assert persisted.current_turn_user_id == guest_uid  # advanced
+    assert persisted.punishment_done_count == 0
+    assert persisted.punishment_last_outcome["pending_approval"] is True
+    assert persisted.punishment_last_outcome["resolved"] is False
+    assert persisted.current_turn_user_id == host_uid  # still blocked
+    # Approver approves (guest is the only other online player).
+    assert persisted.punishment_last_outcome["approver_user_id"] == guest_uid
+
+    await sio.call("punishment:approve", "sid-rd-g", {})
+
+    persisted2 = await get_room_by_code(db, code)
+    assert persisted2 is not None
+    await db.refresh(persisted2)
+    assert persisted2.punishment_done_count == 1
+    assert persisted2.punishment_last_outcome["resolved"] is True
+    assert persisted2.current_turn_user_id == guest_uid  # advanced after approval
 
 
 @pytest.mark.asyncio

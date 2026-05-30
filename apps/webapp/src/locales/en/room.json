@@ -84,6 +84,11 @@
     "not_host": "Only the host can do that.",
     "not_allowed_to_spin": "Only the host can spin right now.",
     "predictions_pending": "Everyone needs to lock a guess first.",
+    "bets_pending": "Everyone needs to pick an option first.",
+    "not_your_turn": "It's not your turn yet.",
+    "cannot_refuse": "You need at least one lucky spin to refuse.",
+    "segment_taken": "That option is already taken by another player.",
+    "not_approver": "You're not the approver for this dare.",
     "round_resolved": "This round is over — start a new one.",
     "invalid_segment": "That option isn't on the wheel.",
     "rate_limited": "Slow down a moment.",
@@ -95,8 +100,11 @@
   },
   "punishment": {
     "tally": "{count, plural, one {# punishment done} other {# punishments done}}",
-    "done": "Done ✓",
+    "done": "I'll do it ✓",
     "refuse": "Refuse (−1)",
+    "approve": "Approve ✓",
+    "approve_prompt": "Did {name} do it?",
+    "waiting_approval": "Waiting for {name} to approve…",
     "new_round": "New game",
     "pick_hint": "Pick your option",
     "bet_status": "{bet}/{total} chose",
@@ -107,6 +115,7 @@
     "lucky": "Hoba! {name} got lucky — it landed on {item} 🍀",
     "must_do": "{name} must do: {card}",
     "winner_title": "{name} wins! 🏆",
+    "spin_count_label": "Matches to win",
     "deck_mild": {
       "label": "Mild",
       "tagline": "Silly, all-ages dares"

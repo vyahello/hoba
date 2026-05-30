@@ -6,6 +6,7 @@ import { Sheet } from "@/components/ds/Sheet";
 import {
   DEFAULT_GAME_MODE,
   DEFAULT_PUNISHMENT_DECK,
+  DEFAULT_PUNISHMENT_SPIN_COUNT,
   DEFAULT_SPIN_COUNT,
   PICKABLE_GAME_MODES,
   PUNISHMENT_DECKS,
@@ -38,6 +39,7 @@ export function RoomModePickerSheet({
   const [selected, setSelected] = useState<GameMode>(DEFAULT_GAME_MODE);
   const [deck, setDeck] = useState<PunishmentDeck>(DEFAULT_PUNISHMENT_DECK);
   const [spinCount, setSpinCount] = useState<number>(DEFAULT_SPIN_COUNT);
+  const [punishSpinCount, setPunishSpinCount] = useState<number>(DEFAULT_PUNISHMENT_SPIN_COUNT);
 
   // Reset to Classic + defaults each time the sheet re-opens.
   useEffect(() => {
@@ -45,6 +47,7 @@ export function RoomModePickerSheet({
       setSelected(DEFAULT_GAME_MODE);
       setDeck(DEFAULT_PUNISHMENT_DECK);
       setSpinCount(DEFAULT_SPIN_COUNT);
+      setPunishSpinCount(DEFAULT_PUNISHMENT_SPIN_COUNT);
     }
   }, [open]);
 
@@ -98,37 +101,70 @@ export function RoomModePickerSheet({
       </div>
 
       {selected === "punishment" ? (
-        <div className="mt-3">
-          <p className="text-sm font-medium text-ink-light-2 dark:text-ink-dark-2 mb-2">
-            {t("room:mode_picker.deck_title")}
-          </p>
-          <div className="flex gap-2">
-            {PUNISHMENT_DECKS.map((d) => {
-              const active = d.id === deck;
-              return (
-                <button
-                  key={d.id}
-                  type="button"
-                  disabled={loading}
-                  aria-pressed={active}
-                  onClick={() => {
-                    if (loading) return;
-                    haptics.selection();
-                    setDeck(d.id);
-                  }}
-                  className={`ds-tactile grow min-h-[44px] px-3 py-2 rounded-md text-sm font-semibold ${
-                    active
-                      ? "bg-brand-primary text-white"
-                      : "bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1"
-                  } disabled:opacity-60`}
-                >
-                  <span aria-hidden className="mr-1">{d.emoji}</span>
-                  {t(`room:${d.i18nKey}.label`)}
-                </button>
-              );
-            })}
+        <>
+          <div className="mt-3">
+            <p className="text-sm font-medium text-ink-light-2 dark:text-ink-dark-2 mb-2">
+              {t("room:mode_picker.deck_title")}
+            </p>
+            <div className="flex gap-2">
+              {PUNISHMENT_DECKS.map((d) => {
+                const active = d.id === deck;
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    disabled={loading}
+                    aria-pressed={active}
+                    onClick={() => {
+                      if (loading) return;
+                      haptics.selection();
+                      setDeck(d.id);
+                    }}
+                    className={`ds-tactile grow min-h-[44px] px-3 py-2 rounded-md text-sm font-semibold ${
+                      active
+                        ? "bg-brand-primary text-white"
+                        : "bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1"
+                    } disabled:opacity-60`}
+                  >
+                    <span aria-hidden className="mr-1">{d.emoji}</span>
+                    {t(`room:${d.i18nKey}.label`)}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+
+          <div className="mt-3">
+            <p className="text-sm font-medium text-ink-light-2 dark:text-ink-dark-2 mb-2">
+              {t("room:punishment.spin_count_label")}
+            </p>
+            <div className="flex gap-2">
+              {SPIN_COUNTS.map((n) => {
+                const active = n === punishSpinCount;
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    disabled={loading}
+                    aria-pressed={active}
+                    onClick={() => {
+                      if (loading) return;
+                      haptics.selection();
+                      setPunishSpinCount(n);
+                    }}
+                    className={`ds-tactile grow min-h-[44px] px-3 py-2 rounded-md text-sm font-semibold ${
+                      active
+                        ? "bg-brand-primary text-white"
+                        : "bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1"
+                    } disabled:opacity-60`}
+                  >
+                    {n}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
       ) : null}
 
       {selected === "classic" ? (
@@ -174,7 +210,11 @@ export function RoomModePickerSheet({
             onCreate(
               selected,
               selected === "punishment" ? deck : undefined,
-              selected === "classic" ? spinCount : undefined,
+              selected === "classic"
+                ? spinCount
+                : selected === "punishment"
+                  ? punishSpinCount
+                  : undefined,
             );
           }}
         >

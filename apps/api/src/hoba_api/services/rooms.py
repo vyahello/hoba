@@ -123,6 +123,10 @@ async def create_room(
         punishment_deck=(
             (punishment_deck or "mild") if game_mode == "punishment" else None
         ),
+        # Punishment always requires unique picks (no per-room toggle); the
+        # bet service falls back to allowing duplicates only when there are
+        # more players than segments.
+        punishment_unique_bets=(game_mode == "punishment"),
         spin_count=spin_count,
     )
     session.add(room)

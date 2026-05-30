@@ -115,6 +115,14 @@ class Room(Base, TimestampMixin):
     punishment_last_outcome: Mapped[dict[str, object] | None] = mapped_column(
         JSON, nullable=True,
     )
+    # Per-player count of dares performed (cumulative, not reset per game).
+    punishment_done_counts: Mapped[dict[str, int] | None] = mapped_column(
+        JSON, nullable=True,
+    )
+    # When True, each player must pick a unique segment before the game starts.
+    punishment_unique_bets: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="0",
+    )
 
     # Best-of-N (Classic): number of MANUAL spin attempts per round.
     # 1 = single spin (current behavior).

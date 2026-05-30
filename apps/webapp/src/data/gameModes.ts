@@ -51,3 +51,5 @@ export function shouldShowBadge(mode: GameMode): boolean {
 /** Best-of-N options (odd → fewer ties). Default 1. */
 export const SPIN_COUNTS = [1, 3, 5, 7] as const;
 export const DEFAULT_SPIN_COUNT = 1;
+/** Punishment: matches needed to win. Default 3. */
+export const DEFAULT_PUNISHMENT_SPIN_COUNT = 3;

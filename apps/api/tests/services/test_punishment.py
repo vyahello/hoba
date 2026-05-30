@@ -56,7 +56,12 @@ async def _segment_ids(db: AsyncSession, room: Room) -> list[int]:
 
 
 async def _make_room(
-    db: AsyncSession, *, tg_base: int, players: int = 2, n: int = 3,
+    db: AsyncSession,
+    *,
+    tg_base: int,
+    players: int = 2,
+    n: int = 3,
+    seg_count: int = 4,
 ) -> tuple[Room, list[int], list[int]]:
     """Create a punishment room with `players` joined participants + N matches.
 
@@ -67,7 +72,7 @@ async def _make_room(
         db,
         host_id=host_id,
         question_text="?",
-        segments=_drafts(4),
+        segments=_drafts(seg_count),
         game_mode="punishment",
         punishment_deck="mild",
         spin_count=n,
@@ -189,7 +194,7 @@ async def test_resolve_lucky_to_n_sets_winner(db: AsyncSession) -> None:
 # --- resolve_punishment (done / refuse) -----------------------------------
 
 
-async def test_done_advances_and_counts_dare(db: AsyncSession) -> None:
+async def test_done_sets_pending_then_approve_advances(db: AsyncSession) -> None:
     room, seg, users = await _make_room(db, tg_base=300, n=3)
     await punishment.place_bet(db, room, users[0], seg[0])
     await punishment.place_bet(db, room, users[1], seg[1])
@@ -201,10 +206,21 @@ async def test_done_advances_and_counts_dare(db: AsyncSession) -> None:
     ok = await punishment.resolve_punishment(db, room, spinner, refuse=False)
 
     assert ok is True
-    assert room.punishment_done_count == 1
+    assert room.punishment_done_count == 0  # not approved yet
     assert room.punishment_last_outcome is not None
+    assert room.punishment_last_outcome["pending_approval"] is True
+    assert room.punishment_last_outcome["resolved"] is False
+    approver_id = room.punishment_last_outcome["approver_user_id"]
+    assert approver_id != spinner
+    assert room.current_turn_user_id == spinner  # still blocked
+
+    ok2 = await punishment.approve_punishment(db, room, approver_id)
+
+    assert ok2 is True
+    assert room.punishment_done_count == 1
+    assert room.punishment_done_counts == {str(spinner): 1}
     assert room.punishment_last_outcome["resolved"] is True
-    assert room.current_turn_user_id != spinner  # advanced
+    assert room.current_turn_user_id != spinner  # advanced after approval
 
 
 async def test_refuse_decrements_count(db: AsyncSession) -> None:
@@ -254,6 +270,58 @@ async def test_resolve_punishment_noop_for_non_pending(db: AsyncSession) -> None
     assert ok is False
 
 
+async def test_approve_wrong_user_noop(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=340, n=3)
+    await punishment.place_bet(db, room, users[0], seg[0])
+    await punishment.place_bet(db, room, users[1], seg[1])
+    await punishment.start_game(db, room)
+    spinner = room.current_turn_user_id
+    assert spinner is not None
+    await punishment.resolve_turn(db, room, spinner, seg[2], "en")
+    await punishment.resolve_punishment(db, room, spinner, refuse=False)
+    assert room.punishment_last_outcome is not None
+
+    wrong = spinner  # spinner is not the approver
+    ok = await punishment.approve_punishment(db, room, wrong)
+
+    assert ok is False
+    assert room.punishment_done_count == 0
+
+
+async def test_unique_bets_rejects_duplicate(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=350, n=3)
+    room.punishment_unique_bets = True
+    await db.commit()
+    await punishment.place_bet(db, room, users[0], seg[0])
+
+    with pytest.raises(RoomServiceError) as exc:
+        await punishment.place_bet(db, room, users[1], seg[0])
+    assert exc.value.code == "segment_taken"
+
+
+async def test_unique_bets_allows_same_player_overwrite(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=360, n=3)
+    room.punishment_unique_bets = True
+    await db.commit()
+    await punishment.place_bet(db, room, users[0], seg[0])
+    await punishment.place_bet(db, room, users[0], seg[1])  # re-pick is allowed
+    assert room.punishment_predictions == {str(users[0]): seg[1]}
+
+
+async def test_unique_bets_fallback_when_more_players_than_segments(
+    db: AsyncSession,
+) -> None:
+    # 2 segments, 3 players: once both segments are taken the third player has
+    # no free option, so the duplicate is allowed (betting never deadlocks).
+    room, seg, users = await _make_room(
+        db, tg_base=370, players=3, n=3, seg_count=2,
+    )
+    await punishment.place_bet(db, room, users[0], seg[0])
+    await punishment.place_bet(db, room, users[1], seg[1])
+    await punishment.place_bet(db, room, users[2], seg[0])  # forced duplicate
+    assert room.punishment_predictions[str(users[2])] == seg[0]
+
+
 # --- reset_game -----------------------------------------------------------
 
 
@@ -266,6 +334,8 @@ async def test_reset_game_clears_round_keeps_done_count(db: AsyncSession) -> Non
     assert spinner is not None
     await punishment.resolve_turn(db, room, spinner, seg[2], "en")
     await punishment.resolve_punishment(db, room, spinner, refuse=False)
+    approver_id = room.punishment_last_outcome["approver_user_id"]
+    await punishment.approve_punishment(db, room, approver_id)
     assert room.punishment_done_count == 1
     room.status = "active"
 

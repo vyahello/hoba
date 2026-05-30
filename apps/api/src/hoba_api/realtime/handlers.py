@@ -40,6 +40,7 @@ from hoba_api.redis_client import (
 from hoba_api.services.participants import join_room, refresh_presence
 from hoba_api.services.punishment import (
     all_present_bet,
+    approve_punishment,
     drop_bet,
     place_bet,
     reset_game,
@@ -720,6 +721,39 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
         log.info(
             "ws.punishment.resolve", user_id=user_id, refuse=refuse, code=room_code,
         )
+
+    @sio.on("punishment:approve", namespace=NAMESPACE)
+    async def on_punishment_approve(sid: str, data: dict[str, Any] | None = None) -> None:
+        sess = await sio.get_session(sid, namespace=NAMESPACE)
+        user_id = sess.get("user_id")
+        room_code = sess.get("room_code")
+        room_id = sess.get("room_id")
+        if user_id is None or room_code is None or room_id is None:
+            await sio.emit("error", {"code": "not_in_room"}, to=sid, namespace=NAMESPACE)
+            return
+        async with SessionLocal() as session:
+            room = await session.get(Room, room_id)
+            if room is None:
+                return
+            changed = await approve_punishment(session, room, user_id)
+            if not changed:
+                await sio.emit(
+                    "error", {"code": "not_approver"}, to=sid, namespace=NAMESPACE,
+                )
+                return
+            patch = {
+                "punishment_last_outcome": room.punishment_last_outcome,
+                "punishment_done_count": room.punishment_done_count,
+                "punishment_done_counts": room.punishment_done_counts,
+                "current_turn_user_id": room.current_turn_user_id,
+            }
+        await sio.emit(
+            "room:updated",
+            {"patch": patch},
+            room=room_code,
+            namespace=NAMESPACE,
+        )
+        log.info("ws.punishment.approve", user_id=user_id, code=room_code)
 
     @sio.on("bon:reset", namespace=NAMESPACE)
     async def on_bon_reset(sid: str) -> None:

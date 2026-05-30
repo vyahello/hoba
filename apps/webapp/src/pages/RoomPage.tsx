@@ -34,15 +34,19 @@ import {
 } from "@/features/rooms/bestOfN";
 import {
   allPresentBet,
+  approverUserId,
   bettorIds,
   doneCount,
+  isMyApproval,
   isMyPunishment,
   isPunishment,
   lastOutcome,
   matchCount,
   matchesToWin,
   myBet,
+  pendingApproval,
   pendingPunishment,
+  perPlayerDoneCount,
   punishmentPhase,
   waitingOnBetIds,
   winnerUserId,
@@ -135,6 +139,7 @@ export function RoomPage(): JSX.Element {
   const punishDone = doneCount(snapshot);
   const placeBet = useRoomStore((s) => s.placeBet);
   const resolvePunishment = useRoomStore((s) => s.resolvePunishment);
+  const approvePunishment = useRoomStore((s) => s.approvePunishment);
   // "Present" = everyone currently in the room snapshot. Participant rows are
   // added on room:participant_joined and removed on _left, so the list mirrors
   // live presence (the same source the header count + avatars use).
@@ -168,6 +173,9 @@ export function RoomPage(): JSX.Element {
   const punishOutcome = lastOutcome(snapshot);
   const punishPending = pendingPunishment(snapshot);
   const mustResolveMyPunish = isMyPunishment(snapshot);
+  const punishPendingApproval = pendingApproval(snapshot);
+  const punishApproverUserId = approverUserId(snapshot);
+  const mustApprove = isMyApproval(snapshot);
   const punishWinnerId = winnerUserId(snapshot);
   const myMatchCount =
     snapshot != null ? matchCount(snapshot, snapshot.me_user_id) : 0;
@@ -419,7 +427,7 @@ export function RoomPage(): JSX.Element {
                 void handleShare();
               }}
             />
-            {callerIsHost ? (
+            {callerIsHost && !isPunish ? (
               <IconButton
                 aria-label={t("room:settings.open_aria")}
                 variant="tonal"
@@ -682,29 +690,56 @@ export function RoomPage(): JSX.Element {
                   })}
             </p>
             <div className="flex flex-wrap justify-center gap-2 text-xs">
-              {punishBettors.map((uid) => (
-                <span
-                  key={uid}
-                  className="rounded-full bg-surface-light-2 dark:bg-surface-dark-2 px-2.5 py-1 text-ink-light-1 dark:text-ink-dark-1"
-                >
-                  {nameFor(uid)} {matchCount(snapshot, uid)}/{matchesToWin(snapshot)}
-                </span>
-              ))}
+              {punishBettors.map((uid) => {
+                const done = perPlayerDoneCount(snapshot, uid);
+                return (
+                  <span
+                    key={uid}
+                    className="rounded-full bg-surface-light-2 dark:bg-surface-dark-2 px-2.5 py-1 text-ink-light-1 dark:text-ink-dark-1"
+                  >
+                    {nameFor(uid)}{" "}
+                    {matchCount(snapshot, uid)}/{matchesToWin(snapshot)}
+                    {done > 0 ? ` · ✓${done}` : ""}
+                  </span>
+                );
+              })}
             </div>
-            {punishOutcome !== null ? (
-              punishOutcome.kind === "lucky" ? (
-                <div className="rounded-xl bg-brand-amber-3/15 px-4 py-3 text-center text-sm font-semibold text-brand-amber-3">
-                  {t("room:punishment.lucky", {
-                    name: nameFor(punishOutcome.spinner_id),
-                    item: segLabel(punishOutcome.result_segment_id),
-                  })}
+            {punishPending !== null ? (
+              punishPendingApproval ? (
+                // Dare was performed ("Done"): the dare card is gone; only a
+                // slim approval prompt remains for the chosen approver.
+                <div className="flex flex-col items-center gap-2 rounded-xl bg-surface-light-2 dark:bg-surface-dark-2 px-4 py-3 text-center w-full">
+                  {mustApprove ? (
+                    <>
+                      <p className="text-sm font-semibold text-ink-light-1 dark:text-ink-dark-1">
+                        {t("room:punishment.approve_prompt", {
+                          name: nameFor(punishPending.spinner_id),
+                        })}
+                      </p>
+                      <Button
+                        variant="accent"
+                        size="md"
+                        onClick={() => {
+                          approvePunishment();
+                        }}
+                      >
+                        {t("room:punishment.approve")}
+                      </Button>
+                    </>
+                  ) : (
+                    <p className="text-sm text-ink-light-2 dark:text-ink-dark-2">
+                      {t("room:punishment.waiting_approval", {
+                        name: nameFor(punishApproverUserId ?? 0),
+                      })}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-2 rounded-xl bg-gradient-to-br from-brand-primary to-brand-amber-3 p-4 text-center text-white shadow-spin">
                   <p className="text-base font-display font-bold leading-snug">
                     {t("room:punishment.must_do", {
-                      name: nameFor(punishOutcome.spinner_id),
-                      card: punishOutcome.card?.text ?? "",
+                      name: nameFor(punishPending.spinner_id),
+                      card: punishPending.card?.text ?? "",
                     })}
                   </p>
                   {mustResolveMyPunish ? (
@@ -733,6 +768,13 @@ export function RoomPage(): JSX.Element {
                   ) : null}
                 </div>
               )
+            ) : punishOutcome?.kind === "lucky" ? (
+              <div className="rounded-xl bg-brand-amber-3/15 px-4 py-3 text-center text-sm font-semibold text-brand-amber-3">
+                {t("room:punishment.lucky", {
+                  name: nameFor(punishOutcome.spinner_id),
+                  item: segLabel(punishOutcome.result_segment_id),
+                })}
+              </div>
             ) : null}
           </div>
         ) : null}

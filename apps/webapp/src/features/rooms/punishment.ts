@@ -4,9 +4,14 @@ export function isPunishment(snap: RoomState | null): boolean {
   return snap?.room.game_mode === "punishment";
 }
 
-/** Cumulative dares actually performed this session. */
+/** Cumulative dares actually performed this session (global). */
 export function doneCount(snap: RoomState | null): number {
   return snap?.room.punishment_done_count ?? 0;
+}
+
+/** Dares performed by a specific player. */
+export function perPlayerDoneCount(snap: RoomState | null, userId: number): number {
+  return snap?.room.punishment_done_counts?.[String(userId)] ?? 0;
 }
 
 /**
@@ -49,10 +54,9 @@ export function matchCount(snap: RoomState | null, userId: number): number {
   return matchCounts(snap)[String(userId)] ?? 0;
 }
 
-/** Matches needed to win (host's spin_count; min 3). */
+/** Matches needed to win (host's spin_count). */
 export function matchesToWin(snap: RoomState | null): number {
-  const n = snap?.room.spin_count ?? 3;
-  return n > 1 ? n : 3;
+  return snap?.room.spin_count ?? 3;
 }
 
 export function winnerUserId(snap: RoomState | null): number | null {
@@ -63,7 +67,7 @@ export function lastOutcome(snap: RoomState | null): PunishmentOutcome | null {
   return snap?.room.punishment_last_outcome ?? null;
 }
 
-/** A dare is pending the spinner's done/refuse (blocks the turn). */
+/** A dare is pending (either unresolved or awaiting approval). */
 export function pendingPunishment(
   snap: RoomState | null,
 ): PunishmentOutcome | null {
@@ -71,10 +75,29 @@ export function pendingPunishment(
   return o != null && o.kind === "punish" && !o.resolved ? o : null;
 }
 
-/** True if the current viewer is the one who must resolve a pending dare. */
+/** True if the current viewer needs to press Done/Refuse (not yet pending approval). */
 export function isMyPunishment(snap: RoomState | null): boolean {
   const o = pendingPunishment(snap);
-  return o != null && snap != null && o.spinner_id === snap.me_user_id;
+  if (o == null || snap == null) return false;
+  return o.spinner_id === snap.me_user_id && !(o.pending_approval ?? false);
+}
+
+/** True while the dare is waiting for the approver (dare was "done", not approved yet). */
+export function pendingApproval(snap: RoomState | null): boolean {
+  const o = lastOutcome(snap);
+  return o != null && o.kind === "punish" && !o.resolved && (o.pending_approval ?? false);
+}
+
+/** The user_id designated as approver, or null. */
+export function approverUserId(snap: RoomState | null): number | null {
+  if (!pendingApproval(snap)) return null;
+  return snap?.room.punishment_last_outcome?.approver_user_id ?? null;
+}
+
+/** True if the current viewer is the chosen approver. */
+export function isMyApproval(snap: RoomState | null): boolean {
+  if (snap == null) return false;
+  return approverUserId(snap) === snap.me_user_id;
 }
 
 export function isMyTurn(snap: RoomState | null): boolean {
