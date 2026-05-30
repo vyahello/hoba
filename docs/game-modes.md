@@ -97,9 +97,33 @@ When `mode_aftereffects` is absent (Classic, other modes), clients treat the set
 
 ---
 
-## Punishment (§5.3) — Planned — next slice
+## Punishment (§5.3) — Live (prediction wager)
 
-The winning segment carries a punishment card. The server draws a card from the deck and broadcasts it; all players see the same card. Planned for the next Stage D slice.
+A wager game. Each round every present player **secretly predicts** which segment the wheel will land on; the **host** spins; all guesses reveal at once; every player who guessed **wrong** draws their **own** dare card; correct guessers are safe. If everyone guessed right, nobody draws ("Everyone escaped 🍀"). A room-wide **"Punishments done: N"** tally counts resolved cards across the session.
+
+This replaced the original "winning segment = victim" mechanic, which never mapped to a real person (segments are usually options like 🍕/🍔, not players).
+
+### The loop
+
+1. **Predicting.** Players tap a chip (one per segment) to lock a secret guess. The server stores it and broadcasts only *who* has locked (`punishment_locked_user_ids`) — never the pick. The header shows "🔮 k/N locked · waiting on …".
+2. **Spin gate.** Host-only. The hub SPIN unlocks once every present participant has locked. The host always has a **"Spin anyway"** button (`spin:trigger { force: true }`) to proceed with whoever's in; non-guessers sit out (no dare). A player who **leaves** is auto-dropped from the required set (explicit `room:leave`; a hard disconnect without leave lingers until rejoin/leave or a host force-spin — the force-start is the intended escape hatch).
+3. **Resolve (settle).** All guesses reveal. Losers each draw a **distinct** card (host language, draw-without-replacement within the resolve). `spin:settled.mode_aftereffects` carries `punishment_result_segment_id`, `punishment_predictions`, `punishment_cards`, `everyone_escaped`; a `room:updated` patch persists the resolved state for reconnects.
+4. **Done.** Each loser card has its own **Done ✓** (tappable by anyone) → `punishment:done { user_id }` flips it and increments the tally.
+5. **New round** (host) → `round:reset` clears predictions/cards/result (tally persists).
+
+### Decks
+
+Host picks `mild` / `spicy` / `chaos` in the mode picker. Cards are server-authored content (180 cards: 3 decks × 30 × EN/UK), dealt in the **host's** language, and never sent to the client except the dealt card text (bypasses `t()` like user-entered segment labels).
+
+### Secrecy (server-authoritative)
+
+`build_room_state(room, me_user_id)` redacts per viewer: while **predicting** a client gets only `punishment_locked_user_ids` + its own `punishment_my_prediction`; the full `punishment_predictions` map crosses the wire only when **resolved**.
+
+### Model
+
+Room columns (Alembic 0010): `punishment_predictions` (raw `{uid: seg_id}`), `punishment_cards` (`{uid: {text, deck, card_index, done}}`; `null` predicting, `{}` escaped), `punishment_result_segment_id`, plus the existing `punishment_deck` / `punishment_done_count`. The legacy `punishment_active_card` column is retained but unused (not dropped — SQLite table-rebuild safety). Engine `apps/api/src/hoba_api/modes/punishment.py` stays minimal; predict/resolve/draw is service-level in `apps/api/src/hoba_api/services/punishment.py`. Frontend helpers: `apps/webapp/src/features/rooms/punishment.ts`; UI: `apps/webapp/src/components/room/PunishmentPanel.tsx` + the RoomPage punishment branch.
+
+**Spin policy default:** `host_only`.
 
 ---
 
