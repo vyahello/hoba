@@ -33,15 +33,19 @@ import {
   target as bonTargetCount,
 } from "@/features/rooms/bestOfN";
 import {
-  allPresentLocked,
+  allPresentBet,
+  bettorIds,
   doneCount,
-  isEveryoneEscaped,
+  isMyPunishment,
   isPunishment,
-  lockedUserIds,
-  myPrediction,
-  pendingCards,
+  lastOutcome,
+  matchCount,
+  matchesToWin,
+  myBet,
+  pendingPunishment,
   punishmentPhase,
-  waitingOnUserIds,
+  waitingOnBetIds,
+  winnerUserId,
 } from "@/features/rooms/punishment";
 import { computeTurnState } from "@/features/rooms/turnState";
 import { Wheel } from "@/features/wheel/Wheel";
@@ -125,16 +129,15 @@ export function RoomPage(): JSX.Element {
   const roundOver = isElimination && isRoundOver(activeQuestion);
   const survivor = roundOver ? livingSegments(activeQuestion)[0] : undefined;
 
-  // Punishment view-state (prediction wager).
+  // Punishment view-state (turn-based personal-bet race).
   const isPunish = isPunishment(snapshot);
-  const punishPhase = punishmentPhase(snapshot);
+  const punishPhase = punishmentPhase(snapshot); // "betting" | "playing" | "over"
   const punishDone = doneCount(snapshot);
-  const predictPunishment = useRoomStore((s) => s.predictPunishment);
-  const markPunishmentDone = useRoomStore((s) => s.markPunishmentDone);
+  const placeBet = useRoomStore((s) => s.placeBet);
+  const resolvePunishment = useRoomStore((s) => s.resolvePunishment);
   // "Present" = everyone currently in the room snapshot. Participant rows are
   // added on room:participant_joined and removed on _left, so the list mirrors
-  // live presence (the same source the header count + avatars use). The server
-  // is the authority on the all-locked gate; this only drives the UI hint.
+  // live presence (the same source the header count + avatars use).
   const presentUserIds = useMemo(
     () => snapshot?.participants.map((p) => p.user_id) ?? [],
     [snapshot],
@@ -142,20 +145,43 @@ export function RoomPage(): JSX.Element {
   const nameFor = useMemo(() => {
     const map = new Map<number, string>();
     for (const p of snapshot?.participants ?? []) {
-      map.set(p.user_id, p.display_name ?? `#${p.user_id}`);
+      if (p.display_name != null && p.display_name !== "") {
+        map.set(p.user_id, p.display_name);
+      }
     }
-    return (id: number): string => map.get(id) ?? `#${id}`;
-  }, [snapshot]);
-  const punishLocked = lockedUserIds(snapshot).length;
-  const punishWaiting = isPunish
-    ? waitingOnUserIds(snapshot, presentUserIds)
-    : [];
-  const punishAllLocked = allPresentLocked(snapshot, presentUserIds);
-  const myPunishPrediction = myPrediction(snapshot);
-  const punishResolved = isPunish && punishPhase === "resolved";
-  const punishPredicting = isPunish && punishPhase === "predicting";
-  const punishCards = pendingCards(snapshot);
-  const punishEscaped = isEveryoneEscaped(snapshot);
+    return (id: number): string =>
+      map.get(id) ?? t("room:turn.someone");
+  }, [snapshot, t]);
+  const segLabel = (id: number): string => {
+    const s = activeQuestion?.segments.find((x) => x.id === id);
+    return s ? `${s.emoji ?? ""} ${s.label}`.trim() : "";
+  };
+  const myBetSeg = myBet(snapshot);
+  const punishBettors = bettorIds(snapshot);
+  const punishWaiting = isPunish ? waitingOnBetIds(snapshot, presentUserIds) : [];
+  const punishAllBet = allPresentBet(snapshot, presentUserIds);
+  const punishBetting = isPunish && punishPhase === "betting";
+  const punishPlaying = isPunish && punishPhase === "playing";
+  const punishOver = isPunish && punishPhase === "over";
+  const punishCurrentTurn = snapshot?.room.current_turn_user_id ?? null;
+  const isMyPunishTurn = isPunish && punishCurrentTurn === snapshot?.me_user_id;
+  const punishOutcome = lastOutcome(snapshot);
+  const punishPending = pendingPunishment(snapshot);
+  const mustResolveMyPunish = isMyPunishment(snapshot);
+  const punishWinnerId = winnerUserId(snapshot);
+  const myMatchCount =
+    snapshot != null ? matchCount(snapshot, snapshot.me_user_id) : 0;
+  // The starter (first bettor in join order) takes the first spin; the server
+  // seeds the turn cursor to them at game start. Everyone else waits.
+  const punishStarter = useMemo(() => {
+    if (!isPunish) return null;
+    const placed = new Set(punishBettors);
+    return presentUserIds.find((u) => placed.has(u)) ?? null;
+  }, [isPunish, presentUserIds, punishBettors]);
+  const canStartPunish =
+    punishBetting && punishAllBet && punishStarter === snapshot?.me_user_id;
+  const canSpinPunish =
+    punishPlaying && isMyPunishTurn && punishPending === null;
 
   // Best-of-N view-state.
   const isBon = isBestOfN(snapshot);

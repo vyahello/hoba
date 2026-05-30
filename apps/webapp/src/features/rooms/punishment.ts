@@ -1,63 +1,100 @@
-import { type PunishmentCard, type RoomState } from "@/lib/api";
+import { type PunishmentOutcome, type RoomState } from "@/lib/api";
 
 export function isPunishment(snap: RoomState | null): boolean {
   return snap?.room.game_mode === "punishment";
 }
 
+/** Cumulative dares actually performed this session. */
 export function doneCount(snap: RoomState | null): number {
   return snap?.room.punishment_done_count ?? 0;
 }
 
+/**
+ * Phase of the punishment game:
+ * - "betting": still in lobby, players choose their option.
+ * - "playing": game underway (spins in turn).
+ * - "over": someone reached N matches.
+ */
 export function punishmentPhase(
   snap: RoomState | null,
-): "predicting" | "resolved" {
-  return (snap?.room.punishment_cards ?? null) === null
-    ? "predicting"
-    : "resolved";
+): "betting" | "playing" | "over" {
+  if (snap?.room.punishment_winner_user_id != null) return "over";
+  return snap?.room.status === "lobby" ? "betting" : "playing";
 }
 
-export function lockedUserIds(snap: RoomState | null): number[] {
-  return snap?.room.punishment_locked_user_ids ?? [];
+/** Each player's bet, `{ userId: segmentId }`. */
+export function bets(snap: RoomState | null): Record<string, number> {
+  return snap?.room.punishment_bets ?? {};
 }
 
-export function myPrediction(snap: RoomState | null): number | null {
-  return snap?.room.punishment_my_prediction ?? null;
+/** The current viewer's own bet, or null. */
+export function myBet(snap: RoomState | null): number | null {
+  if (snap == null) return null;
+  return snap.room.punishment_bets?.[String(snap.me_user_id)] ?? null;
 }
 
-export function pendingCards(
+/** User ids that have placed a bet (sorted). */
+export function bettorIds(snap: RoomState | null): number[] {
+  return Object.keys(bets(snap))
+    .map(Number)
+    .sort((a, b) => a - b);
+}
+
+/** Matches each player has scored, `{ userId: count }`. */
+export function matchCounts(snap: RoomState | null): Record<string, number> {
+  return snap?.room.punishment_match_counts ?? {};
+}
+
+export function matchCount(snap: RoomState | null, userId: number): number {
+  return matchCounts(snap)[String(userId)] ?? 0;
+}
+
+/** Matches needed to win (host's spin_count; min 3). */
+export function matchesToWin(snap: RoomState | null): number {
+  const n = snap?.room.spin_count ?? 3;
+  return n > 1 ? n : 3;
+}
+
+export function winnerUserId(snap: RoomState | null): number | null {
+  return snap?.room.punishment_winner_user_id ?? null;
+}
+
+export function lastOutcome(snap: RoomState | null): PunishmentOutcome | null {
+  return snap?.room.punishment_last_outcome ?? null;
+}
+
+/** A dare is pending the spinner's done/refuse (blocks the turn). */
+export function pendingPunishment(
   snap: RoomState | null,
-): Array<{ userId: number } & PunishmentCard> {
-  const cards = snap?.room.punishment_cards ?? null;
-  if (cards === null) return [];
-  return Object.entries(cards).map(([uid, card]) => ({
-    userId: Number(uid),
-    ...card,
-  }));
+): PunishmentOutcome | null {
+  const o = lastOutcome(snap);
+  return o != null && o.kind === "punish" && !o.resolved ? o : null;
 }
 
-export function isEveryoneEscaped(snap: RoomState | null): boolean {
-  const cards = snap?.room.punishment_cards ?? null;
-  const preds = snap?.room.punishment_predictions ?? null;
-  return (
-    cards !== null &&
-    Object.keys(cards).length === 0 &&
-    preds !== null &&
-    Object.keys(preds).length > 0
-  );
+/** True if the current viewer is the one who must resolve a pending dare. */
+export function isMyPunishment(snap: RoomState | null): boolean {
+  const o = pendingPunishment(snap);
+  return o != null && snap != null && o.spinner_id === snap.me_user_id;
 }
 
-export function allPresentLocked(
+export function isMyTurn(snap: RoomState | null): boolean {
+  return snap != null && snap.room.current_turn_user_id === snap.me_user_id;
+}
+
+/** Whether every present player has placed a bet (host may then start). */
+export function allPresentBet(
   snap: RoomState | null,
   present: number[],
 ): boolean {
-  const locked = new Set(lockedUserIds(snap));
-  return present.length > 0 && present.every((u) => locked.has(u));
+  const placed = new Set(bettorIds(snap));
+  return present.length > 0 && present.every((u) => placed.has(u));
 }
 
-export function waitingOnUserIds(
+/** Present user ids that have not yet placed a bet. */
+export function waitingOnBetIds(
   snap: RoomState | null,
   present: number[],
 ): number[] {
-  const locked = new Set(lockedUserIds(snap));
-  return present.filter((u) => !locked.has(u));
+  const placed = new Set(bettorIds(snap));
+  return present.filter((u) => !placed.has(u));
 }

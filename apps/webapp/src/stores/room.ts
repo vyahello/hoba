@@ -15,8 +15,8 @@ import { create } from "zustand";
 
 import { reactionLaneFor } from "@/features/rooms/reactionLanes";
 import {
-  type PunishmentCard,
   type PunishmentDeck,
+  type PunishmentOutcome,
   type RoomState as ServerRoomState,
 } from "@/lib/api";
 
@@ -42,13 +42,7 @@ export interface SpinSettledEvent {
     remaining?: number;
     round_over?: boolean;
     survivor_segment_id?: number | null;
-    punishment_card?: string;
-    deck?: PunishmentDeck;
-    victim_segment_id?: number;
-    punishment_result_segment_id?: number;
-    punishment_predictions?: Record<string, number>;
-    punishment_cards?: Record<string, PunishmentCard>;
-    everyone_escaped?: boolean;
+    punishment_outcome?: PunishmentOutcome;
   };
 }
 
@@ -88,10 +82,10 @@ interface RoomStore {
   setSnapshot(state: ServerRoomState): void;
   /** Emit round:reset to the server (host-only, Elimination mode). */
   resetRound(): void;
-  /** Emit punishment:predict to lock the viewer's guess for this round. */
-  predictPunishment(segmentId: number): void;
-  /** Emit punishment:done for a specific user's card (any participant). */
-  markPunishmentDone(userId: number): void;
+  /** Place (or change) this player's bet before the game starts. */
+  placeBet(segmentId: number): void;
+  /** The punished player performs (refuse=false) or refuses (refuse=true, -1). */
+  resolvePunishment(refuse: boolean): void;
   /** Emit bon:reset (host) to start a new best-of-N round. */
   bestOfNReset(): void;
 }
@@ -331,22 +325,21 @@ export const useRoomStore = create<RoomStore>((_set, get) => ({
     socket?.emit("round:reset");
   },
 
-  predictPunishment(segmentId: number): void {
-    socket?.emit("punishment:predict", { segment_id: segmentId });
-    // Optimistic local highlight; reconciled by the next server snapshot/patch.
+  placeBet(segmentId: number): void {
+    socket?.emit("punishment:bet", { segment_id: segmentId });
+    // Optimistic: show my bet immediately; reconciled by the next snapshot.
     const snap = useRoomStore.getState().snapshot;
     if (snap !== null) {
+      const bets = { ...(snap.room.punishment_bets ?? {}) };
+      bets[String(snap.me_user_id)] = segmentId;
       useRoomStore.setState({
-        snapshot: {
-          ...snap,
-          room: { ...snap.room, punishment_my_prediction: segmentId },
-        },
+        snapshot: { ...snap, room: { ...snap.room, punishment_bets: bets } },
       });
     }
   },
 
-  markPunishmentDone(userId: number): void {
-    socket?.emit("punishment:done", { user_id: userId });
+  resolvePunishment(refuse: boolean): void {
+    socket?.emit("punishment:resolve", refuse ? { refuse: true } : {});
   },
 
   bestOfNReset(): void {

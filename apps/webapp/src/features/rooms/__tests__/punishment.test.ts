@@ -1,237 +1,163 @@
 import { describe, expect, it } from "vitest";
 
-import { type PunishmentCard, type RoomState } from "@/lib/api";
-
+import { type RoomState, type ServerRoom } from "@/lib/api";
 import {
-  allPresentLocked,
+  allPresentBet,
+  bettorIds,
   doneCount,
-  isEveryoneEscaped,
+  isMyPunishment,
   isPunishment,
-  lockedUserIds,
-  myPrediction,
-  pendingCards,
+  lastOutcome,
+  matchCount,
+  matchesToWin,
+  myBet,
+  pendingPunishment,
   punishmentPhase,
-  waitingOnUserIds,
+  waitingOnBetIds,
+  winnerUserId,
 } from "../punishment";
 
-function makeSnap(over: Partial<RoomState["room"]>): RoomState {
-  const room = {
-    code: "ABCDE",
+function makeRoom(overrides: Partial<ServerRoom> = {}): ServerRoom {
+  return {
+    id: 1,
+    code: "ABC123",
+    host_id: 10,
+    title: null,
+    status: "active",
     game_mode: "punishment",
-    ...over,
-  } as unknown as RoomState["room"];
-  return {
-    room,
-    participants: [],
-    me_user_id: 1,
-  } as unknown as RoomState;
-}
-
-function card(over: Partial<PunishmentCard> = {}): PunishmentCard {
-  return {
-    text: "Do a dance",
-    deck: "mild",
-    card_index: 3,
-    done: false,
-    ...over,
+    spin_policy: "turn_based",
+    suggestion_policy: "off",
+    is_locked: false,
+    is_anonymous: false,
+    current_turn_user_id: null,
+    punishment_deck: "mild",
+    punishment_done_count: 0,
+    punishment_bets: null,
+    punishment_match_counts: null,
+    punishment_winner_user_id: null,
+    punishment_last_outcome: null,
+    spin_count: 3,
+    bon_attempts: 0,
+    bon_tally: null,
+    bon_winner_segment_id: null,
+    created_at: "2026-01-01T00:00:00Z",
+    closed_at: null,
+    ...overrides,
   };
 }
 
-describe("punishment helpers", () => {
-  it("isPunishment true for punishment mode", () => {
-    expect(isPunishment(makeSnap({ game_mode: "punishment" }))).toBe(true);
+function snap(room: ServerRoom, meUserId = 10): RoomState {
+  return {
+    room,
+    participants: [],
+    active_question: null,
+    last_spin: null,
+    me_user_id: meUserId,
+  };
+}
+
+describe("punishment v3 helpers", () => {
+  it("isPunishment true only for punishment mode", () => {
+    expect(isPunishment(snap(makeRoom()))).toBe(true);
+    expect(isPunishment(snap(makeRoom({ game_mode: "classic" })))).toBe(false);
   });
 
-  it("isPunishment false for other modes", () => {
-    expect(isPunishment(makeSnap({ game_mode: "classic" }))).toBe(false);
-  });
-
-  it("isPunishment false for null snapshot", () => {
-    expect(isPunishment(null)).toBe(false);
-  });
-
-  it("doneCount reads count, 0 when absent", () => {
-    expect(doneCount(makeSnap({ punishment_done_count: 2 }))).toBe(2);
-    expect(doneCount(makeSnap({}))).toBe(0);
-  });
-});
-
-describe("punishmentPhase", () => {
-  it("predicting when cards null", () => {
-    expect(punishmentPhase(makeSnap({ punishment_cards: null }))).toBe(
-      "predicting",
-    );
-  });
-
-  it("predicting when cards field absent", () => {
-    expect(punishmentPhase(makeSnap({}))).toBe("predicting");
-  });
-
-  it("predicting for null snapshot", () => {
-    expect(punishmentPhase(null)).toBe("predicting");
-  });
-
-  it("resolved when cards has losers", () => {
+  it("punishmentPhase: betting in lobby, playing when active, over with winner", () => {
+    expect(punishmentPhase(snap(makeRoom({ status: "lobby" })))).toBe("betting");
+    expect(punishmentPhase(snap(makeRoom({ status: "active" })))).toBe("playing");
     expect(
-      punishmentPhase(makeSnap({ punishment_cards: { 2: card() } })),
-    ).toBe("resolved");
+      punishmentPhase(snap(makeRoom({ punishment_winner_user_id: 7 }))),
+    ).toBe("over");
   });
 
-  it("resolved when everyone escaped (cards is empty object)", () => {
-    expect(punishmentPhase(makeSnap({ punishment_cards: {} }))).toBe(
-      "resolved",
-    );
-  });
-});
-
-describe("lockedUserIds", () => {
-  it("returns the locked ids", () => {
-    expect(
-      lockedUserIds(makeSnap({ punishment_locked_user_ids: [2, 5] })),
-    ).toEqual([2, 5]);
+  it("myBet returns the viewer's own bet", () => {
+    const room = makeRoom({ punishment_bets: { "10": 5, "11": 6 } });
+    expect(myBet(snap(room, 10))).toBe(5);
+    expect(myBet(snap(room, 11))).toBe(6);
+    expect(myBet(snap(makeRoom()))).toBeNull();
   });
 
-  it("empty when absent", () => {
-    expect(lockedUserIds(makeSnap({}))).toEqual([]);
+  it("bettorIds returns sorted bettor ids", () => {
+    const room = makeRoom({ punishment_bets: { "2": 1, "1": 3 } });
+    expect(bettorIds(snap(room))).toEqual([1, 2]);
   });
 
-  it("empty for null snapshot", () => {
-    expect(lockedUserIds(null)).toEqual([]);
-  });
-});
-
-describe("myPrediction", () => {
-  it("returns the viewer's pick", () => {
-    expect(myPrediction(makeSnap({ punishment_my_prediction: 9 }))).toBe(9);
-  });
-
-  it("null when absent", () => {
-    expect(myPrediction(makeSnap({}))).toBeNull();
+  it("matchCount + matchesToWin", () => {
+    const room = makeRoom({
+      punishment_match_counts: { "1": 2 },
+      spin_count: 5,
+    });
+    expect(matchCount(snap(room), 1)).toBe(2);
+    expect(matchCount(snap(room), 9)).toBe(0);
+    expect(matchesToWin(snap(room))).toBe(5);
+    // spin_count 1 floors to 3.
+    expect(matchesToWin(snap(makeRoom({ spin_count: 1 })))).toBe(3);
   });
 
-  it("null for null snapshot", () => {
-    expect(myPrediction(null)).toBeNull();
-  });
-});
-
-describe("pendingCards", () => {
-  it("empty while predicting (cards null)", () => {
-    expect(pendingCards(makeSnap({ punishment_cards: null }))).toEqual([]);
+  it("winnerUserId + doneCount", () => {
+    expect(winnerUserId(snap(makeRoom({ punishment_winner_user_id: 7 })))).toBe(7);
+    expect(doneCount(snap(makeRoom({ punishment_done_count: 4 })))).toBe(4);
   });
 
-  it("empty for null snapshot", () => {
-    expect(pendingCards(null)).toEqual([]);
+  it("lastOutcome + pendingPunishment", () => {
+    const lucky = makeRoom({
+      punishment_last_outcome: {
+        spinner_id: 1,
+        result_segment_id: 5,
+        kind: "lucky",
+        card: null,
+        resolved: true,
+      },
+    });
+    expect(lastOutcome(snap(lucky))?.kind).toBe("lucky");
+    expect(pendingPunishment(snap(lucky))).toBeNull(); // lucky never pends
+
+    const punish = makeRoom({
+      punishment_last_outcome: {
+        spinner_id: 2,
+        result_segment_id: 5,
+        kind: "punish",
+        card: { text: "dare", deck: "mild", card_index: 0 },
+        resolved: false,
+      },
+    });
+    expect(pendingPunishment(snap(punish))?.card?.text).toBe("dare");
+    // Resolved punish no longer pends.
+    const resolved = makeRoom({
+      punishment_last_outcome: {
+        spinner_id: 2,
+        result_segment_id: 5,
+        kind: "punish",
+        card: { text: "dare", deck: "mild", card_index: 0 },
+        resolved: true,
+      },
+    });
+    expect(pendingPunishment(snap(resolved))).toBeNull();
   });
 
-  it("empty when everyone escaped (cards {})", () => {
-    expect(pendingCards(makeSnap({ punishment_cards: {} }))).toEqual([]);
+  it("isMyPunishment true only for the spinner with a pending dare", () => {
+    const room = makeRoom({
+      punishment_last_outcome: {
+        spinner_id: 2,
+        result_segment_id: 5,
+        kind: "punish",
+        card: { text: "dare", deck: "mild", card_index: 0 },
+        resolved: false,
+      },
+    });
+    expect(isMyPunishment(snap(room, 2))).toBe(true);
+    expect(isMyPunishment(snap(room, 3))).toBe(false);
   });
 
-  it("maps loser entries to {userId, ...card} with numeric ids", () => {
-    const result = pendingCards(
-      makeSnap({
-        punishment_cards: {
-          2: card({ text: "Sing", card_index: 1 }),
-          7: card({ text: "Hop", card_index: 2, done: true }),
-        },
-      }),
-    );
-    expect(result).toEqual([
-      { userId: 2, text: "Sing", deck: "mild", card_index: 1, done: false },
-      { userId: 7, text: "Hop", deck: "mild", card_index: 2, done: true },
-    ]);
-  });
-});
-
-describe("isEveryoneEscaped", () => {
-  it("true when a real round resolved with no losers", () => {
-    expect(
-      isEveryoneEscaped(
-        makeSnap({
-          punishment_cards: {},
-          punishment_predictions: { 1: 3, 2: 3 },
-        }),
-      ),
-    ).toBe(true);
+  it("allPresentBet true when every present id bet", () => {
+    const room = makeRoom({ punishment_bets: { "1": 3, "2": 4 } });
+    expect(allPresentBet(snap(room), [1, 2])).toBe(true);
+    expect(allPresentBet(snap(room), [1, 2, 3])).toBe(false);
+    expect(allPresentBet(snap(makeRoom()), [])).toBe(false);
   });
 
-  it("false while predicting (cards null)", () => {
-    expect(
-      isEveryoneEscaped(
-        makeSnap({
-          punishment_cards: null,
-          punishment_predictions: null,
-        }),
-      ),
-    ).toBe(false);
-  });
-
-  it("false when resolved with losers", () => {
-    expect(
-      isEveryoneEscaped(
-        makeSnap({
-          punishment_cards: { 2: card() },
-          punishment_predictions: { 1: 3, 2: 9 },
-        }),
-      ),
-    ).toBe(false);
-  });
-
-  it("false when cards empty but no round ran (predictions empty)", () => {
-    expect(
-      isEveryoneEscaped(
-        makeSnap({
-          punishment_cards: {},
-          punishment_predictions: {},
-        }),
-      ),
-    ).toBe(false);
-  });
-});
-
-describe("allPresentLocked", () => {
-  it("true when every present id is locked", () => {
-    expect(
-      allPresentLocked(
-        makeSnap({ punishment_locked_user_ids: [1, 2, 3] }),
-        [1, 2],
-      ),
-    ).toBe(true);
-  });
-
-  it("false when someone present has not locked", () => {
-    expect(
-      allPresentLocked(makeSnap({ punishment_locked_user_ids: [1] }), [1, 2]),
-    ).toBe(false);
-  });
-
-  it("false when nobody is present", () => {
-    expect(
-      allPresentLocked(makeSnap({ punishment_locked_user_ids: [1, 2] }), []),
-    ).toBe(false);
-  });
-});
-
-describe("waitingOnUserIds", () => {
-  it("returns present ids that have not locked", () => {
-    expect(
-      waitingOnUserIds(
-        makeSnap({ punishment_locked_user_ids: [1] }),
-        [1, 2, 3],
-      ),
-    ).toEqual([2, 3]);
-  });
-
-  it("empty when all present are locked", () => {
-    expect(
-      waitingOnUserIds(
-        makeSnap({ punishment_locked_user_ids: [1, 2] }),
-        [1, 2],
-      ),
-    ).toEqual([]);
-  });
-
-  it("returns all present when nobody locked", () => {
-    expect(waitingOnUserIds(makeSnap({}), [4, 5])).toEqual([4, 5]);
+  it("waitingOnBetIds returns present ids without a bet", () => {
+    const room = makeRoom({ punishment_bets: { "2": 4 } });
+    expect(waitingOnBetIds(snap(room), [1, 2, 3])).toEqual([1, 3]);
   });
 });
