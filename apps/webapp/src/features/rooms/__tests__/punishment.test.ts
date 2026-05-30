@@ -16,20 +16,17 @@ import {
   waitingOnUserIds,
 } from "../punishment";
 
-const baseRoom = {
-  code: "ABCDE",
-  game_mode: "punishment",
-} as RoomState["room"];
-
 function makeSnap(over: Partial<RoomState["room"]>): RoomState {
+  const room = {
+    code: "ABCDE",
+    game_mode: "punishment",
+    ...over,
+  } as unknown as RoomState["room"];
   return {
-    room: {
-      ...baseRoom,
-      ...over,
-    },
+    room,
     participants: [],
     me_user_id: 1,
-  } as RoomState;
+  } as unknown as RoomState;
 }
 
 function card(over: Partial<PunishmentCard> = {}): PunishmentCard {
