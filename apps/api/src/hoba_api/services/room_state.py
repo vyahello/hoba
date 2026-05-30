@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from hoba_api.models.room import Room
 from hoba_api.schemas.room import (
     ParticipantOut,
+    PunishmentCardOut,
     QuestionOut,
     RoomOut,
     RoomState,
@@ -30,8 +31,34 @@ async def build_room_state(
     spins = await list_room_spins(session, room.id, limit=1)
     last_spin = spins[0] if spins else None
 
+    # Punishment prediction secrecy: predictions are SECRET while the round
+    # is in the predicting phase (`punishment_cards IS None`) and REVEALED
+    # once resolved. Override the naive model_validate values per-viewer.
+    preds_raw = room.punishment_predictions or {}
+    resolved = room.punishment_cards is not None
+    locked_ids = sorted(int(k) for k in preds_raw)
+    cards_out: dict[str, PunishmentCardOut] | None = None
+    if resolved and room.punishment_cards is not None:
+        cards_out = {
+            k: PunishmentCardOut.model_validate(v)
+            for k, v in room.punishment_cards.items()
+        }
+    room_out = RoomOut.model_validate(room).model_copy(
+        update={
+            "punishment_locked_user_ids": locked_ids,
+            "punishment_my_prediction": (
+                preds_raw.get(str(current_user_id)) if not resolved else None
+            ),
+            "punishment_predictions": dict(preds_raw) if resolved else None,
+            "punishment_result_segment_id": (
+                room.punishment_result_segment_id if resolved else None
+            ),
+            "punishment_cards": cards_out,
+        },
+    )
+
     return RoomState(
-        room=RoomOut.model_validate(room),
+        room=room_out,
         # `Participant.display_name` is never populated at write time, so
         # derive the name from the eager-loaded `User` (relationship is
         # lazy="joined"). Prefer an explicit participant display_name if

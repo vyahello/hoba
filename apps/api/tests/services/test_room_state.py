@@ -90,4 +90,58 @@ async def test_room_out_exposes_punishment_fields(db: AsyncSession) -> None:
     state = await build_room_state(db, fetched, current_user_id=host.id)
     assert state.room.punishment_deck == "mild"
     assert state.room.punishment_done_count == 0
-    assert state.room.punishment_active_card is None
+
+
+async def test_build_room_state_redacts_predictions_while_predicting(
+    db: AsyncSession,
+) -> None:
+    host = await upsert_from_telegram(db, TelegramUser(id=7720, first_name="H"))
+    await db.flush()
+    room = await create_room(
+        db, host_id=host.id, question_text="Q?",
+        segments=[SegmentDraft(label="a"), SegmentDraft(label="b")],
+        game_mode="punishment",
+    )
+    await db.commit()
+    fetched = await get_room_by_code(db, room.code)
+    assert fetched is not None
+    fetched.punishment_predictions = {"1": 10, "2": 11}
+    fetched.punishment_cards = None
+    await db.commit()
+
+    state = await build_room_state(db, fetched, current_user_id=2)
+    assert state.room.punishment_locked_user_ids == [1, 2]
+    assert state.room.punishment_my_prediction == 11
+    # Other players' picks must stay hidden while predicting.
+    assert state.room.punishment_predictions is None
+    assert state.room.punishment_result_segment_id is None
+    assert state.room.punishment_cards is None
+
+
+async def test_build_room_state_reveals_predictions_when_resolved(
+    db: AsyncSession,
+) -> None:
+    host = await upsert_from_telegram(db, TelegramUser(id=7730, first_name="H"))
+    await db.flush()
+    room = await create_room(
+        db, host_id=host.id, question_text="Q?",
+        segments=[SegmentDraft(label="a"), SegmentDraft(label="b")],
+        game_mode="punishment",
+    )
+    await db.commit()
+    fetched = await get_room_by_code(db, room.code)
+    assert fetched is not None
+    fetched.punishment_predictions = {"1": 10, "2": 11}
+    fetched.punishment_cards = {
+        "1": {"text": "x", "deck": "mild", "card_index": 0, "done": False},
+    }
+    fetched.punishment_result_segment_id = 11
+    await db.commit()
+
+    state = await build_room_state(db, fetched, current_user_id=2)
+    assert state.room.punishment_predictions == {"1": 10, "2": 11}
+    assert state.room.punishment_result_segment_id == 11
+    assert state.room.punishment_cards is not None
+    assert state.room.punishment_cards["1"].text == "x"
+    # No longer needed once revealed.
+    assert state.room.punishment_my_prediction is None

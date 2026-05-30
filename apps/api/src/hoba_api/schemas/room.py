@@ -67,6 +67,13 @@ class SpinOut(BaseModel):
     settled_at: datetime | None
 
 
+class PunishmentCardOut(BaseModel):
+    text: str
+    deck: str
+    card_index: int
+    done: bool
+
+
 class RoomOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -83,7 +90,14 @@ class RoomOut(BaseModel):
     current_turn_user_id: int | None
     punishment_deck: PunishmentDeck | None
     punishment_done_count: int
-    punishment_active_card: dict[str, object] | None
+    # Prediction-wager secrecy layer (set per-viewer in build_room_state):
+    # while predicting, only who-has-locked + the viewer's own pick are
+    # exposed; the full predictions map + result + cards appear once resolved.
+    punishment_locked_user_ids: list[int] = []
+    punishment_my_prediction: int | None = None
+    punishment_predictions: dict[str, int] | None = None
+    punishment_result_segment_id: int | None = None
+    punishment_cards: dict[str, PunishmentCardOut] | None = None
     spin_count: int
     bon_attempts: int
     bon_tally: dict[str, int] | None
