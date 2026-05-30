@@ -37,7 +37,6 @@ function card(over: Partial<PunishmentCard> = {}): PunishmentCard {
     text: "Do a dance",
     deck: "mild",
     card_index: 3,
-    card_id: "mild-3",
     done: false,
     ...over,
   };
@@ -150,33 +149,14 @@ describe("pendingCards", () => {
     const result = pendingCards(
       makeSnap({
         punishment_cards: {
-          2: card({ text: "Sing", card_index: 1, card_id: "mild-1" }),
-          7: card({
-            text: "Hop",
-            card_index: 2,
-            card_id: "mild-2",
-            done: true,
-          }),
+          2: card({ text: "Sing", card_index: 1 }),
+          7: card({ text: "Hop", card_index: 2, done: true }),
         },
       }),
     );
     expect(result).toEqual([
-      {
-        userId: 2,
-        text: "Sing",
-        deck: "mild",
-        card_index: 1,
-        card_id: "mild-1",
-        done: false,
-      },
-      {
-        userId: 7,
-        text: "Hop",
-        deck: "mild",
-        card_index: 2,
-        card_id: "mild-2",
-        done: true,
-      },
+      { userId: 2, text: "Sing", deck: "mild", card_index: 1, done: false },
+      { userId: 7, text: "Hop", deck: "mild", card_index: 2, done: true },
     ]);
   });
 });
