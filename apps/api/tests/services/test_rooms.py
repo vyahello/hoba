@@ -255,7 +255,9 @@ def test_derive_spin_policy_default_for_elimination() -> None:
 
 
 def test_derive_spin_policy_default_for_punishment() -> None:
-    assert _derive_spin_policy(None, "punishment") == "turn_based"
+    # Punishment is host-triggered (host spins after everyone locks a
+    # prediction), so its default policy is host_only.
+    assert _derive_spin_policy(None, "punishment") == "host_only"
 
 
 def test_derive_spin_policy_default_for_chaos() -> None:
@@ -281,7 +283,7 @@ async def test_create_room_with_game_mode_persists_field(db: AsyncSession) -> No
     assert room.game_mode == "elimination"
 
 
-async def test_create_room_punishment_defaults_to_turn_based(db: AsyncSession) -> None:
+async def test_create_room_punishment_defaults_to_host_only(db: AsyncSession) -> None:
     host_id = await _make_user(db, tg_id=102)
     room = await create_room(
         db,
@@ -290,7 +292,7 @@ async def test_create_room_punishment_defaults_to_turn_based(db: AsyncSession) -
         segments=_drafts(2),
         game_mode="punishment",
     )
-    assert room.spin_policy == "turn_based"
+    assert room.spin_policy == "host_only"
 
 
 async def test_create_room_explicit_spin_policy_wins_over_mode(
