@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 import { Card } from "@/components/ds/Card";
 import { StubPage } from "@/components/layout/StubPage";
@@ -43,6 +44,7 @@ function ToggleRow({ label, on, onToggle }: ToggleRowProps): JSX.Element {
 
 export function SettingsPage(): JSX.Element {
   const { t, i18n } = useTranslation(["settings", "common", "brand"]);
+  const navigate = useNavigate();
   const currentLocale = (i18n.resolvedLanguage ?? "en") as Locale;
   const [sound, setSound] = useState(true);
   const [hapticsOn, setHapticsOn] = useState(true);
@@ -131,6 +133,27 @@ export function SettingsPage(): JSX.Element {
               {t("settings:about.copyright")}
             </p>
           </Card>
+          <div className="flex items-center justify-center gap-4 mt-3">
+            <button
+              type="button"
+              className="text-sm font-semibold text-brand-primary"
+              onClick={() => {
+                navigate("/privacy");
+              }}
+            >
+              {t("settings:about.privacy")}
+            </button>
+            <span aria-hidden className="text-ink-light-2 dark:text-ink-dark-2">·</span>
+            <button
+              type="button"
+              className="text-sm font-semibold text-brand-primary"
+              onClick={() => {
+                navigate("/terms");
+              }}
+            >
+              {t("settings:about.terms")}
+            </button>
+          </div>
         </section>
       </div>
     </StubPage>

@@ -92,6 +92,35 @@ Full setup, tunnel walkthrough, and debugging recipes live in [`docs/development
 
 ---
 
+## 60-second walkthrough
+
+<!-- TODO(owner): record + drop the GIF here → docs/brand/walkthrough.gif -->
+<!-- ![Hoba! walkthrough](docs/brand/walkthrough.gif) -->
+
+The whole loop in under a minute:
+
+1. **Open** from the Telegram bot — land on the Home grid of 8 quick wheels.
+2. **Tap a wheel** (e.g. *Where to eat?*) → it spins solo, the *Хоба!* word lands, confetti.
+3. **Play together** → creates a room; share the link, a friend joins.
+4. **Pick a mode** — Classic, Elimination, Punishment, Chaos, or 🎭 Rigged.
+5. **Spin in turns**, react with emoji, watch the winner reveal.
+6. **Save** the wheel to your library, or **make it public** → it shows up in Trending.
+
+---
+
+## Deploy to production
+
+On the server, from the repo root (shared-VPS profile):
+
+```bash
+./scripts/deploy.sh          # git pull --ff-only + build + up + health check
+./scripts/deploy.sh --no-pull   # rebuild the current tree without pulling
+```
+
+The script rebuilds the containers, lets the API run migrations on start (`AUTO_MIGRATE`), and polls `/health`. Full topology, TLS, and troubleshooting recipes are in [`docs/deployment.md`](docs/deployment.md).
+
+---
+
 ## Quality gates
 
 Every stage closes with all of these green:

@@ -16,6 +16,7 @@ import enCommon from "@/locales/en/common.json";
 import enCreate from "@/locales/en/create.json";
 import enDev from "@/locales/en/dev.json";
 import enHome from "@/locales/en/home.json";
+import enLegal from "@/locales/en/legal.json";
 import enRoom from "@/locales/en/room.json";
 import enSettings from "@/locales/en/settings.json";
 import ukBrand from "@/locales/uk/brand.json";
@@ -23,6 +24,7 @@ import ukCommon from "@/locales/uk/common.json";
 import ukCreate from "@/locales/uk/create.json";
 import ukDev from "@/locales/uk/dev.json";
 import ukHome from "@/locales/uk/home.json";
+import ukLegal from "@/locales/uk/legal.json";
 import ukRoom from "@/locales/uk/room.json";
 import ukSettings from "@/locales/uk/settings.json";
 
@@ -55,6 +57,7 @@ void i18n
         dev: enDev,
         create: enCreate,
         room: enRoom,
+        legal: enLegal,
       },
       uk: {
         common: ukCommon,
@@ -64,6 +67,7 @@ void i18n
         dev: ukDev,
         create: ukCreate,
         room: ukRoom,
+        legal: ukLegal,
       },
     },
     lng: detectInitialLocale(),

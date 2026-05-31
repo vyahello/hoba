@@ -1,5 +1,11 @@
 # Hoba! — Privacy Policy
 
+> The **canonical, user-facing** Privacy Policy + Terms now live in-app
+> (EN + UK) at `/privacy` and `/terms`, sourced from
+> `apps/webapp/src/locales/{en,uk}/legal.json` and served publicly at the
+> production domain (point BotFather's Privacy link there). This file is the
+> long-form reference copy — keep it consistent with `legal.json`.
+
 _Last updated: 2026-05-27_
 
 Hoba! (`@hobagame_bot`) is a Telegram Mini App party game. This document

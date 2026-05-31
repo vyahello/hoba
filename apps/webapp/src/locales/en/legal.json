@@ -1,0 +1,88 @@
+{
+  "privacy": {
+    "title": "Privacy Policy",
+    "updated": "Last updated: 31 May 2026",
+    "sections": [
+      {
+        "heading": "Who we are",
+        "body": [
+          "Hoba! (@hobagame_bot) is a Telegram Mini App party game, operated by Volodymyr Yahello. Contact: vyahello@gmail.com."
+        ]
+      },
+      {
+        "heading": "What we collect",
+        "body": [
+          "From Telegram's initData when you open the app: your Telegram numeric ID, your first name (and optionally last name and username), and your client language code.",
+          "From playing: wheels you create, rooms you join and your role, spins you trigger, reactions you send, and wheels you publish, like, or report."
+        ]
+      },
+      {
+        "heading": "What we do NOT collect",
+        "body": [
+          "We never collect your phone number, email, contacts, messages or media outside the Mini App, your location, or precise device identifiers."
+        ]
+      },
+      {
+        "heading": "How we use it",
+        "body": [
+          "Only to run the game: identify your session, show your name to other players in a room, sync spins in real time, and power the saved-wheel library and trending feed. We do not sell your data or use it for advertising."
+        ]
+      },
+      {
+        "heading": "Retention",
+        "body": [
+          "Rooms are ephemeral and idle rooms are closed automatically. You can delete your saved wheels at any time. Aggregate, non-identifying counts (like a wheel's use count) may persist."
+        ]
+      },
+      {
+        "heading": "Your choices",
+        "body": [
+          "You control your language, sound, and haptics in Settings. To request deletion of your account data, contact vyahello@gmail.com."
+        ]
+      }
+    ]
+  },
+  "terms": {
+    "title": "Terms of Service",
+    "updated": "Last updated: 31 May 2026",
+    "sections": [
+      {
+        "heading": "Acceptance",
+        "body": [
+          "By using Hoba! you agree to these terms. If you do not agree, please do not use the app."
+        ]
+      },
+      {
+        "heading": "The service",
+        "body": [
+          "Hoba! is a free party game for making group decisions with a spinning wheel. It is provided as-is, and may change or be unavailable at times."
+        ]
+      },
+      {
+        "heading": "Acceptable use",
+        "body": [
+          "Don't use Hoba! to harass others, post illegal content, or abuse the service. Wheel titles and options you make public are filtered for profanity and may be hidden after reports.",
+          "You are responsible for the content you create and share."
+        ]
+      },
+      {
+        "heading": "Public wheels and moderation",
+        "body": [
+          "When you make a wheel public it appears in Trending to other users. We may hide or remove public wheels that are reported or violate these terms, at our discretion."
+        ]
+      },
+      {
+        "heading": "Disclaimer",
+        "body": [
+          "Hoba! is for fun. Outcomes are random and provided without warranty. We are not liable for decisions made using the app."
+        ]
+      },
+      {
+        "heading": "Changes and contact",
+        "body": [
+          "We may update these terms; continued use means you accept the changes. Questions: vyahello@gmail.com."
+        ]
+      }
+    ]
+  }
+}
