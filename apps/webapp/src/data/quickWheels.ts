@@ -34,9 +34,9 @@ export const QUICK_WHEELS: readonly QuickWheel[] = [
       { key: "pizza", emoji: "🍕", colorSeed: 0 },
       { key: "sushi", emoji: "🍣", colorSeed: 1 },
       { key: "burger", emoji: "🍔", colorSeed: 2 },
-      { key: "salad", emoji: "🥗", colorSeed: 3 },
-      { key: "tacos", emoji: "🌮", colorSeed: 4 },
-      { key: "ramen", emoji: "🍜", colorSeed: 5 },
+      { key: "tacos", emoji: "🌮", colorSeed: 3 },
+      { key: "ramen", emoji: "🍜", colorSeed: 4 },
+      { key: "shawarma", emoji: "🌯", colorSeed: 5 },
     ],
   },
   {
@@ -45,10 +45,11 @@ export const QUICK_WHEELS: readonly QuickWheel[] = [
     emoji: "💸",
     gradient: ["#22C55E", "#5CE5FF"],
     segments: [
-      { key: "you", colorSeed: 0 },
-      { key: "me", colorSeed: 2 },
-      { key: "split", colorSeed: 4 },
-      { key: "next_time", colorSeed: 7 },
+      { key: "you", emoji: "🫵", colorSeed: 0 },
+      { key: "me", emoji: "😎", colorSeed: 2 },
+      { key: "split", emoji: "🤝", colorSeed: 4 },
+      { key: "rps", emoji: "✊", colorSeed: 6 },
+      { key: "late", emoji: "⏰", colorSeed: 9 },
     ],
   },
   {
@@ -57,12 +58,12 @@ export const QUICK_WHEELS: readonly QuickWheel[] = [
     emoji: "🎬",
     gradient: ["#7C5CFF", "#FF5C9C"],
     segments: [
-      { key: "comedy", emoji: "😂", colorSeed: 0 },
-      { key: "thriller", emoji: "😱", colorSeed: 1 },
-      { key: "action", emoji: "💥", colorSeed: 2 },
-      { key: "drama", emoji: "🎭", colorSeed: 3 },
-      { key: "documentary", emoji: "🎬", colorSeed: 4 },
-      { key: "anime", emoji: "🍙", colorSeed: 5 },
+      { key: "superhero", emoji: "🦸", colorSeed: 0 },
+      { key: "true_crime", emoji: "🔪", colorSeed: 1 },
+      { key: "kdrama", emoji: "💔", colorSeed: 2 },
+      { key: "scifi", emoji: "🚀", colorSeed: 3 },
+      { key: "romcom", emoji: "💘", colorSeed: 4 },
+      { key: "horror", emoji: "👻", colorSeed: 5 },
     ],
   },
   {
@@ -73,8 +74,9 @@ export const QUICK_WHEELS: readonly QuickWheel[] = [
     segments: [
       { key: "truth", emoji: "💬", colorSeed: 6 },
       { key: "dare", emoji: "🔥", colorSeed: 10 },
-      { key: "wild_card", emoji: "🃏", colorSeed: 5 },
-      { key: "skip", emoji: "⏭️", colorSeed: 11 },
+      { key: "double_dare", emoji: "😈", colorSeed: 4 },
+      { key: "spicy_truth", emoji: "🌶️", colorSeed: 3 },
+      { key: "crowd", emoji: "👥", colorSeed: 8 },
     ],
   },
   {
@@ -85,6 +87,8 @@ export const QUICK_WHEELS: readonly QuickWheel[] = [
     segments: [
       { key: "yes", emoji: "✅", colorSeed: 4 },
       { key: "no", emoji: "❌", colorSeed: 10 },
+      { key: "hell_yes", emoji: "🔥", colorSeed: 0 },
+      { key: "no_way", emoji: "🙅", colorSeed: 7 },
     ],
   },
   {
@@ -93,12 +97,12 @@ export const QUICK_WHEELS: readonly QuickWheel[] = [
     emoji: "🍻",
     gradient: ["#FFB84D", "#FF9F1C"],
     segments: [
-      { key: "movies", emoji: "🎬", colorSeed: 0 },
-      { key: "bar", emoji: "🍻", colorSeed: 1 },
-      { key: "dinner", emoji: "🍝", colorSeed: 2 },
-      { key: "stay_in", emoji: "🛋️", colorSeed: 3 },
-      { key: "karaoke", emoji: "🎤", colorSeed: 5 },
-      { key: "concert", emoji: "🎵", colorSeed: 7 },
+      { key: "rooftop", emoji: "🌆", colorSeed: 0 },
+      { key: "game_night", emoji: "🎲", colorSeed: 1 },
+      { key: "karaoke", emoji: "🎤", colorSeed: 2 },
+      { key: "road_trip", emoji: "🚗", colorSeed: 3 },
+      { key: "house_party", emoji: "🎉", colorSeed: 5 },
+      { key: "midnight_snack", emoji: "🍟", colorSeed: 7 },
     ],
   },
 ] as const;

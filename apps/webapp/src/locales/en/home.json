@@ -18,41 +18,45 @@
       "pizza": "Pizza",
       "sushi": "Sushi",
       "burger": "Burger",
-      "salad": "Salad",
       "tacos": "Tacos",
-      "ramen": "Ramen"
+      "ramen": "Ramen",
+      "shawarma": "Shawarma"
     },
     "pays": {
       "you": "You",
       "me": "Me",
-      "split": "Split",
-      "next_time": "Next time"
+      "split": "Split it",
+      "rps": "Rock-paper-scissors",
+      "late": "Whoever's late"
     },
     "watch": {
-      "comedy": "Comedy",
-      "thriller": "Thriller",
-      "action": "Action",
-      "drama": "Drama",
-      "documentary": "Documentary",
-      "anime": "Anime"
+      "superhero": "Superhero",
+      "true_crime": "True crime",
+      "kdrama": "K-drama",
+      "scifi": "Sci-fi",
+      "romcom": "Rom-com",
+      "horror": "Horror"
     },
     "truth_dare": {
       "truth": "Truth",
       "dare": "Dare",
-      "wild_card": "Wild card",
-      "skip": "Skip"
+      "double_dare": "Double dare",
+      "spicy_truth": "Spicy truth",
+      "crowd": "Crowd decides"
     },
     "yes_no": {
       "yes": "Yes",
-      "no": "No"
+      "no": "No",
+      "hell_yes": "Hell yes",
+      "no_way": "No way"
     },
     "friday": {
-      "movies": "Movies",
-      "bar": "Bar",
-      "dinner": "Dinner",
-      "stay_in": "Stay in",
+      "rooftop": "Rooftop drinks",
+      "game_night": "Game night",
       "karaoke": "Karaoke",
-      "concert": "Concert"
+      "road_trip": "Spontaneous road trip",
+      "house_party": "House party",
+      "midnight_snack": "Midnight snack run"
     }
   },
   "create_custom": {

@@ -18,41 +18,45 @@
       "pizza": "Піца",
       "sushi": "Суші",
       "burger": "Бургер",
-      "salad": "Салат",
       "tacos": "Тако",
-      "ramen": "Рамен"
+      "ramen": "Рамен",
+      "shawarma": "Шаурма"
     },
     "pays": {
       "you": "Ти",
       "me": "Я",
       "split": "Навпіл",
-      "next_time": "Наступного разу"
+      "rps": "Камінь-ножиці-папір",
+      "late": "Хто запізнився"
     },
     "watch": {
-      "comedy": "Комедія",
-      "thriller": "Трилер",
-      "action": "Бойовик",
-      "drama": "Драма",
-      "documentary": "Документалка",
-      "anime": "Аніме"
+      "superhero": "Супергерої",
+      "true_crime": "Тру-крайм",
+      "kdrama": "Дорама",
+      "scifi": "Sci-fi",
+      "romcom": "Ромком",
+      "horror": "Жахи"
     },
     "truth_dare": {
       "truth": "Правда",
       "dare": "Дія",
-      "wild_card": "Джокер",
-      "skip": "Пас"
+      "double_dare": "Подвійне слабо",
+      "spicy_truth": "Гостра правда",
+      "crowd": "Натовп вирішує"
     },
     "yes_no": {
       "yes": "Так",
-      "no": "Ні"
+      "no": "Ні",
+      "hell_yes": "Звісно так",
+      "no_way": "Та нізащо"
     },
     "friday": {
-      "movies": "Кіно",
-      "bar": "Бар",
-      "dinner": "Вечеря",
-      "stay_in": "Вдома",
+      "rooftop": "Бар на даху",
+      "game_night": "Настолки",
       "karaoke": "Караоке",
-      "concert": "Концерт"
+      "road_trip": "Спонтанна поїздка",
+      "house_party": "Домашня вечірка",
+      "midnight_snack": "Нічний жор"
     }
   },
   "create_custom": {
