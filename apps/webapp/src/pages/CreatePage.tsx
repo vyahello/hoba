@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ds/Button";
 import { IconButton } from "@/components/ds/IconButton";
 import { Input, Textarea } from "@/components/ds/Input";
+import { splitEmoji } from "@/features/wheel/emoji";
 import { type SavedWheel, api } from "@/lib/api";
 import { haptics } from "@/lib/haptics";
 import { safeNavigateBack } from "@/lib/navigation";
@@ -79,14 +80,17 @@ export function CreatePage(): JSX.Element {
     setSegments((prev) => prev.map((s) => (s.id === id ? { ...s, label } : s)));
   }
 
-  /** Cleaned, non-empty segments with stable colours + preserved emoji. */
+  /** Cleaned, non-empty segments with stable colours + promoted emoji.
+   *
+   * If the segment has no explicit emoji (a fresh custom wheel), lift any
+   * emoji the user typed into the label up to the dedicated `emoji` slot so
+   * it renders large on the wheel — matching the built-in presets. */
   function cleanedSegments(): Array<{ label: string; emoji?: string; colorSeed: number }> {
     return segments
-      .map((s, i) => ({
-        label: s.label.trim(),
-        emoji: s.emoji,
-        colorSeed: s.colorSeed ?? i % 12,
-      }))
+      .map((s, i) => {
+        const split = s.emoji ? { emoji: s.emoji, label: s.label.trim() } : splitEmoji(s.label);
+        return { label: split.label, emoji: split.emoji, colorSeed: s.colorSeed ?? i % 12 };
+      })
       .filter((s) => s.label.length > 0);
   }
 
