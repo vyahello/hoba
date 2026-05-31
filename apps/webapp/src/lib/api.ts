@@ -142,6 +142,14 @@ export interface ServerRoom {
   bon_attempts: number;
   bon_tally: Record<string, number> | null;
   bon_winner_segment_id: number | null;
+  /**
+   * Rigged Mode 🎭 — true once the host reveals (un-redacts mode + weights).
+   * Optional on the client type so older fixtures/payloads stay valid; the
+   * server always sends it. Consumers default with `?? false`.
+   */
+  rigged_revealed?: boolean;
+  /** Spins taken while rigged (0 for non-host viewers until the reveal). */
+  rigged_spin_count?: number;
   created_at: string;
   closed_at: string | null;
 }
@@ -201,6 +209,10 @@ export const api = {
   /** Rigged Mode 🎭 (host only): set secret per-segment weights `{segId: 0..100}`. */
   setRig: (code: string, weights: Record<number, number>): Promise<RoomState> =>
     request(`/rooms/${encodeURIComponent(code)}/rig`, { method: "PATCH", body: { weights } }),
+
+  /** Rigged Mode 🎭 (host only): reveal the rig — un-redacts for everyone. */
+  revealRig: (code: string): Promise<RoomState> =>
+    request(`/rooms/${encodeURIComponent(code)}/reveal`, { method: "POST" }),
 
   closeRoom: (code: string): Promise<RoomState> =>
     request(`/rooms/${encodeURIComponent(code)}/close`, { method: "POST" }),

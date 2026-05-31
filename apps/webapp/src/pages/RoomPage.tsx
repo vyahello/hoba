@@ -121,6 +121,7 @@ export function RoomPage(): JSX.Element {
   const [revealed, setRevealed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [rigOpen, setRigOpen] = useState(false);
+  const [rigRevealShown, setRigRevealShown] = useState(false);
   // Chaos (§5.4): the rolled event for the in-flight spin while its 1.5 s
   // pre-roll announcement card is showing, then null once the wheel releases.
   const [chaosAnnounce, setChaosAnnounce] = useState<string | null>(null);
@@ -403,6 +404,26 @@ export function RoomPage(): JSX.Element {
     haptics.success();
     fireConfetti();
   }, [punishOver, isChaos]);
+
+  // Rigged Mode 🎭 reveal: when the host pulls the trigger, everyone's snapshot
+  // un-redacts (rigged_revealed → true). Play the full-screen reveal once.
+  const rigRevealed = snapshot?.room.rigged_revealed ?? false;
+  useEffect(() => {
+    if (!rigRevealed) {
+      setRigRevealShown(false);
+      return undefined;
+    }
+    setRigRevealShown(true);
+    audio.play("hoba_pop");
+    haptics.success();
+    fireConfetti();
+    const timer = window.setTimeout(() => {
+      setRigRevealShown(false);
+    }, 5000);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [rigRevealed]);
 
   useEffect(() => {
     if (lastError === null) return;
@@ -1218,6 +1239,74 @@ export function RoomPage(): JSX.Element {
                 />
               </motion.div>
             )
+          ) : null}
+        </AnimatePresence>
+
+        {/* Rigged Mode 🎭 reveal — the catharsis. Full-screen takeover with
+            the real weight bars, fired once when the host reveals. */}
+        <AnimatePresence>
+          {rigRevealShown && activeQuestion !== null ? (
+            (() => {
+              const segs = activeQuestion.segments.filter((s) => !s.is_eliminated);
+              const total = segs.reduce((sum, s) => sum + s.weight, 0) || 1;
+              const ranked = [...segs].sort((a, b) => b.weight - a.weight);
+              const rigCount = snapshot?.room.rigged_spin_count ?? 0;
+              return (
+                <motion.div
+                  key="rig-reveal"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  onClick={() => {
+                    setRigRevealShown(false);
+                  }}
+                  className="absolute inset-0 z-40 px-5 py-6 flex flex-col items-center justify-center gap-3 bg-bg-light/97 dark:bg-bg-dark/97 cursor-pointer"
+                  aria-live="assertive"
+                  role="status"
+                >
+                  <motion.div
+                    initial={{ scale: 0.3, opacity: 0, skewX: -18, rotate: -10 }}
+                    animate={{ scale: 1, opacity: 1, skewX: -11, rotate: -4 }}
+                    transition={{ type: "spring", damping: 9, stiffness: 240 }}
+                    className="origin-center"
+                  >
+                    <HobaWord sizeClass="text-5xl sm:text-6xl" />
+                  </motion.div>
+                  <h2 className="font-display font-extrabold text-2xl text-brand-pink text-center">
+                    🎭 {t("room:rig.revealed_title")}
+                  </h2>
+                  <div className="w-full max-w-sm flex flex-col gap-2 mt-1">
+                    {ranked.map((s, i) => {
+                      const pct = Math.round((s.weight / total) * 100);
+                      return (
+                        <div key={s.id} className="flex items-center gap-2 text-sm">
+                          <span className="w-24 shrink-0 truncate text-right text-ink-light-1 dark:text-ink-dark-1">
+                            {s.emoji ? `${s.emoji} ` : ""}{s.label}
+                          </span>
+                          <div className="flex-1 h-5 rounded-full bg-surface-light-2 dark:bg-surface-dark-2 overflow-hidden">
+                            <motion.div
+                              className="h-full rounded-full bg-brand-primary"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${pct}%` }}
+                              transition={{ delay: 0.3 + i * 0.12, duration: 0.7, ease: "easeOut" }}
+                            />
+                          </div>
+                          <span className="w-9 shrink-0 tabular-nums text-ink-light-2 dark:text-ink-dark-2">
+                            {pct}%
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {rigCount > 0 ? (
+                    <p className="text-sm text-ink-light-2 dark:text-ink-dark-2 mt-1">
+                      {t("room:rig.revealed_count", { count: rigCount })}
+                    </p>
+                  ) : null}
+                </motion.div>
+              );
+            })()
           ) : null}
         </AnimatePresence>
       </main>

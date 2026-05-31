@@ -54,6 +54,8 @@ async def build_room_state(
     }
     if rig_hidden:
         room_update["game_mode"] = "classic"
+        # A non-zero rigged spin count would itself leak the rig.
+        room_update["rigged_spin_count"] = 0
     room_out = RoomOut.model_validate(room).model_copy(update=room_update)
 
     question_out = (

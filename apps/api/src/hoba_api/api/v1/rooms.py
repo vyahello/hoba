@@ -20,7 +20,7 @@ from hoba_api.schemas.room import (
     RoomUpdateIn,
     SpinOut,
 )
-from hoba_api.services.rigged import set_rig_weights
+from hoba_api.services.rigged import reveal_rig, set_rig_weights
 from hoba_api.services.room_state import build_room_state
 from hoba_api.services.rooms import (
     RoomServiceError,
@@ -176,6 +176,32 @@ async def rig_room_endpoint(
     except RoomServiceError as exc:
         raise _service_error_to_http(exc) from exc
     await db.commit()
+    return await build_room_state(db, room, current_user_id=user.id)
+
+
+@router.post("/{code}/reveal", response_model=RoomState)
+async def reveal_rig_endpoint(
+    code: str,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> RoomState:
+    """Rigged Mode 🎭 (spec §5.5): host reveals the rig (the finale).
+
+    Flips `rigged_revealed` (which un-redacts mode + weights for EVERYONE) and
+    stamps 🎭 into the title. Broadcasts `rigged:revealed` so connected clients
+    refetch and play the reveal — here a broadcast IS wanted (the secret is out).
+    """
+    room = await get_room_by_code(db, code)
+    if room is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="room_not_found",
+        )
+    try:
+        await reveal_rig(db, room, user_id=user.id)
+    except RoomServiceError as exc:
+        raise _service_error_to_http(exc) from exc
+    await db.commit()
+    await sio.emit("rigged:revealed", {}, room=room.code, namespace=NAMESPACE)
     return await build_room_state(db, room, current_user_id=user.id)
 
 

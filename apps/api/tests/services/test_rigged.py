@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hoba_api.models.participant import Participant
-from hoba_api.services.rigged import set_rig_weights
+from hoba_api.services.rigged import reveal_rig, set_rig_weights
 from hoba_api.services.room_state import build_room_state
 from hoba_api.services.rooms import (
     RoomServiceError,
@@ -16,6 +16,7 @@ from hoba_api.services.rooms import (
     create_room,
     get_room_by_code,
 )
+from hoba_api.services.spins import trigger_spin
 from hoba_api.wheel.spin_math import pick_segment_index
 
 
@@ -130,6 +131,67 @@ async def test_rig_is_hidden_from_guests_until_reveal(db: AsyncSession) -> None:
     assert revealed.room.game_mode == "rigged"
     weights = {s.id: s.weight for s in revealed.active_question.segments}
     assert weights[seg[0]] == 95
+
+
+async def test_reveal_requires_host_and_rigged(db: AsyncSession) -> None:
+    host_id = await _make_user(db, tg_id=710)
+    guest_id = await _make_user(db, tg_id=711)
+    room = await create_room(db, host_id=host_id, question_text="?", segments=_drafts(2))
+    await db.commit()
+    # Not rigged yet → can't reveal.
+    with pytest.raises(RoomServiceError) as exc:
+        await reveal_rig(db, room, user_id=host_id)
+    assert exc.value.code == "not_rigged"
+    # Rig it, then a non-host can't reveal.
+    seg = await _seg_ids(db, room.id)
+    await set_rig_weights(db, room, user_id=host_id, weights={seg[0]: 90})
+    with pytest.raises(RoomServiceError) as exc2:
+        await reveal_rig(db, room, user_id=guest_id)
+    assert exc2.value.code == "not_host"
+
+
+async def test_reveal_unredacts_and_stamps_title(db: AsyncSession) -> None:
+    host_id = await _make_user(db, tg_id=712)
+    guest_id = await _make_user(db, tg_id=713)
+    room = await create_room(
+        db, host_id=host_id, question_text="?", segments=_drafts(3), title="Lunch",
+    )
+    db.add(Participant(room_id=room.id, user_id=guest_id, role="guest"))
+    await db.commit()
+    seg = await _seg_ids(db, room.id)
+    await set_rig_weights(db, room, user_id=host_id, weights={seg[0]: 90, seg[1]: 10})
+    await reveal_rig(db, room, user_id=host_id)
+    await db.commit()
+
+    room = await get_room_by_code(db, room.code)
+    assert room is not None
+    guest_state = await build_room_state(db, room, current_user_id=guest_id)
+    assert guest_state.room.game_mode == "rigged"
+    assert guest_state.room.rigged_revealed is True
+    assert "🎭" in (guest_state.room.title or "")
+    weights = {s.id: s.weight for s in guest_state.active_question.segments}
+    assert weights[seg[0]] == 90
+
+
+async def test_rigged_spin_count_increments_and_is_redacted(db: AsyncSession) -> None:
+    host_id = await _make_user(db, tg_id=714)
+    guest_id = await _make_user(db, tg_id=715)
+    room = await create_room(db, host_id=host_id, question_text="?", segments=_drafts(3))
+    db.add(Participant(room_id=room.id, user_id=guest_id, role="guest"))
+    await db.commit()
+    seg = await _seg_ids(db, room.id)
+    await set_rig_weights(db, room, user_id=host_id, weights={seg[0]: 100, seg[1]: 0, seg[2]: 0})
+    await trigger_spin(db, room=room, user_id=host_id)
+    await trigger_spin(db, room=room, user_id=host_id)
+    await db.commit()
+
+    room = await get_room_by_code(db, room.code)
+    assert room is not None
+    host_state = await build_room_state(db, room, current_user_id=host_id)
+    assert host_state.room.rigged_spin_count == 2
+    # Hidden from guests pre-reveal (would otherwise leak the rig).
+    guest_state = await build_room_state(db, room, current_user_id=guest_id)
+    assert guest_state.room.rigged_spin_count == 0
 
 
 def test_weighted_rng_stays_within_two_percent() -> None:

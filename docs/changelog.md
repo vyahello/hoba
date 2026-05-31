@@ -4,7 +4,13 @@
 
 ---
 
-## Stage E — in progress (Rigged Mode 🎭)
+## Stage E — Rigged Mode 🎭 (both slices shipped; pending owner real-device verify)
+
+### Slice 2 — the reveal moment (2026-05-31)
+
+The catharsis. Host-only "Reveal the rig 🎭" button in `RigEditorSheet` → `POST /rooms/{code}/reveal` (`services/rigged.py::reveal_rig`): sets `rigged_revealed = true`, stamps 🎭 into the room title (ethical guard), broadcasts `rigged:revealed`. The existing `build_room_state` redaction keys on `rigged_revealed`, so it un-redacts mode + weights for **everyone**; clients refetch on the event (`store` `rigged:revealed` handler → `api.getRoom` → `setSnapshot`). RoomPage plays a **full-screen reveal** — skewed "Хоба!" + "IT WAS RIGGED!" + an animated real-weight **bar-chart** (sorted desc) + "rigged for N spins 😈" + confetti, auto-dismiss 5 s. New `rooms.rigged_spin_count` (Alembic **0014**), incremented per spin while rigged (redacted to 0 for non-host pre-reveal); `rigged_revealed` + `rigged_spin_count` exposed on `RoomOut`/`RoomState` (client type optional to keep fixtures valid). EN+UK `rig.reveal` / `rig.revealed_title` / `rig.revealed_count`.
+
+Gates green: **232 backend (86%) / 106 frontend**, ruff + mypy --strict + tsc + eslint + i18n + `pnpm build` clean. **Rigged Mode is feature-complete; pending owner real-device verify** (rig a Classic room, spin biased, guests can't tell, then reveal → bar-chart + 🎭). Mechanics in `docs/game-modes.md` (Rigged).
 
 ### Slice 1 — secret rigging mechanic (2026-05-31)
 

@@ -195,6 +195,10 @@ async def trigger_spin(
     if room.status == "lobby":
         room.status = "active"
 
+    # Rigged Mode 🎭: tally spins taken while rigged for the reveal stat.
+    if room.game_mode == "rigged":
+        room.rigged_spin_count += 1
+
     await session.flush()
 
     return spin

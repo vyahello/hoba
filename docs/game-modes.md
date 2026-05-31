@@ -177,7 +177,7 @@ The event is **folded into `spin:started.mode_effects`** (no separate `chaos:eve
 
 ---
 
-## Rigged (§5.5) — Live (rigging mechanic; reveal is Slice 2)
+## Rigged (§5.5) — Live
 
 The host secretly weights segments so the wheel is biased — but to everyone else the room looks and plays exactly like Classic. **Picker-excluded:** Rigged is never offered at room creation; the host enters it with a **hidden ~1.5 s long-press on the hub** (only wired for the host, only in Classic/Rigged rooms), which opens the secret weight editor.
 
@@ -189,9 +189,13 @@ The host secretly weights segments so the wheel is biased — but to everyone el
 - **Host editor:** `RigEditorSheet` — a 0–100 slider per segment; releasing a slider commits the full map via `PATCH /rooms/{code}/rig` (host-only, `services/rigged.py::set_rig_weights`). That endpoint **does not broadcast** — guests never receive a `room:updated` that would reveal the change.
 - **Fairness:** a CI test asserts a heavily weighted segment lands within ±2% of its declared share over 40k weighted picks.
 
-### Deferred to Slice 2 (the reveal)
+### The reveal (Slice 2)
 
-`rigged_revealed` flag exists but is always False in Slice 1. Slice 2: a host "Reveal the rig" action → flips the flag (un-redacts mode + weights for everyone), an animated weight bar-chart, 🎭 injected into the room title, and a rigged-spin-count stat.
+- **Trigger**: a host-only "Reveal the rig 🎭" button in the `RigEditorSheet` (shown when `game_mode === "rigged"` && not yet revealed).
+- **Server**: `POST /rooms/{code}/reveal` (`services/rigged.py::reveal_rig`, host-only) sets `rigged_revealed = true`, stamps **🎭 into the room title** (ethical guard), and broadcasts `rigged:revealed`. Here a broadcast IS wanted — the secret is out.
+- **Un-redaction**: `build_room_state` keys on `rigged_revealed`, so once true the mode + real weights become visible to **everyone**. On the `rigged:revealed` event each client refetches `GET /rooms/{code}` (weights aren't in a flat patch) → `setSnapshot`.
+- **Client**: when `rigged_revealed` flips true, RoomPage plays a **full-screen reveal** — skewed "Хоба!" + "IT WAS RIGGED!" + the real weight **bar-chart** (animated, sorted desc) + "rigged for N spins 😈" + confetti, auto-dismissing after 5 s. The host badge + 🎭 title persist.
+- **Stat**: `rooms.rigged_spin_count` (Alembic 0014) increments on each spin while rigged (redacted to 0 for non-host pre-reveal); shown in the reveal.
 
 ## Best-of-N spins (cross-mode)
 

@@ -112,6 +112,10 @@ class RoomOut(BaseModel):
     bon_attempts: int
     bon_tally: dict[str, int] | None
     bon_winner_segment_id: int | None
+    # Rigged Mode 🎭 (spec §5.5). Pre-reveal these are only meaningful to the
+    # host — a non-host viewer gets game_mode redacted to "classic" + count 0.
+    rigged_revealed: bool = False
+    rigged_spin_count: int = 0
     created_at: datetime
     closed_at: datetime | None
 

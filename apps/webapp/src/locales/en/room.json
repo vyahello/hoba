@@ -69,7 +69,10 @@
     "title": "Rig the wheel 🎭",
     "hint": "Only you can see this — to everyone else it's a normal Classic room.",
     "footer": "Higher = more likely to land. 0 = never.",
-    "save_failed": "Couldn't save the rig. Try again."
+    "save_failed": "Couldn't save the rig. Try again.",
+    "reveal": "Reveal the rig 🎭",
+    "revealed_title": "IT WAS RIGGED!",
+    "revealed_count": "{count, plural, one {Rigged for # spin 😈} other {Rigged for # spins 😈}}"
   },
   "chaos": {
     "events": {

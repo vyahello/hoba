@@ -15,6 +15,7 @@ import { create } from "zustand";
 
 import { reactionLaneFor } from "@/features/rooms/reactionLanes";
 import {
+  api,
   type PunishmentOutcome,
   type RoomState as ServerRoomState,
 } from "@/lib/api";
@@ -257,6 +258,22 @@ function wireListeners(s: Socket): void {
   s.on("round:reset", () => {
     const snap = getState().snapshot;
     if (snap !== null) setState({ snapshot: reviveAllSegments(snap) });
+  });
+
+  // Rigged Mode 🎭 reveal: the secret is out. Refetch the (now un-redacted)
+  // room so every client sees the real mode + weights + 🎭 title, then plays
+  // the reveal. The weights aren't in a flat patch, so a refetch is cleanest.
+  s.on("rigged:revealed", () => {
+    const code = getState().joinedCode;
+    if (code === null) return;
+    void api
+      .getRoom(code)
+      .then((state) => {
+        getState().setSnapshot(state);
+      })
+      .catch(() => {
+        /* a failed refetch just means the reveal animation is skipped */
+      });
   });
 
   // punishment:cleared is a per-card "done" signal. The authoritative state

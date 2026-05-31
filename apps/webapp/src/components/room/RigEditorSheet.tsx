@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Button } from "@/components/ds/Button";
 import { Sheet } from "@/components/ds/Sheet";
 import { ApiError, type RoomState, api } from "@/lib/api";
 import { haptics } from "@/lib/haptics";
@@ -28,6 +29,9 @@ export function RigEditorSheet({ open, onClose, snapshot }: RigEditorSheetProps)
 
   const [weights, setWeights] = useState<Record<number, number>>({});
   const [saving, setSaving] = useState(false);
+  const [revealing, setRevealing] = useState(false);
+  const isRigged = snapshot.room.game_mode === "rigged";
+  const revealed = snapshot.room.rigged_revealed;
   const weightsRef = useRef(weights);
   weightsRef.current = weights;
 
@@ -100,6 +104,40 @@ export function RigEditorSheet({ open, onClose, snapshot }: RigEditorSheetProps)
       <p className="text-xs text-ink-light-2 dark:text-ink-dark-2 mt-3">
         {t("room:rig.footer")}
       </p>
+      {isRigged && !revealed ? (
+        <Button
+          variant="accent"
+          size="lg"
+          fullWidth
+          className="mt-4"
+          loading={revealing}
+          onClick={() => {
+            setRevealing(true);
+            haptics.heavy();
+            void api
+              .revealRig(code)
+              .then((updated) => {
+                setSnapshot(updated);
+                onClose(); // let the full-screen reveal play on the room
+              })
+              .catch((exc) => {
+                const errCode = exc instanceof ApiError ? exc.code : "save_failed";
+                const localized = t(`room:errors.${errCode}`);
+                toast({
+                  title: localized === `room:errors.${errCode}`
+                    ? t("room:rig.save_failed")
+                    : localized,
+                  intent: "error",
+                });
+              })
+              .finally(() => {
+                setRevealing(false);
+              });
+          }}
+        >
+          {t("room:rig.reveal")}
+        </Button>
+      ) : null}
     </Sheet>
   );
 }

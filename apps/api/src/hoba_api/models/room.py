@@ -150,6 +150,12 @@ class Room(Base, TimestampMixin):
     rigged_revealed: Mapped[bool] = mapped_column(
         default=False, nullable=False, server_default="0",
     )
+    # Count of spins taken while the room was rigged — surfaced in the reveal
+    # ("the wheel was rigged for N spins"). Redacted to 0 for non-host viewers
+    # until the reveal (a non-zero count would otherwise leak the rig).
+    rigged_spin_count: Mapped[int] = mapped_column(
+        default=0, nullable=False, server_default="0",
+    )
 
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

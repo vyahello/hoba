@@ -78,3 +78,26 @@ async def set_rig_weights(
         by_id[seg_id].weight = weight
     room.game_mode = "rigged"
     await session.flush()
+
+
+REVEAL_EMOJI = "🎭"
+
+
+async def reveal_rig(session: AsyncSession, room: Room, *, user_id: int) -> None:
+    """Host reveals the rig (spec §5.5): un-redact for everyone + 🎭 in the title.
+
+    After this, `build_room_state` stops redacting (mode + weights become
+    visible to all). Idempotent — re-revealing is a no-op.
+    """
+    if room.host_id != user_id:
+        raise RoomServiceError("not_host")
+    if room.game_mode != "rigged":
+        raise RoomServiceError("not_rigged")
+    if room.rigged_revealed:
+        return
+    room.rigged_revealed = True
+    # Ethical guard: stamp 🎭 into the title (transparency, post-fact).
+    title = (room.title or "").rstrip()
+    if REVEAL_EMOJI not in title:
+        room.title = f"{title} {REVEAL_EMOJI}".strip()
+    await session.flush()
