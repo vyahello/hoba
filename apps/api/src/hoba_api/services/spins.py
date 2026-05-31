@@ -80,13 +80,6 @@ async def trigger_spin(
         .all(),
     )
 
-    engine = engine_for(room.game_mode)
-    ctx = SpinContext(room=room, question=question, segments=all_segments)
-    decision = engine.on_spin_request(ctx)
-    spin_segments = decision.segments
-    if len(spin_segments) < MIN_SEGMENTS_TO_SPIN:
-        raise RoomServiceError("too_few_segments")
-
     last_spin = (
         await session.execute(
             select(Spin)
@@ -96,6 +89,26 @@ async def trigger_spin(
         )
     ).scalar_one_or_none()
     starting_angle_deg = last_spin.final_angle_deg if last_spin is not None else 0.0
+    # Feed the previous chaos event in so the engine can avoid announcing the
+    # same one twice in a row (Chaos felt repetitive otherwise).
+    last_chaos_event: str | None = None
+    if last_spin is not None:
+        prev_effects = (last_spin.mode_state_snapshot or {}).get("mode_effects")
+        if isinstance(prev_effects, dict):
+            prev = prev_effects.get("chaos_event")
+            last_chaos_event = prev if isinstance(prev, str) else None
+
+    engine = engine_for(room.game_mode)
+    ctx = SpinContext(
+        room=room,
+        question=question,
+        segments=all_segments,
+        last_chaos_event=last_chaos_event,
+    )
+    decision = engine.on_spin_request(ctx)
+    spin_segments = decision.segments
+    if len(spin_segments) < MIN_SEGMENTS_TO_SPIN:
+        raise RoomServiceError("too_few_segments")
 
     seed = secrets.randbits(31)
     raw_weights = [float(s.weight) for s in spin_segments]

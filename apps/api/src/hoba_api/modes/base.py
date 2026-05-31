@@ -19,6 +19,10 @@ class SpinContext:
     room: Room
     question: Question | None
     segments: list[Segment]  # ALL segments of the question, position order
+    # The previous spin's chaos_event (if any) — lets ChaosEngine avoid
+    # announcing the same event twice in a row. None for the first spin / other
+    # modes.
+    last_chaos_event: str | None = None
 
 
 @dataclass(frozen=True)

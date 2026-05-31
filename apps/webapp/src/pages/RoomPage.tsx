@@ -332,7 +332,9 @@ export function RoomPage(): JSX.Element {
       await sleep(isElimination ? ELIM_REVEAL_DELAY_MS : REVEAL_DELAY_MS);
       if (cancelled) return;
       audio.play("hoba_pop");
-      if (!isElimination) fireConfetti();
+      // Chaos: no per-spin confetti — a hit shows the "Hoba! {option}" banner
+      // instead, and the win gets its own celebration (effect below).
+      if (!isElimination && !isChaos) fireConfetti();
       setRevealed(true);
     }
     void run();
@@ -341,7 +343,7 @@ export function RoomPage(): JSX.Element {
       cancelled = true;
       for (const tmr of timers) window.clearTimeout(tmr);
     };
-  }, [currentSpin?.spin_id, currentSpin, isElimination, animateWheel, wheelScope]);
+  }, [currentSpin?.spin_id, currentSpin, isElimination, isChaos, animateWheel, wheelScope]);
 
   // The result auto-dismisses for every mode — no manual close. The
   // elimination "what's out" flash is quick; the classic celebration
@@ -371,6 +373,15 @@ export function RoomPage(): JSX.Element {
     haptics.success();
     fireConfetti();
   }, [bonOver]);
+
+  // Chaos has no per-spin confetti, so the bet-race winner gets its own
+  // celebration on the winner-hero page. (Punishment keeps its per-spin burst.)
+  useEffect(() => {
+    if (!(punishOver && isChaos)) return;
+    audio.play("hoba_pop");
+    haptics.success();
+    fireConfetti();
+  }, [punishOver, isChaos]);
 
   useEffect(() => {
     if (lastError === null) return;
@@ -923,7 +934,7 @@ export function RoomPage(): JSX.Element {
                   ) : null}
                 </div>
               )
-            ) : !isChaos && punishOutcome?.kind === "lucky" ? (
+            ) : punishOutcome?.kind === "lucky" ? (
               <div className="flex flex-col items-center gap-1 rounded-xl bg-brand-amber-3/15 px-4 py-3 text-center">
                 <HobaWord sizeClass="text-4xl" />
                 <p className="text-sm font-semibold text-ink-light-1 dark:text-ink-dark-1">

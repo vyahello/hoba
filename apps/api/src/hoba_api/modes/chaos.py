@@ -41,6 +41,14 @@ def _default_rng() -> float:
     return secrets.randbits(30) / (1 << 30)
 
 
+def _event_group(event: str | None) -> str | None:
+    """The displayed announcement group — both nudges share one generic card,
+    so they count as the same thing for back-to-back repeat avoidance."""
+    if event is None:
+        return None
+    return "nudge" if event.startswith("nudge") else event
+
+
 class ChaosEngine:
     mode_id = "chaos"
 
@@ -51,8 +59,12 @@ class ChaosEngine:
         return ctx.segments
 
     def on_spin_request(self, ctx: SpinContext) -> SpinDecision:
-        idx = min(int(self._rng() * len(CHAOS_EVENTS)), len(CHAOS_EVENTS) - 1)
-        event = CHAOS_EVENTS[idx]
+        # Never announce the same event two spins running — pick from the
+        # events whose displayed group differs from last time (≥5 remain).
+        last_group = _event_group(ctx.last_chaos_event)
+        candidates = [e for e in CHAOS_EVENTS if _event_group(e) != last_group]
+        idx = min(int(self._rng() * len(candidates)), len(candidates) - 1)
+        event = candidates[idx]
         if event == "multi_spin":
             reps = MULTI_SPIN_MIN + int(
                 self._rng() * (MULTI_SPIN_MAX - MULTI_SPIN_MIN + 1),

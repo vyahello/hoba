@@ -136,7 +136,9 @@ Room columns: `punishment_predictions` (`{uid: seg_id}` = the bets), `spin_count
 
 Chaos is a **personal-bet race** — the same flow as Punishment, minus the dares, plus a chaos event on every spin. Each player locks a unique option (a segment); players spin **in turn** (host first); landing on **your own** bet scores a match; **first to N matches wins** (host picks `N ∈ {1,3,5,7}`). A miss is a **no-op** (just confetti + next turn — no dare). On **every** spin a chaos event also fires, announced on a ~1.5 s card before the wheel.
 
-This reuses Punishment's whole betting/turn/standings/winner flow: backend `services/punishment.py` (`place_bet`, `start_game`, `resolve_turn`, `reset_game`) and the same room columns (`punishment_predictions` = bets, `spin_count` = N, `punishment_match_counts`, `punishment_winner_user_id`, `punishment_last_outcome`). The only fork is `resolve_turn`'s miss branch (`game_mode == "chaos"` → `kind: "miss"`, advance, no card). The frontend shares the UI via `isBetRace(snap) = punishment | chaos`; dare/approval UI auto-disables because chaos outcomes are never `"punish"`. Per-spin there is **no "Hoba!" result banner** (just confetti); the **winner hero** at the end matches Punishment.
+This reuses Punishment's whole betting/turn/standings/winner flow: backend `services/punishment.py` (`place_bet`, `start_game`, `resolve_turn`, `reset_game`) and the same room columns (`punishment_predictions` = bets, `spin_count` = N, `punishment_match_counts`, `punishment_winner_user_id`, `punishment_last_outcome`). The only fork is `resolve_turn`'s miss branch (`game_mode == "chaos"` → `kind: "miss"`, advance, no card). The frontend shares the UI via `isBetRace(snap) = punishment | chaos`; dare/approval UI auto-disables because chaos outcomes are never `"punish"`.
+
+**Per-spin feedback:** no confetti on every stop. A **hit** (lands your own option, non-winning) shows the **"Hoba! {option}"** lucky banner in the standings area; a **miss** shows nothing. The **winning** hit flips the phase to `over` immediately, so the lucky banner is skipped and only the **winner hero** ("{option} wins! 🏆") shows — they never overlap. The winner hero fires its own confetti (chaos-only effect, since Chaos has no per-spin burst).
 
 ### The seven chaos events (≈⅐ each)
 
@@ -150,6 +152,8 @@ This reuses Punishment's whole betting/turn/standings/winner flow: backend `serv
 | `blind_pointer` 🫥 | normal spin, but the **pointer vanishes** during it and **reappears at a random screen angle** on stop — whatever it lands on is the result | spin service picks a random `pointer_deg` and computes the result = segment under it (`floor(((P − A) mod 360)/sector)`); `<Wheel pointerHidden pointerDeg>` hides the pointer while spinning, reveals it at `P` when settled |
 
 The match-count uses the **recorded** `result_segment_id` (the *nudged* one for nudge, the *under-pointer* one for blind_pointer), so the race stays consistent with what the wheel finally shows. The announcement card holds `CHAOS_ANNOUNCE_MS = 2500` (long enough to read).
+
+**No back-to-back repeats:** the engine never announces the same event two spins running — `trigger_spin` feeds the previous `chaos_event` into `SpinContext.last_chaos_event`, and `ChaosEngine` picks from the events whose displayed group differs (the two nudges count as one group, since they share a card). Prevents the "same event 3–4× in a row" feel.
 
 ### Spin policy
 

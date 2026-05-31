@@ -142,6 +142,30 @@ def test_chaos_blind_pointer() -> None:
     assert d.duration_multiplier == 1.0
 
 
+def test_chaos_never_repeats_last_event() -> None:
+    # Whatever the previous event, none of many rolls may reproduce it.
+    segs = [_seg(1, 0), _seg(2, 1), _seg(3, 2)]
+    for roll in (0.0, 0.2, 0.45, 0.6, 0.75, 0.9, 0.99):
+        ctx = SpinContext(
+            room=_ctx(segs).room, question=None, segments=segs,
+            last_chaos_event="reverse",
+        )
+        d = ChaosEngine(rng=_seq_rng([roll, 0.0, 0.99])).on_spin_request(ctx)
+        assert d.effects.get("chaos_event") != "reverse"
+
+
+def test_chaos_nudge_repeat_avoids_both_directions() -> None:
+    # The two nudges share one card, so after a nudge neither may follow.
+    segs = [_seg(1, 0), _seg(2, 1)]
+    for roll in (0.0, 0.25, 0.5, 0.7, 0.85, 0.99):
+        ctx = SpinContext(
+            room=_ctx(segs).room, question=None, segments=segs,
+            last_chaos_event="nudge_fwd",
+        )
+        d = ChaosEngine(rng=_seq_rng([roll, 0.0, 0.99])).on_spin_request(ctx)
+        assert d.effects.get("chaos_event") not in ("nudge_fwd", "nudge_back")
+
+
 def test_chaos_always_fires_an_event() -> None:
     # No "plain spin" outcome — every roll across [0,1) yields an event.
     segs = [_seg(1, 0), _seg(2, 1)]
