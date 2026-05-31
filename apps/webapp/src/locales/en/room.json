@@ -85,7 +85,7 @@
       },
       "blind_pointer": {
         "title": "Blind pointer",
-        "desc": "The pointer vanishes — it reappears wherever it lands."
+        "desc": "The pointer vanishes — it reappears at a random spot."
       },
       "roaming_pointer": {
         "title": "Roaming pointer",

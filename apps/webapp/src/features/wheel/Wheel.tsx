@@ -1,4 +1,4 @@
-import { animate, motion, useMotionTemplate, useMotionValue } from "framer-motion";
+import { animate, motion, useMotionValue } from "framer-motion";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -157,15 +157,26 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
   const { t } = useTranslation("common");
   const rotation = useMotionValue(0);
   const pointerRotation = useMotionValue(0);
-  // Rotate the pointer about the WHEEL CENTRE via the SVG `transform`
-  // attribute (explicit user-space origin). A CSS-style `rotate` +
-  // transform-origin spins it on its own axis on SVG, which is the
-  // "pointer spins in place" bug.
-  const pointerTransform = useMotionTemplate`rotate(${pointerRotation} ${CX} ${CY})`;
+  const pointerGroupRef = useRef<SVGGElement>(null);
   const tickWatchActive = useRef(false);
 
-  // Keep the pointer at the prop angle (top by default; the random reveal
-  // angle for Chaos `blind_pointer`). `roamPointer` animates this same value.
+  // Drive the pointer's SVG `transform` attribute from the motion value on
+  // every frame, rotating about the WHEEL CENTRE (explicit user-space origin).
+  // We set the attribute imperatively because: a CSS-style `rotate` +
+  // transform-origin spins the little triangle on its own axis on SVG, and a
+  // motion-template bound to the `transform` attribute only updates on React
+  // renders (so `animate()` — the roam — didn't move). `.on("change")` fires
+  // for both `.set()` and `animate()`, every frame.
+  useEffect(() => {
+    const apply = (v: number): void => {
+      pointerGroupRef.current?.setAttribute("transform", `rotate(${v} ${CX} ${CY})`);
+    };
+    apply(pointerRotation.get());
+    return pointerRotation.on("change", apply);
+  }, [pointerRotation]);
+
+  // Keep the pointer at the prop angle (top by default; the result-segment
+  // centre for Chaos `blind_pointer`). `roamPointer` animates this same value.
   // Keyed on `spin?.seed` too so every new spin/phase resets it — otherwise a
   // roam leaves it stuck at the result angle on later spins.
   useEffect(() => {
@@ -357,14 +368,14 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
           // wheel group) so it can be both set instantly (blind_pointer) and
           // animated through a path (roaming_pointer). transformOrigin = wheel
           // centre so it swings around the rim.
-          <motion.g transform={pointerTransform}>
+          <g ref={pointerGroupRef}>
             <path
               d={`M ${CX} ${POINTER_TIP_Y + 32} L ${CX + 16} ${POINTER_TIP_Y} L ${CX - 16} ${POINTER_TIP_Y} Z`}
               fill="#5B3DF5"
               stroke="#FFFFFF"
               strokeWidth={2}
             />
-          </motion.g>
+          </g>
         )}
 
         {/* Visual only. The real, focusable spin control is the HTML button
