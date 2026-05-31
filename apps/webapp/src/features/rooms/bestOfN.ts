@@ -1,8 +1,11 @@
 import { type RoomState } from "@/lib/api";
 
-/** Best-of-N is active in Classic rooms with a target above 1. */
+/** Best-of-N is active in Classic + Rigged rooms with a target above 1.
+ * (Rigged is a Classic variant; the host sees game_mode "rigged" — guests get
+ * it redacted to "classic" — and best-of-N must work the same for both.) */
 export function isBestOfN(snap: RoomState | null): boolean {
-  return snap?.room.game_mode === "classic" && (snap?.room.spin_count ?? 1) > 1;
+  const mode = snap?.room.game_mode;
+  return (mode === "classic" || mode === "rigged") && (snap?.room.spin_count ?? 1) > 1;
 }
 
 export function attempts(snap: RoomState | null): number {

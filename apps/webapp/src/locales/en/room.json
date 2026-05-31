@@ -71,7 +71,7 @@
     "footer": "Higher = more likely to land. 0 = never.",
     "save_failed": "Couldn't save the rig. Try again.",
     "reveal": "Reveal the rig 🎭",
-    "revealed_title": "IT WAS RIGGED!",
+    "revealed_title": "it was rigged 🎭",
     "revealed_count": "{count, plural, one {Rigged for # spin 😈} other {Rigged for # spins 😈}}"
   },
   "chaos": {

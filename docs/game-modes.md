@@ -194,7 +194,8 @@ The host secretly weights segments so the wheel is biased — but to everyone el
 - **Trigger**: a host-only "Reveal the rig 🎭" button in the `RigEditorSheet` (shown when `game_mode === "rigged"` && not yet revealed).
 - **Server**: `POST /rooms/{code}/reveal` (`services/rigged.py::reveal_rig`, host-only) sets `rigged_revealed = true`, stamps **🎭 into the room title** (ethical guard), and broadcasts `rigged:revealed`. Here a broadcast IS wanted — the secret is out.
 - **Un-redaction**: `build_room_state` keys on `rigged_revealed`, so once true the mode + real weights become visible to **everyone**. On the `rigged:revealed` event each client refetches `GET /rooms/{code}` (weights aren't in a flat patch) → `setSnapshot`.
-- **Client**: when `rigged_revealed` flips true, RoomPage plays a **full-screen reveal** — skewed "Хоба!" + "IT WAS RIGGED!" + the real weight **bar-chart** (animated, sorted desc) + "rigged for N spins 😈" + confetti, auto-dismissing after 5 s. The host badge + 🎭 title persist.
+- **Client**: when `rigged_revealed` flips true, RoomPage plays a **full-screen reveal as a separate page** (`fixed inset-0`, opaque — covers the header too, so it doesn't blend with the room) — skewed "Хоба!" + "воно було підкручене 🎭" + the real weight **bar-chart** (animated, sorted desc) + "rigged for N spins 😈" + confetti, auto-dismissing after 5 s. The host badge + 🎭 title persist.
+- **Best-of-N works while rigged**: a Classic room with `spin_count > 1` that gets rigged keeps counting attempts — the `_emit_settled` gate + client `isBestOfN` both accept `game_mode in (classic, rigged)`. (Earlier bug: rigging stopped the attempt counter because the gate was `== "classic"`.)
 - **Stat**: `rooms.rigged_spin_count` (Alembic 0014) increments on each spin while rigged (redacted to 0 for non-host pre-reveal); shown in the reveal.
 
 ## Best-of-N spins (cross-mode)

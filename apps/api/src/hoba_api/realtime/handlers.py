@@ -211,16 +211,18 @@ async def _emit_settled(
                         "current_turn_user_id": room.current_turn_user_id,
                     }
 
-            # Best-of-N (Classic, spin_count > 1): recompute the round from
-            # the committed Spin rows rather than incrementing shared
+            # Best-of-N (Classic + Rigged, spin_count > 1): recompute the round
+            # from the committed Spin rows rather than incrementing shared
             # counters. _emit_settled runs as overlapping background tasks,
             # so an increment-based count races: a late stale patch (e.g.
             # attempts=4, winner=null) can arrive after the finalizing patch
             # and blank the winner on clients (the "5/5, no winner" bug).
             # Counting committed spins is order-independent — every settle
             # after the Nth spin commits converges to the same result.
+            # Rigged is a Classic variant (just weighted) — rigging a best-of-N
+            # room must NOT stop the attempt counting.
             if (
-                room.game_mode == "classic"
+                room.game_mode in ("classic", "rigged")
                 and room.spin_count > 1
                 and question is not None
             ):

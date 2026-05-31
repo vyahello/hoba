@@ -4,6 +4,13 @@
 
 ---
 
+## Post-Stage-E fixes — 2026-05-31
+
+- **Rigged reveal is now a separate full-screen page** (`fixed inset-0`, opaque) instead of an `absolute` overlay inside `<main>` that left the header showing and blended with the room. Reveal text changed to "Хоба! / воно було підкручене 🎭" (skewed HobaWord + sentence).
+- **Bug: rigging a best-of-N Classic room stopped the attempt counter.** Rigging flips `game_mode` to `"rigged"`, but the best-of-N recompute in `_emit_settled` (and client `isBestOfN`) gated on `== "classic"` → attempts froze. Both now accept `game_mode in (classic, rigged)`.
+
+---
+
 ## STAGE E COMPLETE — 2026-05-31
 
 **Phase 8 delivered: Rigged Mode 🎭** — the legendary hidden-weighting feature. With it, **all five game modes are live** (Classic, Elimination, Punishment, Chaos, Rigged). Two slices:

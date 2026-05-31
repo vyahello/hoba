@@ -1261,7 +1261,7 @@ export function RoomPage(): JSX.Element {
                   onClick={() => {
                     setRigRevealShown(false);
                   }}
-                  className="absolute inset-0 z-40 px-5 py-6 flex flex-col items-center justify-center gap-3 bg-bg-light/97 dark:bg-bg-dark/97 cursor-pointer"
+                  className="fixed inset-0 z-50 px-5 py-6 flex flex-col items-center justify-center gap-3 bg-bg-light dark:bg-bg-dark cursor-pointer"
                   aria-live="assertive"
                   role="status"
                 >
@@ -1274,7 +1274,7 @@ export function RoomPage(): JSX.Element {
                     <HobaWord sizeClass="text-5xl sm:text-6xl" />
                   </motion.div>
                   <h2 className="font-display font-extrabold text-2xl text-brand-pink text-center">
-                    🎭 {t("room:rig.revealed_title")}
+                    {t("room:rig.revealed_title")}
                   </h2>
                   <div className="w-full max-w-sm flex flex-col gap-2 mt-1">
                     {ranked.map((s, i) => {
