@@ -31,10 +31,10 @@
     },
     "watch": {
       "superhero": "Супергерої",
-      "true_crime": "Тру-крайм",
-      "kdrama": "Дорама",
+      "crime": "Крайм",
+      "comedy": "Комедія",
       "scifi": "Sci-fi",
-      "romcom": "Ромком",
+      "romance": "Романтік",
       "horror": "Жахи"
     },
     "truth_dare": {

@@ -59,10 +59,10 @@ export const QUICK_WHEELS: readonly QuickWheel[] = [
     gradient: ["#7C5CFF", "#FF5C9C"],
     segments: [
       { key: "superhero", emoji: "🦸", colorSeed: 0 },
-      { key: "true_crime", emoji: "🔪", colorSeed: 1 },
-      { key: "kdrama", emoji: "💔", colorSeed: 2 },
+      { key: "crime", emoji: "🔪", colorSeed: 1 },
+      { key: "comedy", emoji: "😂", colorSeed: 2 },
       { key: "scifi", emoji: "🚀", colorSeed: 3 },
-      { key: "romcom", emoji: "💘", colorSeed: 4 },
+      { key: "romance", emoji: "💘", colorSeed: 4 },
       { key: "horror", emoji: "👻", colorSeed: 5 },
     ],
   },

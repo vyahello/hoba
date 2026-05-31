@@ -31,10 +31,10 @@
     },
     "watch": {
       "superhero": "Superhero",
-      "true_crime": "True crime",
-      "kdrama": "K-drama",
+      "crime": "Crime",
+      "comedy": "Comedy",
       "scifi": "Sci-fi",
-      "romcom": "Rom-com",
+      "romance": "Romance",
       "horror": "Horror"
     },
     "truth_dare": {
