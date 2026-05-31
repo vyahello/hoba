@@ -17,13 +17,18 @@ from hoba_api.models.segment import Segment
 from hoba_api.models.wheel import Wheel
 from hoba_api.models.wheel_social import WheelLike, WheelReport
 from hoba_api.moderation import contains_profanity, normalize_category
+from hoba_api.sanitize import sanitize_text
 from hoba_api.services.rooms import (
     MAX_SEGMENTS,
     MIN_SEGMENTS,
+    SEGMENT_LABEL_MAX_LENGTH,
     RoomServiceError,
     SegmentDraft,
     create_room,
 )
+
+WHEEL_TITLE_MAX_LENGTH = 120
+REPORT_REASON_MAX_LENGTH = 200
 
 # Distinct reporters that auto-hide a public wheel pending review (spec §14).
 REPORT_HIDE_THRESHOLD = 3
@@ -31,11 +36,14 @@ REPORT_HIDE_THRESHOLD = 3
 _LIKE_WEIGHT = 3
 
 
-def _validate(title: str, segments: list[SegmentDraft]) -> None:
-    if not title.strip():
+def _validate(title: str, segments: list[SegmentDraft]) -> str:
+    """Sanitize + validate the title; returns the cleaned title."""
+    clean_title = sanitize_text(title, max_length=WHEEL_TITLE_MAX_LENGTH)
+    if not clean_title:
         raise RoomServiceError("empty_title")
     if not MIN_SEGMENTS <= len(segments) <= MAX_SEGMENTS:
         raise RoomServiceError("bad_segment_count")
+    return clean_title
 
 
 async def _add_segments(
@@ -46,7 +54,7 @@ async def _add_segments(
             Segment(
                 parent_id=wheel_id,
                 parent_type="wheel",
-                label=draft.label.strip(),
+                label=sanitize_text(draft.label, max_length=SEGMENT_LABEL_MAX_LENGTH),
                 emoji=draft.emoji,
                 color_seed=draft.color_seed,
                 weight=draft.weight,
@@ -58,8 +66,8 @@ async def _add_segments(
 async def create_wheel(
     session: AsyncSession, *, owner_id: int, title: str, segments: list[SegmentDraft],
 ) -> Wheel:
-    _validate(title, segments)
-    wheel = Wheel(owner_id=owner_id, title=title.strip())
+    clean_title = _validate(title, segments)
+    wheel = Wheel(owner_id=owner_id, title=clean_title)
     session.add(wheel)
     await session.flush()
     await _add_segments(session, wheel.id, segments)
@@ -90,14 +98,14 @@ async def update_wheel(
 ) -> Wheel:
     if wheel.owner_id != owner_id:
         raise RoomServiceError("not_owner")
-    _validate(title, segments)
+    clean_title = _validate(title, segments)
     # Replace the segment set wholesale.
     await session.execute(
         delete(Segment).where(
             Segment.parent_type == "wheel", Segment.parent_id == wheel.id,
         ),
     )
-    wheel.title = title.strip()
+    wheel.title = clean_title
     await _add_segments(session, wheel.id, segments)
     await session.flush()
     return wheel
@@ -229,8 +237,13 @@ async def report_wheel(
         )
     ).scalar_one_or_none()
     if existing is None:
+        clean_reason = (
+            sanitize_text(reason, max_length=REPORT_REASON_MAX_LENGTH) or None
+            if reason is not None
+            else None
+        )
         session.add(
-            WheelReport(wheel_id=wheel.id, user_id=user_id, reason=reason),
+            WheelReport(wheel_id=wheel.id, user_id=user_id, reason=clean_reason),
         )
         await session.flush()
     wheel.report_count = (

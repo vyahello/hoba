@@ -279,6 +279,17 @@ cp ./data/hoba.db ./data/hoba-$(date +%F).db.bak
 
 # Free disk by pruning old images
 docker image prune -af
+
+# Room cleanup — close rooms idle > 24h (run from cron, e.g. hourly).
+# Non-destructive: history is kept, the room just can't be re-entered.
+docker compose exec api python -m hoba_api.tasks.cleanup
+# Override the window: -e HOBA_CLEANUP_AFTER_HOURS=48
+```
+
+Suggested host crontab line (hourly):
+
+```cron
+0 * * * * cd /home/cax/_hoba && docker compose -f compose.shared.yaml exec -T api python -m hoba_api.tasks.cleanup >> /var/log/hoba-cleanup.log 2>&1
 ```
 
 ## 9. Common first-deploy gotchas

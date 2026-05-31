@@ -18,6 +18,7 @@ from hoba_api.models.room import (
     Room,
 )
 from hoba_api.models.segment import Segment
+from hoba_api.sanitize import sanitize_text
 
 # Code alphabet excludes confusable characters (0/O, 1/I, etc.).
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -25,6 +26,11 @@ CODE_LENGTH = 6
 MAX_CODE_GENERATION_RETRIES = 8
 MIN_SEGMENTS = 2
 MAX_SEGMENTS = 12
+# Defensive truncation caps for sanitized user text (schema bounds are
+# tighter; these are the last-resort guards on the stored value).
+QUESTION_MAX_LENGTH = 200
+SEGMENT_LABEL_MAX_LENGTH = 100
+ROOM_TITLE_MAX_LENGTH = 80
 
 MODE_DEFAULT_SPIN_POLICY: dict[str, str] = {
     # Classic defaults to host-controlled ("Лише я") — the spin-policy gear
@@ -117,7 +123,8 @@ async def create_room(
         raise RoomServiceError("bad_suggestion_policy")
     if not MIN_SEGMENTS <= len(segments) <= MAX_SEGMENTS:
         raise RoomServiceError("bad_segment_count")
-    if not question_text.strip():
+    question_text = sanitize_text(question_text, max_length=QUESTION_MAX_LENGTH)
+    if not question_text:
         raise RoomServiceError("empty_question")
 
     code = await _find_unused_code(session)
@@ -147,7 +154,7 @@ async def create_room(
 
     question = Question(
         room_id=room.id,
-        text=question_text.strip(),
+        text=question_text,
         is_active=True,
         created_by=host_id,
         approved=True,
@@ -160,7 +167,7 @@ async def create_room(
             Segment(
                 parent_id=question.id,
                 parent_type="question",
-                label=draft.label.strip(),
+                label=sanitize_text(draft.label, max_length=SEGMENT_LABEL_MAX_LENGTH),
                 emoji=draft.emoji,
                 color_seed=draft.color_seed,
                 weight=draft.weight,
@@ -222,6 +229,8 @@ async def update_room(
     for key, value in patch.items():
         if key not in allowed:
             continue
+        if key == "title" and isinstance(value, str):
+            value = sanitize_text(value, max_length=ROOM_TITLE_MAX_LENGTH) or None
         setattr(room, key, value)
 
     # Mid-room mode change (spec §F11): start the new mode from a clean slate
