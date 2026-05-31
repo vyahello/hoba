@@ -59,14 +59,8 @@ export function RoomSettingsSheet({
           {t("room:settings.spin_policy.label")}
         </h3>
         <div className="flex flex-col gap-2">
-          <PolicyOption
-            label={t("room:settings.spin_policy.anyone")}
-            selected={snapshot.room.spin_policy === "anyone"}
-            saving={saving === "anyone"}
-            onSelect={() => {
-              void applyPolicy("anyone");
-            }}
-          />
+          {/* "Anyone can spin" intentionally omitted — the host chooses
+              between only-me and take-turns once a guest is present. */}
           <PolicyOption
             label={t("room:settings.spin_policy.host_only")}
             selected={snapshot.room.spin_policy === "host_only"}

@@ -517,6 +517,9 @@ export function RoomPage(): JSX.Element {
 
   const canSpin = computeCanSpin(snapshot);
   const callerIsHost = isHost(snapshot);
+  // The spin-policy gear is only meaningful once someone else is in the room
+  // (solo, the host just spins). Shows when ≥1 non-host player is present.
+  const hasOtherPlayers = presentUserIds.some((id) => id !== snapshot?.room.host_id);
   const turnState = computeTurnState(snapshot);
 
   // Spinning is the only state without status lines. No mode has a bottom
@@ -623,7 +626,7 @@ export function RoomPage(): JSX.Element {
                 void handleShare();
               }}
             />
-            {callerIsHost && !isRace ? (
+            {callerIsHost && !isRace && hasOtherPlayers ? (
               <IconButton
                 aria-label={t("room:settings.open_aria")}
                 variant="tonal"
@@ -1104,8 +1107,9 @@ export function RoomPage(): JSX.Element {
         <FlyingReactions />
 
         {/* Bet-race modes (Punishment, Chaos) are turn_based-only — no
-            spin_policy to configure, so the settings gear is hidden. */}
-        {callerIsHost && !isRace ? (
+            spin_policy to configure. Otherwise the gear only matters once a
+            guest is present (solo, the host just spins). */}
+        {callerIsHost && !isRace && hasOtherPlayers ? (
           <RoomSettingsSheet
             open={settingsOpen}
             onClose={() => {
