@@ -280,21 +280,23 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
             `blind_pointer` hides it during the spin and re-renders it at a
             random screen angle on stop (rotated about the wheel centre). */}
         {pointerHidden ? null : (
-          <motion.g
-            key={pointerDeg}
-            initial={pointerDeg !== 0 ? { scale: 0, opacity: 0 } : false}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", damping: 12, stiffness: 260 }}
-            style={{ transformOrigin: `${CX}px ${CY}px` }}
-            transform={`rotate(${pointerDeg} ${CX} ${CY})`}
-          >
-            <path
+          // Rotation lives on a plain <g> via the SVG `transform` attribute.
+          // The fade-in animates ONLY opacity — animating scale/transform here
+          // would make Framer write a CSS transform that overrides this
+          // attribute, snapping the pointer back to the top (the blind_pointer
+          // "always at top" bug).
+          <g transform={`rotate(${pointerDeg} ${CX} ${CY})`}>
+            <motion.path
+              key={pointerDeg}
+              initial={{ opacity: pointerDeg !== 0 ? 0 : 1 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.25 }}
               d={`M ${CX} ${POINTER_TIP_Y + 32} L ${CX + 16} ${POINTER_TIP_Y} L ${CX - 16} ${POINTER_TIP_Y} Z`}
               fill="#5B3DF5"
               stroke="#FFFFFF"
               strokeWidth={2}
             />
-          </motion.g>
+          </g>
         )}
 
         {/* Visual only. The real, focusable spin control is the HTML button
