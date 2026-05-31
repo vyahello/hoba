@@ -23,7 +23,7 @@ import {
   livingSegments,
   remainingCount,
 } from "@/features/rooms/elimination";
-import { CHAOS_EVENT_EMOJI, orderSegmentsForSpin } from "@/features/rooms/chaos";
+import { buildRoamHops, CHAOS_EVENT_EMOJI, orderSegmentsForSpin } from "@/features/rooms/chaos";
 import { computeCanSpin, isHost } from "@/features/rooms/permissions";
 import {
   attempts as bonAttemptsCount,
@@ -126,6 +126,9 @@ export function RoomPage(): JSX.Element {
   // SpinResult that overrides the server one while the sequence plays.
   const [phaseSpin, setPhaseSpin] = useState<SpinResult | null>(null);
   const wheelRef = useRef<WheelHandle>(null);
+  // Latest rendered segments, read inside the spin choreography without making
+  // it a hook dep (which would restart the animation when segments change).
+  const segmentsRef = useRef<SegmentDef[]>([]);
 
   // Shatter thunk: when a segment is eliminated, briefly compress the wheel
   // (scale 1 → 0.97 → 1, ~300 ms) so players feel the winner "pop off".
@@ -261,6 +264,7 @@ export function RoomPage(): JSX.Element {
     const event = fx?.chaos_event ?? null;
     const finalAngle = currentSpin.final_angle_deg;
     const baseDur = currentSpin.duration_ms;
+    const resultSegId = currentSpin.result_segment_id;
 
     let cancelled = false;
     const timers: number[] = [];
@@ -316,6 +320,20 @@ export function RoomPage(): JSX.Element {
         if (cancelled) return;
         setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: finalAngle, durationMs: NUDGE_CREEP_MS, seed: freshSeed() });
         await sleep(NUDGE_CREEP_MS);
+        if (cancelled) return;
+      } else if (event === "roaming_pointer") {
+        // Wheel stays still (server kept the angle, so the no-op spin doesn't
+        // move it); the pointer roams across the options and lands on the
+        // result. R = the wheel's resting angle = currentSpin.final_angle_deg.
+        const segs = segmentsRef.current;
+        const resultIdx = segs.findIndex((s) => s.id === String(resultSegId));
+        if (resultIdx >= 0 && wheelRef.current !== null) {
+          await wheelRef.current.roamPointer(
+            buildRoamHops(segs.length, resultIdx, finalAngle),
+          );
+        } else {
+          await sleep(baseDur);
+        }
         if (cancelled) return;
       } else {
         // normal / slow_burn / reverse / swap — one server-driven spin
@@ -424,6 +442,7 @@ export function RoomPage(): JSX.Element {
       colorSeed: s.color_seed,
     }));
   }, [snapshot, currentSpin]);
+  segmentsRef.current = segments;
 
   const winningSegmentIndex = useMemo(() => {
     if (currentSpin === null || segments.length === 0) return -1;

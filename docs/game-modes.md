@@ -142,7 +142,7 @@ During play, the standings list every player's `option matches/N`; the **viewer'
 
 **Per-spin feedback:** no confetti on every stop. When the wheel settles, the **landed wedge flashes** (an animated highlight on the `<Wheel>` via `highlightSegmentId`, used by both Chaos and Punishment) so it's clear which option came up. A **hit** (lands your own option, non-winning) also shows the **"Hoba! {option}"** lucky banner in the standings area; a **miss** shows nothing. The **winning** hit flips the phase to `over` immediately, so the lucky banner is skipped and only the **winner hero** ("{option} wins! 🏆") shows — they never overlap. The winner hero fires its own confetti (chaos-only effect, since Chaos has no per-spin burst).
 
-### The seven chaos events (≈⅐ each)
+### The eight chaos events (≈⅛ each)
 
 | Event | Effect | Where it's applied |
 |---|---|---|
@@ -152,6 +152,7 @@ During play, the standings list every player's `option matches/N`; the **viewer'
 | `swap` 🔀 | two segments trade positions; the announcement card shows the two **crossing** so it's visible | engine reorders `SpinDecision.segments` + emits `segment_order` (client renders that order) + `swap_pair` (the two ids for the card) |
 | `nudge_fwd` ⏩ / `nudge_back` ⏪ | wheel settles, "thinks" (shake), then creeps **±1 sector** — changing the result. Both share **one generic "nudge" announcement** (direction not spoiled; only the creep reveals it) | spin service records the nudged segment + the nudged `final_angle_deg`, carries the pre-nudge stop in `nudge_from_angle`; client plays settle → shake → creep |
 | `blind_pointer` 🫥 | normal spin, but the **pointer vanishes** during it and **reappears at a random screen angle** on stop — whatever it lands on is the result | spin service picks a random `pointer_deg` and computes the result = segment under it (`floor(((P − A) mod 360)/sector)`); `<Wheel pointerHidden pointerDeg>` hides the pointer while spinning, reveals it at `P` when settled |
+| `roaming_pointer` 🎯 | the **wheel stays still** and the **pointer roams** across the options — forward, reversing, back — then settles on the result | spin service keeps `final_angle_deg = starting` (no rotation), result is the normal pick; client builds `buildRoamHops(n, resultIndex, R)` (a virtual-index random walk ending on the result centre) and the Wheel's imperative `roamPointer(hops)` animates the pointer motion value through them |
 
 The match-count uses the **recorded** `result_segment_id` (the *nudged* one for nudge, the *under-pointer* one for blind_pointer), so the race stays consistent with what the wheel finally shows. The announcement card holds `CHAOS_ANNOUNCE_MS = 2500` (long enough to read).
 

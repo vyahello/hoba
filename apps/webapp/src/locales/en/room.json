@@ -86,6 +86,10 @@
       "blind_pointer": {
         "title": "Blind pointer",
         "desc": "The pointer vanishes — it reappears wherever it lands."
+      },
+      "roaming_pointer": {
+        "title": "Roaming pointer",
+        "desc": "The wheel freezes — the pointer wanders the options."
       }
     }
   },

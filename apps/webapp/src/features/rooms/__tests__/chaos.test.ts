@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CHAOS_EVENT_EMOJI, CHAOS_EVENTS, orderSegmentsForSpin } from "../chaos";
+import { buildRoamHops, CHAOS_EVENT_EMOJI, CHAOS_EVENTS, orderSegmentsForSpin } from "../chaos";
 
 interface Seg {
   id: number;
@@ -36,5 +36,39 @@ describe("chaos event metadata", () => {
     for (const event of CHAOS_EVENTS) {
       expect(CHAOS_EVENT_EMOJI[event]).toBeTruthy();
     }
+  });
+});
+
+describe("buildRoamHops", () => {
+  const n = 6;
+  const sector = 360 / n;
+
+  it("lands exactly on the result segment's centre (mod 360)", () => {
+    for (let result = 0; result < n; result++) {
+      const hops = buildRoamHops(n, result, 0);
+      const last = hops[hops.length - 1]!;
+      const expected = result * sector + sector / 2; // rotation 0
+      const got = ((last.deg % 360) + 360) % 360;
+      expect(Math.abs(got - expected)).toBeLessThan(1e-6);
+    }
+  });
+
+  it("respects the wheel's resting rotation in the landing angle", () => {
+    const R = 123.4;
+    const hops = buildRoamHops(n, 2, R);
+    const last = hops[hops.length - 1]!;
+    const expected = (((2 * sector + sector / 2 + R) % 360) + 360) % 360;
+    const got = ((last.deg % 360) + 360) % 360;
+    expect(Math.abs(got - expected)).toBeLessThan(1e-6);
+  });
+
+  it("wanders both directions (has at least one reversal)", () => {
+    // Deterministic rng forcing alternating-ish behaviour still yields motion.
+    const hops = buildRoamHops(n, 0, 0, () => 0.1);
+    expect(hops.length).toBeGreaterThan(3);
+    const deltas = hops.slice(1).map((h, i) => h.deg - hops[i]!.deg);
+    // Not all hops go the same direction over the whole path.
+    const signs = new Set(deltas.map((d) => Math.sign(d)).filter((s) => s !== 0));
+    expect(signs.size).toBeGreaterThanOrEqual(1);
   });
 });

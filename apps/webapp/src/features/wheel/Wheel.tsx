@@ -135,6 +135,9 @@ export interface WheelProps {
 
 export interface WheelHandle {
   getCurrentRotation: () => number;
+  /** Animate the pointer through a sequence of screen angles (Chaos
+   * `roaming_pointer`). Resolves when the last hop finishes. */
+  roamPointer: (hops: { deg: number; ms: number }[]) => Promise<void>;
 }
 
 export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
@@ -153,14 +156,29 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
 ) {
   const { t } = useTranslation("common");
   const rotation = useMotionValue(0);
+  const pointerRotation = useMotionValue(0);
   const tickWatchActive = useRef(false);
+
+  // Keep the pointer at the prop angle (top by default; the random reveal
+  // angle for Chaos `blind_pointer`). `roamPointer` animates this same value.
+  useEffect(() => {
+    pointerRotation.set(pointerDeg);
+  }, [pointerDeg, pointerRotation]);
 
   useImperativeHandle(
     ref,
     () => ({
       getCurrentRotation: (): number => rotation.get(),
+      roamPointer: async (hops): Promise<void> => {
+        for (const hop of hops) {
+          await animate(pointerRotation, hop.deg, {
+            duration: hop.ms / 1000,
+            ease: "easeInOut",
+          });
+        }
+      },
     }),
-    [rotation],
+    [rotation, pointerRotation],
   );
 
   // Drive the spin animation imperatively. Effect dep keys identify the
@@ -322,23 +340,20 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
             `blind_pointer` hides it during the spin and re-renders it at a
             random screen angle on stop (rotated about the wheel centre). */}
         {pointerHidden ? null : (
-          // Rotation lives on a plain <g> via the SVG `transform` attribute.
-          // The fade-in animates ONLY opacity — animating scale/transform here
-          // would make Framer write a CSS transform that overrides this
-          // attribute, snapping the pointer back to the top (the blind_pointer
-          // "always at top" bug).
-          <g transform={`rotate(${pointerDeg} ${CX} ${CY})`}>
-            <motion.path
-              key={pointerDeg}
-              initial={{ opacity: pointerDeg !== 0 ? 0 : 1 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.25 }}
+          // Pointer rotation is a motion value (same proven pattern as the
+          // wheel group) so it can be both set instantly (blind_pointer) and
+          // animated through a path (roaming_pointer). transformOrigin = wheel
+          // centre so it swings around the rim.
+          <motion.g
+            style={{ rotate: pointerRotation, transformOrigin: `${CX}px ${CY}px` }}
+          >
+            <path
               d={`M ${CX} ${POINTER_TIP_Y + 32} L ${CX + 16} ${POINTER_TIP_Y} L ${CX - 16} ${POINTER_TIP_Y} Z`}
               fill="#5B3DF5"
               stroke="#FFFFFF"
               strokeWidth={2}
             />
-          </g>
+          </motion.g>
         )}
 
         {/* Visual only. The real, focusable spin control is the HTML button

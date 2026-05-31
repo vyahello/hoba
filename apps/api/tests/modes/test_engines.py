@@ -88,8 +88,9 @@ def test_elimination_settled_marks_winner_and_round_over() -> None:
     assert eff3.round_over is False
 
 
-# Chaos fires an event on EVERY spin (idx = int(roll * 7) over 7 events:
-# multi_spin, slow_burn, reverse, swap, nudge_fwd, nudge_back, blind_pointer).
+# Chaos fires an event on EVERY spin (idx = int(roll * 8) over 8 events:
+# multi_spin, slow_burn, reverse, swap, nudge_fwd, nudge_back, blind_pointer,
+# roaming_pointer).
 
 
 def test_chaos_multi_spin_reps_in_range() -> None:
@@ -111,7 +112,7 @@ def test_chaos_slow_burn_is_very_slow() -> None:
 
 def test_chaos_reverse_keeps_order_and_duration() -> None:
     segs = [_seg(1, 0), _seg(2, 1)]
-    d = ChaosEngine(rng=_seq_rng([0.4])).on_spin_request(_ctx(segs))  # idx 2
+    d = ChaosEngine(rng=_seq_rng([0.3])).on_spin_request(_ctx(segs))  # idx 2
     assert d.effects == {"chaos_event": "reverse"}
     assert d.duration_multiplier == 1.0
     assert d.segments == segs
@@ -119,8 +120,8 @@ def test_chaos_reverse_keeps_order_and_duration() -> None:
 
 def test_chaos_swap_reorders_and_emits_pair() -> None:
     segs = [_seg(1, 0), _seg(2, 1), _seg(3, 2)]
-    # roll 0.55 -> idx 3 = swap; i = floor(0.0*3)=0; j = floor(0.99*2)=1, j>=i -> j=2.
-    d = ChaosEngine(rng=_seq_rng([0.55, 0.0, 0.99])).on_spin_request(_ctx(segs))
+    # roll 0.4 -> idx 3 = swap; i = floor(0.0*3)=0; j = floor(0.99*2)=1, j>=i -> j=2.
+    d = ChaosEngine(rng=_seq_rng([0.4, 0.0, 0.99])).on_spin_request(_ctx(segs))
     assert d.effects["chaos_event"] == "swap"
     assert [s.id for s in d.segments] == [3, 2, 1]
     assert d.effects["segment_order"] == [3, 2, 1]
@@ -129,17 +130,25 @@ def test_chaos_swap_reorders_and_emits_pair() -> None:
 
 def test_chaos_nudge_events() -> None:
     segs = [_seg(1, 0), _seg(2, 1)]
-    fwd = ChaosEngine(rng=_seq_rng([0.62])).on_spin_request(_ctx(segs))  # idx 4
+    fwd = ChaosEngine(rng=_seq_rng([0.55])).on_spin_request(_ctx(segs))  # idx 4
     assert fwd.effects == {"chaos_event": "nudge_fwd"}
-    back = ChaosEngine(rng=_seq_rng([0.78])).on_spin_request(_ctx(segs))  # idx 5
+    back = ChaosEngine(rng=_seq_rng([0.7])).on_spin_request(_ctx(segs))  # idx 5
     assert back.effects == {"chaos_event": "nudge_back"}
 
 
 def test_chaos_blind_pointer() -> None:
     segs = [_seg(1, 0), _seg(2, 1)]
-    d = ChaosEngine(rng=_seq_rng([0.95])).on_spin_request(_ctx(segs))  # idx 6
+    d = ChaosEngine(rng=_seq_rng([0.8])).on_spin_request(_ctx(segs))  # idx 6
     assert d.effects == {"chaos_event": "blind_pointer"}
     assert d.duration_multiplier == 1.0
+
+
+def test_chaos_roaming_pointer() -> None:
+    segs = [_seg(1, 0), _seg(2, 1)]
+    d = ChaosEngine(rng=_seq_rng([0.95])).on_spin_request(_ctx(segs))  # idx 7
+    assert d.effects == {"chaos_event": "roaming_pointer"}
+    assert d.duration_multiplier == 1.0
+    assert d.segments == segs
 
 
 def test_chaos_never_repeats_last_event() -> None:

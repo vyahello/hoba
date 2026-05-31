@@ -15,6 +15,7 @@ export const CHAOS_EVENTS = [
   "nudge_fwd",
   "nudge_back",
   "blind_pointer",
+  "roaming_pointer",
 ] as const;
 
 export const CHAOS_EVENT_EMOJI: Record<string, string> = {
@@ -25,7 +26,50 @@ export const CHAOS_EVENT_EMOJI: Record<string, string> = {
   nudge_fwd: "⏩",
   nudge_back: "⏪",
   blind_pointer: "🫥",
+  roaming_pointer: "🎯",
 };
+
+/** One leg of the roaming-pointer path: an absolute screen angle + how long
+ * to travel there. */
+export interface RoamHop {
+  deg: number;
+  ms: number;
+}
+
+/**
+ * Build the `roaming_pointer` path: the wheel is still and the pointer wanders
+ * across the options (forward/back, frequent reversals — fun to watch), then
+ * settles **exactly on the result segment's centre**.
+ *
+ * Works in a *virtual* (unwrapped) segment index so the pointer never jumps
+ * across the 0/360 seam — it just keeps rotating the short way each hop. The
+ * final hop lands on a virtual index ≡ `resultIndex (mod n)`, i.e. the result.
+ */
+export function buildRoamHops(
+  segmentCount: number,
+  resultIndex: number,
+  wheelRotationDeg: number,
+  rng: () => number = Math.random,
+): RoamHop[] {
+  const sector = 360 / segmentCount;
+  const centerDeg = (v: number): number => v * sector + sector / 2 + wheelRotationDeg;
+  const hops: RoamHop[] = [];
+  let v = 0; // start at the top option
+  let dir = rng() < 0.5 ? 1 : -1;
+  const wander = 9 + Math.floor(rng() * 5); // 9–13 wandering hops
+  for (let k = 0; k < wander; k++) {
+    if (rng() < 0.4) dir = -dir; // frequent reversals
+    v += dir * (rng() < 0.7 ? 1 : 2);
+    hops.push({ deg: centerDeg(v), ms: 150 + Math.round((k / wander) * 150) });
+  }
+  // Settle: hover one before / one after the result, then land on it.
+  const gap = (((v - resultIndex) % segmentCount) + segmentCount) % segmentCount;
+  const landingV = v - gap; // ≡ resultIndex (mod n)
+  hops.push({ deg: centerDeg(landingV - 1), ms: 360 });
+  hops.push({ deg: centerDeg(landingV + 1), ms: 300 });
+  hops.push({ deg: centerDeg(landingV), ms: 560 });
+  return hops;
+}
 
 /**
  * Reorder living segments to match the server's spin order for this spin.

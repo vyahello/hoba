@@ -169,6 +169,10 @@ async def trigger_spin(
         rel = (pointer_deg - result.final_angle_deg) % 360.0
         winning_index = int(rel // sector_deg) % len(spin_segments)
         effects["pointer_deg"] = pointer_deg
+    elif chaos_event == "roaming_pointer":
+        # Wheel stays put — keep the current angle so nothing rotates; the
+        # client roams the pointer to the (normally-picked) result segment.
+        result = replace(result, final_angle_deg=starting_angle_deg)
 
     winning_segment = spin_segments[winning_index]
     started_at = datetime.now(UTC)

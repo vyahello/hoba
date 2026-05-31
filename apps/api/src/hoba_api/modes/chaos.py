@@ -36,6 +36,7 @@ CHAOS_EVENTS: tuple[str, ...] = (
     "nudge_fwd",
     "nudge_back",
     "blind_pointer",
+    "roaming_pointer",
 )
 
 
@@ -103,6 +104,14 @@ class ChaosEngine:
             return SpinDecision(
                 segments=ctx.segments,
                 effects={"chaos_event": "blind_pointer"},
+            )
+        if event == "roaming_pointer":
+            # The wheel stays still; the client roams the pointer across the
+            # options (forward/back) and settles on the result. The service
+            # just keeps the wheel angle put; the result is the normal pick.
+            return SpinDecision(
+                segments=ctx.segments,
+                effects={"chaos_event": "roaming_pointer"},
             )
         return self._swap(ctx)
 

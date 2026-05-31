@@ -290,13 +290,13 @@ async def test_trigger_spin_punishment_is_normal_spin(
 async def test_trigger_spin_chaos_reverse_flips_angle_backward(
     db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Force the chaos engine to roll "reverse" (idx 2 of 6 → roll in
-    # [0.333, 0.5)). The service must re-target the final angle below the
+    # Force the chaos engine to roll "reverse" (idx 2 of 8 → roll in
+    # [0.25, 0.375)). The service must re-target the final angle below the
     # start so the wheel animates counter-clockwise, still landing a valid
     # sector.
     from hoba_api.modes.registry import engine_for
 
-    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.4)
+    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.3)
     host_id = await _make_user(db, tg_id=600)
     room = await create_room(
         db, host_id=host_id, question_text="Q?", segments=_drafts(4),
@@ -314,12 +314,12 @@ async def test_trigger_spin_chaos_reverse_flips_angle_backward(
 async def test_trigger_spin_chaos_nudge_changes_result_and_records_pre_angle(
     db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Force "nudge_fwd" (idx 4 of 6 → roll in [0.666, 0.833)). The recorded
+    # Force "nudge_fwd" (idx 4 of 8 → roll in [0.5, 0.625)). The recorded
     # result must be one sector forward of the natural landing, and the
     # pre-nudge stop angle must be carried for the client choreography.
     from hoba_api.modes.registry import engine_for
 
-    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.7)
+    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.55)
     host_id = await _make_user(db, tg_id=601)
     room = await create_room(
         db, host_id=host_id, question_text="Q?", segments=_drafts(4),
@@ -341,7 +341,7 @@ async def test_trigger_spin_chaos_nudge_changes_result_and_records_pre_angle(
 async def test_trigger_spin_chaos_slow_burn_trims_turns(
     db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Force "slow_burn" (idx 1 of 7 → roll in [0.143, 0.286)). The spin should
+    # Force "slow_burn" (idx 1 of 8 → roll in [0.125, 0.25)). The spin should
     # travel only a few turns (not the usual ≥5) so the slow duration reads as
     # a crawl, while still landing a valid sector.
     from hoba_api.modes.chaos import SLOW_BURN_TURNS
@@ -366,11 +366,11 @@ async def test_trigger_spin_chaos_slow_burn_trims_turns(
 async def test_trigger_spin_chaos_blind_pointer_lands_under_pointer(
     db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Force "blind_pointer" (idx 6 of 7 → roll in [0.857, 1.0)). The recorded
+    # Force "blind_pointer" (idx 6 of 8 → roll in [0.75, 0.875)). The recorded
     # result must be the segment under the random pointer angle.
     from hoba_api.modes.registry import engine_for
 
-    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.95)
+    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.8)
     host_id = await _make_user(db, tg_id=602)
     room = await create_room(
         db, host_id=host_id, question_text="Q?", segments=_drafts(4),
@@ -387,6 +387,29 @@ async def test_trigger_spin_chaos_blind_pointer_lands_under_pointer(
     sector = 360.0 / len(living)
     idx = int(((pointer_deg - spin.final_angle_deg) % 360.0) // sector) % len(living)
     assert spin.result_segment_id == living[idx]
+
+
+async def test_trigger_spin_chaos_roaming_pointer_keeps_wheel_still(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Force "roaming_pointer" (idx 7 of 8 → roll in [0.875, 1.0)). The wheel
+    # must not move — the final angle equals the starting angle — while the
+    # result is still a valid segment (the client roams the pointer to it).
+    from hoba_api.modes.registry import engine_for
+
+    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.95)
+    host_id = await _make_user(db, tg_id=604)
+    room = await create_room(
+        db, host_id=host_id, question_text="Q?", segments=_drafts(4),
+        spin_policy="anyone", game_mode="chaos",
+    )
+    await db.commit()
+    # First spin starts at angle 0 → roaming keeps it at 0.
+    spin = await trigger_spin(db, room=room, user_id=host_id)
+    await db.commit()
+    assert spin.mode_state_snapshot["mode_effects"]["chaos_event"] == "roaming_pointer"
+    assert spin.final_angle_deg == 0.0
+    assert spin.result_segment_id in spin.mode_state_snapshot["living_segment_ids"]
 
 
 def test_best_of_n_leaders() -> None:
