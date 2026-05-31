@@ -143,6 +143,12 @@ class RoomCreateIn(BaseModel):
     spin_count: int = Field(default=1)
 
 
+class RigUpdateIn(BaseModel):
+    """Rigged Mode 🎭 (spec §5.5): host-only segment weights `{segment_id: 0..100}`."""
+
+    weights: dict[int, int]
+
+
 class RoomUpdateIn(BaseModel):
     title: str | None = Field(default=None, max_length=80)
     spin_policy: SpinPolicy | None = None

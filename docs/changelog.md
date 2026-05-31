@@ -4,6 +4,22 @@
 
 ---
 
+## Stage E — in progress (Rigged Mode 🎭)
+
+### Slice 1 — secret rigging mechanic (2026-05-31)
+
+Rigged Mode (spec §5.5) groundwork + the secret-weighting half. The reveal moment is Slice 2.
+
+- **Weighting reuses `Segment.weight`** (already fed to `compute_spin`) — no engine change for weighted spins. New `services/rigged.py::set_rig_weights` (host-only) validates `{segId: 0..100}`, rejects all-zero / bad / unknown segments, sets the weights and flips `room.game_mode="rigged"` (spin policy untouched).
+- **Secrecy via per-viewer redaction** in `build_room_state`: non-host + not-revealed → `game_mode` serialized as `"classic"` and segment weights as `1`. Host (and everyone post-reveal) sees the truth. New `rooms.rigged_revealed` column (Alembic **0013**, additive bool).
+- **Endpoint** `PATCH /rooms/{code}/rig` (`RigUpdateIn`) — host-only, **no broadcast** (guests must not learn). Returns the host's full snapshot.
+- **Frontend**: hidden **long-press on the hub** (`<Wheel onHubLongPress>`, ~1.5 s, host-only, Classic/Rigged rooms) opens `RigEditorSheet` (0–100 slider per segment, commits on release via `api.setRig`). Host gets a "🎭 Rigged" badge (`getGameModeMeta`/`shouldShowBadge` now cover rigged while keeping it out of `PICKABLE_GAME_MODES`); guests see redacted "classic" → no badge. EN+UK `modes.rigged` + `rig.*`.
+- **CI fairness guard**: weighted RNG lands within ±2% of declared share over 40k picks (`test_rigged.py`).
+
+Gates green (Opus 4.8, inline): **229 backend (86%) / 106 frontend**, ruff + mypy --strict + tsc + eslint + i18n + `pnpm build` clean. Mechanics in `docs/game-modes.md` (Rigged). **Next: Slice 2 — the reveal moment** (un-redact + bar-chart + 🎭 title + rigged-spin-count).
+
+---
+
 ## STAGE D COMPLETE — 2026-05-31
 
 **Phase 7 delivered: all four non-Rigged game modes on prod**, built on the `GameModeEngine` abstraction (`apps/api/src/hoba_api/modes/`: base `Protocol`, `ClassicEngine`, `EliminationEngine`, `PunishmentEngine`, `ChaosEngine`, registry — unknown modes fall back to Classic). Closed-out items:

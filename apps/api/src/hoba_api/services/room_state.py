@@ -39,14 +39,34 @@ async def build_room_state(
         if room.punishment_last_outcome
         else None
     )
-    room_out = RoomOut.model_validate(room).model_copy(
-        update={
-            "punishment_bets": bets,
-            "punishment_match_counts": room.punishment_match_counts,
-            "punishment_winner_user_id": room.punishment_winner_user_id,
-            "punishment_last_outcome": outcome,
-        },
+    # Rigged Mode 🎭 secrecy (spec §5.5): to a non-host viewer, before the host
+    # reveals, a rigged room is INDISTINGUISHABLE from Classic — the mode shows
+    # as "classic" and every segment weight as 1. The host (and everyone after
+    # a reveal) sees the real mode + weights.
+    is_host = room.host_id == current_user_id
+    rig_hidden = room.game_mode == "rigged" and not room.rigged_revealed and not is_host
+
+    room_update: dict[str, object] = {
+        "punishment_bets": bets,
+        "punishment_match_counts": room.punishment_match_counts,
+        "punishment_winner_user_id": room.punishment_winner_user_id,
+        "punishment_last_outcome": outcome,
+    }
+    if rig_hidden:
+        room_update["game_mode"] = "classic"
+    room_out = RoomOut.model_validate(room).model_copy(update=room_update)
+
+    question_out = (
+        QuestionOut.model_validate(active_question)
+        if active_question is not None
+        else None
     )
+    if question_out is not None and rig_hidden:
+        question_out = question_out.model_copy(
+            update={
+                "segments": [s.model_copy(update={"weight": 1}) for s in question_out.segments],
+            },
+        )
 
     return RoomState(
         room=room_out,
@@ -60,11 +80,7 @@ async def build_room_state(
             )
             for p in participants
         ],
-        active_question=(
-            QuestionOut.model_validate(active_question)
-            if active_question is not None
-            else None
-        ),
+        active_question=question_out,
         last_spin=SpinOut.model_validate(last_spin) if last_spin is not None else None,
         me_user_id=current_user_id,
     )

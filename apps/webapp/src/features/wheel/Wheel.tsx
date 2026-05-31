@@ -126,6 +126,12 @@ export interface WheelProps {
   /** Hide the pointer entirely (Chaos `blind_pointer` while spinning). */
   pointerHidden?: boolean;
   /**
+   * Hidden host gesture (Rigged Mode 🎭, spec §5.5): fires after a ~1.5 s
+   * press-and-hold on the hub. When provided, the hub also supports long-press;
+   * the press that triggers it does NOT also fire `onSpinClick`.
+   */
+  onHubLongPress?: () => void;
+  /**
    * Segment id to flash-highlight once the wheel settles — the visual "this
    * one landed!" cue for modes without a per-spin result overlay (Chaos,
    * Punishment). Undefined = no highlight.
@@ -151,6 +157,7 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
     pointerDeg = 0,
     pointerHidden = false,
     highlightSegmentId,
+    onHubLongPress,
   },
   ref,
 ) {
@@ -159,6 +166,8 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
   const pointerRotation = useMotionValue(0);
   const pointerGroupRef = useRef<SVGGElement>(null);
   const tickWatchActive = useRef(false);
+  const longPressTimer = useRef<number | null>(null);
+  const longPressedRef = useRef(false);
 
   // Drive the pointer's SVG `transform` attribute from the motion value on
   // every frame, rotating about the WHEEL CENTRE (explicit user-space origin).
@@ -416,7 +425,36 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
       {canSpin ? (
         <button
           type="button"
-          onClick={onSpinClick}
+          onClick={() => {
+            // A press that became a long-press already opened the rig editor —
+            // don't also fire a spin.
+            if (longPressedRef.current) {
+              longPressedRef.current = false;
+              return;
+            }
+            onSpinClick?.();
+          }}
+          onPointerDown={() => {
+            if (onHubLongPress === undefined) return;
+            longPressedRef.current = false;
+            longPressTimer.current = window.setTimeout(() => {
+              longPressedRef.current = true;
+              haptics.heavy();
+              onHubLongPress();
+            }, 1500);
+          }}
+          onPointerUp={() => {
+            if (longPressTimer.current !== null) {
+              window.clearTimeout(longPressTimer.current);
+              longPressTimer.current = null;
+            }
+          }}
+          onPointerLeave={() => {
+            if (longPressTimer.current !== null) {
+              window.clearTimeout(longPressTimer.current);
+              longPressTimer.current = null;
+            }
+          }}
           aria-label={t("actions.spin")}
           className={cn(
             "absolute left-1/2 top-1/2 h-[22%] w-[22%]",

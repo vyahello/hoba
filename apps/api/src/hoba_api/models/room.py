@@ -143,6 +143,14 @@ class Room(Base, TimestampMixin):
     # overlapping background settle tasks.
     bon_round_start_spin_id: Mapped[int | None] = mapped_column(nullable=True)
 
+    # Rigged Mode 🎭 (spec §5.5): segment weights live in Segment.weight (fed
+    # to compute_spin). For a rigged room the mode + weights are redacted to
+    # non-host viewers (they see "classic" + uniform weights) UNTIL the host
+    # reveals the rig, which flips this flag. Slice 1 keeps it False.
+    rigged_revealed: Mapped[bool] = mapped_column(
+        default=False, nullable=False, server_default="0",
+    )
+
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     host: Mapped[User] = relationship(foreign_keys=[host_id], lazy="joined")

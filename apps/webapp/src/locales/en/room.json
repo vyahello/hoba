@@ -59,7 +59,17 @@
     "chaos": {
       "label": "Chaos",
       "tagline": "Total chaos — a wild twist on every single spin."
+    },
+    "rigged": {
+      "label": "Rigged",
+      "tagline": "Secretly weighted by the host."
     }
+  },
+  "rig": {
+    "title": "Rig the wheel 🎭",
+    "hint": "Only you can see this — to everyone else it's a normal Classic room.",
+    "footer": "Higher = more likely to land. 0 = never.",
+    "save_failed": "Couldn't save the rig. Try again."
   },
   "chaos": {
     "events": {

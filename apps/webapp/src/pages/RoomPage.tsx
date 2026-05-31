@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ds/Skeleton";
 import { GameModeBadge } from "@/components/room/GameModeBadge";
 import { FlyingReactions } from "@/components/room/FlyingReactions";
 import { ReactionsBar } from "@/components/room/ReactionsBar";
+import { RigEditorSheet } from "@/components/room/RigEditorSheet";
 import { RoomSettingsSheet } from "@/components/room/RoomSettingsSheet";
 import {
   eliminatedSegments,
@@ -119,6 +120,7 @@ export function RoomPage(): JSX.Element {
   const [wheelState, setWheelState] = useState<WheelState>("idle");
   const [revealed, setRevealed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [rigOpen, setRigOpen] = useState(false);
   // Chaos (§5.4): the rolled event for the in-flight spin while its 1.5 s
   // pre-roll announcement card is showing, then null once the wheel releases.
   const [chaosAnnounce, setChaosAnnounce] = useState<string | null>(null);
@@ -776,6 +778,18 @@ export function RoomPage(): JSX.Element {
                       }
                     : undefined
               }
+              // Rigged Mode 🎭 (spec §5.5): the host's hidden long-press on the
+              // hub opens the secret weight editor. Only in Classic/Rigged
+              // rooms (rigging the bet-race / elimination modes is meaningless).
+              onHubLongPress={
+                callerIsHost &&
+                (snapshot.room.game_mode === "classic" ||
+                  snapshot.room.game_mode === "rigged")
+                  ? () => {
+                      setRigOpen(true);
+                    }
+                  : undefined
+              }
               className="max-w-md mx-auto"
             />
           </motion.div>
@@ -1075,6 +1089,16 @@ export function RoomPage(): JSX.Element {
             open={settingsOpen}
             onClose={() => {
               setSettingsOpen(false);
+            }}
+            snapshot={snapshot}
+          />
+        ) : null}
+
+        {callerIsHost ? (
+          <RigEditorSheet
+            open={rigOpen}
+            onClose={() => {
+              setRigOpen(false);
             }}
             snapshot={snapshot}
           />

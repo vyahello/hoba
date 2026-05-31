@@ -35,17 +35,27 @@ export const PICKABLE_GAME_MODES: readonly GameModeMeta[] = [
 
 export const DEFAULT_GAME_MODE: GameMode = "classic";
 
+/**
+ * Rigged 🎭 is NOT pickable (entered via the hidden long-press), but the host
+ * still needs a badge for it. Guests never see `game_mode === "rigged"` — the
+ * server redacts it to "classic" — so showing a badge for rigged only ever
+ * surfaces to the host.
+ */
+const RIGGED_META: GameModeMeta = { id: "rigged", emoji: "🎭", i18nKey: "modes.rigged" };
+
 export function getGameModeMeta(id: GameMode): GameModeMeta | undefined {
+  if (id === "rigged") return RIGGED_META;
   return PICKABLE_GAME_MODES.find((m) => m.id === id);
 }
 
 /**
  * Whether the RoomPage header should render a GameModeBadge for this mode.
- * Classic = false (no badge for the default). Rigged = false (defensive;
- * don't accidentally reveal the long-press feature in the header).
+ * Classic = false (no badge for the default / for the redacted guest view of a
+ * rigged room). Everything else (including rigged, which only the host sees as
+ * "rigged") shows a badge.
  */
 export function shouldShowBadge(mode: GameMode): boolean {
-  return mode !== "classic" && mode !== "rigged";
+  return mode !== "classic";
 }
 
 /** Best-of-N options (odd → fewer ties). Default 1. */

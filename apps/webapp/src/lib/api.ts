@@ -198,6 +198,10 @@ export const api = {
   patchRoom: (code: string, patch: RoomPatchPayload): Promise<RoomState> =>
     request(`/rooms/${encodeURIComponent(code)}`, { method: "PATCH", body: patch }),
 
+  /** Rigged Mode 🎭 (host only): set secret per-segment weights `{segId: 0..100}`. */
+  setRig: (code: string, weights: Record<number, number>): Promise<RoomState> =>
+    request(`/rooms/${encodeURIComponent(code)}/rig`, { method: "PATCH", body: { weights } }),
+
   closeRoom: (code: string): Promise<RoomState> =>
     request(`/rooms/${encodeURIComponent(code)}/close`, { method: "POST" }),
 

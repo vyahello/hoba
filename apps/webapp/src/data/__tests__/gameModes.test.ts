@@ -41,8 +41,12 @@ describe("getGameModeMeta", () => {
     expect(meta?.emoji).toBe("💥");
   });
 
-  it("returns undefined for rigged (intentionally absent from picker meta)", () => {
-    expect(getGameModeMeta("rigged")).toBeUndefined();
+  it("returns meta for rigged (host badge) but keeps it out of the picker", () => {
+    const meta = getGameModeMeta("rigged");
+    expect(meta?.id).toBe("rigged");
+    expect(meta?.emoji).toBe("🎭");
+    // Still excluded from the room-creation picker (entered via long-press).
+    expect(PICKABLE_GAME_MODES.some((m) => m.id === "rigged")).toBe(false);
   });
 });
 
@@ -63,7 +67,7 @@ describe("shouldShowBadge", () => {
     expect(shouldShowBadge("classic")).toBe(false);
   });
 
-  it("returns false for rigged (defensive — preserves long-press reveal)", () => {
-    expect(shouldShowBadge("rigged")).toBe(false);
+  it("returns true for rigged (host sees the 🎭 badge; guests get redacted 'classic')", () => {
+    expect(shouldShowBadge("rigged")).toBe(true);
   });
 });

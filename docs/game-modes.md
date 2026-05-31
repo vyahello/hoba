@@ -177,9 +177,21 @@ The event is **folded into `spin:started.mode_effects`** (no separate `chaos:eve
 
 ---
 
-## Rigged (§5.5) — Planned
+## Rigged (§5.5) — Live (rigging mechanic; reveal is Slice 2)
 
-Long-press reveal only (not surfaced in the standard mode picker). Host secretly pre-selects the outcome. Planned for a later stage.
+The host secretly weights segments so the wheel is biased — but to everyone else the room looks and plays exactly like Classic. **Picker-excluded:** Rigged is never offered at room creation; the host enters it with a **hidden ~1.5 s long-press on the hub** (only wired for the host, only in Classic/Rigged rooms), which opens the secret weight editor.
+
+### How it works
+
+- **Weights live in `Segment.weight`** (0–100), which `compute_spin` already consumes — so weighted spins need no engine change. Setting weights flips `room.game_mode` to `"rigged"` (spin policy is left unchanged — changing it would tip guests off).
+- **Secrecy via per-viewer redaction** in `build_room_state`: for a non-host viewer, while `rigged_revealed` is False, `game_mode` serializes as `"classic"` and every segment `weight` as `1`. The host sees the real mode + weights. So a guest's snapshot is byte-for-byte a plain Classic room.
+- **Badge:** host sees a "🎭 Rigged" badge (`game_mode === "rigged"`); guests have the redacted `"classic"` → no badge.
+- **Host editor:** `RigEditorSheet` — a 0–100 slider per segment; releasing a slider commits the full map via `PATCH /rooms/{code}/rig` (host-only, `services/rigged.py::set_rig_weights`). That endpoint **does not broadcast** — guests never receive a `room:updated` that would reveal the change.
+- **Fairness:** a CI test asserts a heavily weighted segment lands within ±2% of its declared share over 40k weighted picks.
+
+### Deferred to Slice 2 (the reveal)
+
+`rigged_revealed` flag exists but is always False in Slice 1. Slice 2: a host "Reveal the rig" action → flips the flag (un-redacts mode + weights for everyone), an animated weight bar-chart, 🎭 injected into the room title, and a rigged-spin-count stat.
 
 ## Best-of-N spins (cross-mode)
 

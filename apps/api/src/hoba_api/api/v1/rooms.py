@@ -14,11 +14,13 @@ from hoba_api.models.question import Question
 from hoba_api.realtime.server import NAMESPACE, sio
 from hoba_api.redis_client import rate_limit_take
 from hoba_api.schemas.room import (
+    RigUpdateIn,
     RoomCreateIn,
     RoomState,
     RoomUpdateIn,
     SpinOut,
 )
+from hoba_api.services.rigged import set_rig_weights
 from hoba_api.services.room_state import build_room_state
 from hoba_api.services.rooms import (
     RoomServiceError,
@@ -148,6 +150,32 @@ async def patch_room_endpoint(
             room=room.code,
             namespace=NAMESPACE,
         )
+    return await build_room_state(db, room, current_user_id=user.id)
+
+
+@router.patch("/{code}/rig", response_model=RoomState)
+async def rig_room_endpoint(
+    code: str,
+    payload: RigUpdateIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> RoomState:
+    """Rigged Mode 🎭 (spec §5.5): host sets secret segment weights.
+
+    Host-only. Deliberately does NOT broadcast — guests must not learn the
+    room turned rigged (it stays "Classic" to them until a reveal). Only the
+    calling host's snapshot updates (and the host sees the real weights).
+    """
+    room = await get_room_by_code(db, code)
+    if room is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="room_not_found",
+        )
+    try:
+        await set_rig_weights(db, room, user_id=user.id, weights=payload.weights)
+    except RoomServiceError as exc:
+        raise _service_error_to_http(exc) from exc
+    await db.commit()
     return await build_room_state(db, room, current_user_id=user.id)
 
 
