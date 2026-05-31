@@ -32,6 +32,7 @@ CHAOS_EVENTS: tuple[str, ...] = (
     "swap",
     "nudge_fwd",
     "nudge_back",
+    "blind_pointer",
 )
 
 
@@ -79,6 +80,14 @@ class ChaosEngine:
             return SpinDecision(
                 segments=ctx.segments,
                 effects={"chaos_event": event},
+            )
+        if event == "blind_pointer":
+            # Normal spin, but the pointer is hidden and reappears at a random
+            # screen angle on stop — whatever it lands on is the result. The
+            # service picks the angle + result (geometry); engine just names it.
+            return SpinDecision(
+                segments=ctx.segments,
+                effects={"chaos_event": "blind_pointer"},
             )
         return self._swap(ctx)
 

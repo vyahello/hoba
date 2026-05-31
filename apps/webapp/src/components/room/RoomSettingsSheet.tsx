@@ -59,17 +59,14 @@ export function RoomSettingsSheet({
           {t("room:settings.spin_policy.label")}
         </h3>
         <div className="flex flex-col gap-2">
-          {/* Chaos is host-driven / take-turns only — no "anyone can spin". */}
-          {snapshot.room.game_mode === "chaos" ? null : (
-            <PolicyOption
-              label={t("room:settings.spin_policy.anyone")}
-              selected={snapshot.room.spin_policy === "anyone"}
-              saving={saving === "anyone"}
-              onSelect={() => {
-                void applyPolicy("anyone");
-              }}
-            />
-          )}
+          <PolicyOption
+            label={t("room:settings.spin_policy.anyone")}
+            selected={snapshot.room.spin_policy === "anyone"}
+            saving={saving === "anyone"}
+            onSelect={() => {
+              void applyPolicy("anyone");
+            }}
+          />
           <PolicyOption
             label={t("room:settings.spin_policy.host_only")}
             selected={snapshot.room.spin_policy === "host_only"}

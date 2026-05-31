@@ -338,6 +338,32 @@ async def test_trigger_spin_chaos_nudge_changes_result_and_records_pre_angle(
     assert 0 <= segment_under_pointer(spin.final_angle_deg, 4) < 4
 
 
+async def test_trigger_spin_chaos_blind_pointer_lands_under_pointer(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Force "blind_pointer" (idx 6 of 7 → roll in [0.857, 1.0)). The recorded
+    # result must be the segment under the random pointer angle.
+    from hoba_api.modes.registry import engine_for
+
+    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.95)
+    host_id = await _make_user(db, tg_id=602)
+    room = await create_room(
+        db, host_id=host_id, question_text="Q?", segments=_drafts(4),
+        spin_policy="anyone", game_mode="chaos",
+    )
+    await db.commit()
+    spin = await trigger_spin(db, room=room, user_id=host_id)
+    await db.commit()
+    effects = spin.mode_state_snapshot["mode_effects"]
+    assert effects["chaos_event"] == "blind_pointer"
+    pointer_deg = effects["pointer_deg"]
+    assert 0.0 <= pointer_deg < 360.0
+    living = spin.mode_state_snapshot["living_segment_ids"]
+    sector = 360.0 / len(living)
+    idx = int(((pointer_deg - spin.final_angle_deg) % 360.0) // sector) % len(living)
+    assert spin.result_segment_id == living[idx]
+
+
 def test_best_of_n_leaders() -> None:
     from hoba_api.services.spins import best_of_n_leaders
 

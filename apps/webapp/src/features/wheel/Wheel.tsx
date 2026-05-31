@@ -118,6 +118,13 @@ export interface WheelProps {
   onSpinClick?: () => void;
   ariaLabel: string;
   className?: string;
+  /**
+   * Screen angle (deg, clockwise from top) to draw the pointer at. Default 0
+   * = the usual top position. Chaos `blind_pointer` reveals it elsewhere.
+   */
+  pointerDeg?: number;
+  /** Hide the pointer entirely (Chaos `blind_pointer` while spinning). */
+  pointerHidden?: boolean;
 }
 
 export interface WheelHandle {
@@ -125,7 +132,7 @@ export interface WheelHandle {
 }
 
 export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
-  { segments, state, spin, onSpinClick, ariaLabel, className },
+  { segments, state, spin, onSpinClick, ariaLabel, className, pointerDeg = 0, pointerHidden = false },
   ref,
 ) {
   const { t } = useTranslation("common");
@@ -269,14 +276,26 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
           />
         </motion.g>
 
-        <g style={{ transformOrigin: `${CX}px ${POINTER_TIP_Y}px` }}>
-          <path
-            d={`M ${CX} ${POINTER_TIP_Y + 32} L ${CX + 16} ${POINTER_TIP_Y} L ${CX - 16} ${POINTER_TIP_Y} Z`}
-            fill="#5B3DF5"
-            stroke="#FFFFFF"
-            strokeWidth={2}
-          />
-        </g>
+        {/* Pointer. Normally fixed at the top (pointerDeg 0); Chaos
+            `blind_pointer` hides it during the spin and re-renders it at a
+            random screen angle on stop (rotated about the wheel centre). */}
+        {pointerHidden ? null : (
+          <motion.g
+            key={pointerDeg}
+            initial={pointerDeg !== 0 ? { scale: 0, opacity: 0 } : false}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", damping: 12, stiffness: 260 }}
+            style={{ transformOrigin: `${CX}px ${CY}px` }}
+            transform={`rotate(${pointerDeg} ${CX} ${CY})`}
+          >
+            <path
+              d={`M ${CX} ${POINTER_TIP_Y + 32} L ${CX + 16} ${POINTER_TIP_Y} L ${CX - 16} ${POINTER_TIP_Y} Z`}
+              fill="#5B3DF5"
+              stroke="#FFFFFF"
+              strokeWidth={2}
+            />
+          </motion.g>
+        )}
 
         {/* Visual only. The real, focusable spin control is the HTML button
             overlaid below — the SVG is role="img" so AT ignores its

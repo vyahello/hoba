@@ -138,7 +138,7 @@ Chaos is a **personal-bet race** — the same flow as Punishment, minus the dare
 
 This reuses Punishment's whole betting/turn/standings/winner flow: backend `services/punishment.py` (`place_bet`, `start_game`, `resolve_turn`, `reset_game`) and the same room columns (`punishment_predictions` = bets, `spin_count` = N, `punishment_match_counts`, `punishment_winner_user_id`, `punishment_last_outcome`). The only fork is `resolve_turn`'s miss branch (`game_mode == "chaos"` → `kind: "miss"`, advance, no card). The frontend shares the UI via `isBetRace(snap) = punishment | chaos`; dare/approval UI auto-disables because chaos outcomes are never `"punish"`. Per-spin there is **no "Hoba!" result banner** (just confetti); the **winner hero** at the end matches Punishment.
 
-### The six chaos events (≈⅙ each)
+### The seven chaos events (≈⅐ each)
 
 | Event | Effect | Where it's applied |
 |---|---|---|
@@ -146,13 +146,14 @@ This reuses Punishment's whole betting/turn/standings/winner flow: backend `serv
 | `slow_burn` 🐢 | a genuinely slow crawl (×4 duration) | `duration_multiplier = 4.0` |
 | `reverse` 🔄 | wheel travels counter-clockwise to the same sector | spin service re-targets `final_angle_deg` below the start (engines never compute angles) |
 | `swap` 🔀 | two segments trade positions; the announcement card shows the two **crossing** so it's visible | engine reorders `SpinDecision.segments` + emits `segment_order` (client renders that order) + `swap_pair` (the two ids for the card) |
-| `nudge_fwd` ⏩ / `nudge_back` ⏪ | wheel settles, "thinks" (shake), then creeps **±1 sector** — changing the result. Both share **one generic "nudge" announcement** (direction is not spoiled; only the creep reveals it) | spin service records the nudged segment + the nudged `final_angle_deg`, carries the pre-nudge stop in `nudge_from_angle`; client plays settle → shake → creep |
+| `nudge_fwd` ⏩ / `nudge_back` ⏪ | wheel settles, "thinks" (shake), then creeps **±1 sector** — changing the result. Both share **one generic "nudge" announcement** (direction not spoiled; only the creep reveals it) | spin service records the nudged segment + the nudged `final_angle_deg`, carries the pre-nudge stop in `nudge_from_angle`; client plays settle → shake → creep |
+| `blind_pointer` 🫥 | normal spin, but the **pointer vanishes** during it and **reappears at a random screen angle** on stop — whatever it lands on is the result | spin service picks a random `pointer_deg` and computes the result = segment under it (`floor(((P − A) mod 360)/sector)`); `<Wheel pointerHidden pointerDeg>` hides the pointer while spinning, reveals it at `P` when settled |
 
-The match-count uses the **recorded** `result_segment_id` (the *nudged* one for nudge events), so the race stays consistent with what the wheel finally shows.
+The match-count uses the **recorded** `result_segment_id` (the *nudged* one for nudge, the *under-pointer* one for blind_pointer), so the race stays consistent with what the wheel finally shows. The announcement card holds `CHAOS_ANNOUNCE_MS = 2500` (long enough to read).
 
 ### Spin policy
 
-`spin_policy` default: **`turn_based`** (host first, then take turns; if nobody else is present the host plays alone). The settings sheet offers **host_only** and **turn_based** only — "anyone can spin" is hidden for Chaos. The host picks **N** (matches to win) in the mode picker.
+Chaos is **`turn_based` only** (host first, then take turns; if nobody else is present the host plays alone). There is no spin-policy choice — the settings gear is hidden (host_only made no sense for a multi-player bet race). The host picks **N** (matches to win) in the mode picker.
 
 ### Wire
 

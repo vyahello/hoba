@@ -82,6 +82,10 @@
       "nudge": {
         "title": "Nudge",
         "desc": "It stops, thinks… then creeps one — but which way?"
+      },
+      "blind_pointer": {
+        "title": "Blind pointer",
+        "desc": "The pointer vanishes — it reappears wherever it lands."
       }
     }
   },

@@ -81,8 +81,8 @@ import { WHEEL_PALETTE } from "../../tailwind.config";
 const REVEAL_DELAY_MS = 400;
 const ELIM_REVEAL_DELAY_MS = 400;
 // Chaos (§5.4): how long the pre-spin event announcement card holds before
-// the wheel is released. ~1.5 s beat.
-const CHAOS_ANNOUNCE_MS = 1500;
+// the wheel is released — long enough to read the event.
+const CHAOS_ANNOUNCE_MS = 2500;
 // multi_spin: each short fast spin, and the final (result-bearing) spin.
 const MULTI_SPIN_STEP_MS = 620;
 const MULTI_SPIN_FINAL_MS = 2200;
@@ -543,7 +543,7 @@ export function RoomPage(): JSX.Element {
                 void handleShare();
               }}
             />
-            {callerIsHost && !isPunish ? (
+            {callerIsHost && !isRace ? (
               <IconButton
                 aria-label={t("room:settings.open_aria")}
                 variant="tonal"
@@ -681,6 +681,18 @@ export function RoomPage(): JSX.Element {
               segments={segments}
               state={wheelState}
               spin={phaseSpin ?? wheelSpin}
+              // Chaos blind_pointer: hide the pointer while spinning, then
+              // reveal it at the server's random angle once settled.
+              pointerHidden={
+                currentSpin?.mode_effects?.chaos_event === "blind_pointer" &&
+                wheelState === "spinning"
+              }
+              pointerDeg={
+                currentSpin?.mode_effects?.chaos_event === "blind_pointer" &&
+                wheelState === "settled"
+                  ? currentSpin.mode_effects?.pointer_deg ?? 0
+                  : 0
+              }
               ariaLabel={snapshot.active_question?.text ?? t("room:header.wheel_aria")}
               // Only attach the hub-tap handler when this user is actually
               // allowed to spin (host_only policy) — otherwise the hub
@@ -985,7 +997,9 @@ export function RoomPage(): JSX.Element {
 
         <FlyingReactions />
 
-        {callerIsHost ? (
+        {/* Bet-race modes (Punishment, Chaos) are turn_based-only — no
+            spin_policy to configure, so the settings gear is hidden. */}
+        {callerIsHost && !isRace ? (
           <RoomSettingsSheet
             open={settingsOpen}
             onClose={() => {

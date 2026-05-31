@@ -138,6 +138,16 @@ async def trigger_spin(
         # `direction` segments forward we rotate by -direction * sector.
         result = replace(result, final_angle_deg=pre_angle - direction * sector_deg)
         effects["nudge_from_angle"] = pre_angle
+    elif chaos_event == "blind_pointer":
+        # Normal spin (angle unchanged), but the pointer is hidden and pops up
+        # at a random screen angle on stop — whatever sits there is the result.
+        # segment under a pointer at screen angle P (wheel at A) is
+        # floor(((P - A) mod 360) / sector). The wheel visually lands wherever
+        # compute_spin put it; only the pointer + recorded result move.
+        pointer_deg = secrets.randbelow(3600) / 10.0  # 0.0 … 359.9
+        rel = (pointer_deg - result.final_angle_deg) % 360.0
+        winning_index = int(rel // sector_deg) % len(spin_segments)
+        effects["pointer_deg"] = pointer_deg
 
     winning_segment = spin_segments[winning_index]
     started_at = datetime.now(UTC)

@@ -14,6 +14,7 @@ export const CHAOS_EVENTS = [
   "swap",
   "nudge_fwd",
   "nudge_back",
+  "blind_pointer",
 ] as const;
 
 export const CHAOS_EVENT_EMOJI: Record<string, string> = {
@@ -23,6 +24,7 @@ export const CHAOS_EVENT_EMOJI: Record<string, string> = {
   swap: "🔀",
   nudge_fwd: "⏩",
   nudge_back: "⏪",
+  blind_pointer: "🫥",
 };
 
 /**

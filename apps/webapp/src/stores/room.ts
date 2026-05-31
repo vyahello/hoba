@@ -34,6 +34,8 @@ export interface SpinModeEffects {
   spin_reps?: number;
   /** nudge_* only: the pre-nudge stop angle (wheel settles here, then creeps). */
   nudge_from_angle?: number;
+  /** blind_pointer only: screen angle (deg) the pointer reappears at on stop. */
+  pointer_deg?: number;
   dramatic?: boolean;
 }
 
