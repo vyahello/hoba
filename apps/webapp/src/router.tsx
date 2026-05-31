@@ -8,6 +8,7 @@ import { LibraryPage } from "@/pages/LibraryPage";
 import { RoomPage } from "@/pages/RoomPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { SpinPage } from "@/pages/SpinPage";
+import { TrendingPage } from "@/pages/TrendingPage";
 
 export const router = createBrowserRouter([
   {
@@ -18,6 +19,7 @@ export const router = createBrowserRouter([
       { path: "/create", element: <CreatePage /> },
       { path: "/room/:code", element: <RoomPage /> },
       { path: "/library", element: <LibraryPage /> },
+      { path: "/trending", element: <TrendingPage /> },
       { path: "/settings", element: <SettingsPage /> },
       { path: "/dev/ds", element: <DevDSPage /> },
     ],

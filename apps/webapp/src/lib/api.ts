@@ -200,8 +200,23 @@ export interface SavedWheel {
   title: string;
   use_count: number;
   is_public: boolean;
+  like_count: number;
+  category: string | null;
+  /** Viewer-relative: set on trending results; false on the owner's library. */
+  liked: boolean;
   segments: SavedWheelSegment[];
   created_at: string;
+}
+
+/** Toggle-like result. */
+export interface WheelLikeResult {
+  liked: boolean;
+  like_count: number;
+}
+
+export interface WheelReportPayload {
+  wheel_id: number;
+  reason?: string | null;
 }
 
 export interface WheelSavePayload {
@@ -298,6 +313,32 @@ export const api = {
 
   useWheel: (id: number, payload: WheelUsePayload = {}): Promise<RoomState> =>
     request(`/wheels/${id}/use`, { method: "POST", body: payload }),
+
+  // --- Public wheels / trending / moderation (Phase 10) ---
+  publishWheel: (id: number, category?: string | null): Promise<SavedWheel> =>
+    request(`/wheels/${id}/publish`, { method: "POST", body: { category: category ?? null } }),
+
+  unpublishWheel: (id: number): Promise<SavedWheel> =>
+    request(`/wheels/${id}/unpublish`, { method: "POST" }),
+
+  likeWheel: (id: number): Promise<WheelLikeResult> =>
+    request(`/wheels/${id}/like`, { method: "POST" }),
+
+  listTrending: (params: { category?: string; limit?: number; offset?: number } = {}):
+    Promise<SavedWheel[]> => {
+    const q = new URLSearchParams();
+    if (params.category !== undefined) q.set("category", params.category);
+    if (params.limit !== undefined) q.set("limit", String(params.limit));
+    if (params.offset !== undefined) q.set("offset", String(params.offset));
+    const qs = q.toString();
+    return request(`/trending${qs ? `?${qs}` : ""}`);
+  },
+
+  searchTrending: (query: string, limit = 20): Promise<SavedWheel[]> =>
+    request(`/trending/search?q=${encodeURIComponent(query)}&limit=${limit}`),
+
+  reportWheel: (payload: WheelReportPayload): Promise<void> =>
+    request("/moderation/report", { method: "POST", body: payload }),
 
   closeRoom: (code: string): Promise<RoomState> =>
     request(`/rooms/${encodeURIComponent(code)}/close`, { method: "POST" }),

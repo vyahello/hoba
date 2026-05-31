@@ -77,9 +77,36 @@
     "load_failed": "Couldn't load your wheels.",
     "delete_failed": "Couldn't delete. Try again.",
     "use_failed": "Couldn't start a room. Try again.",
-    "see_all": "See all"
+    "see_all": "See all",
+    "public_badge": "Public",
+    "make_public": "Make public 🌐",
+    "make_private": "Make private",
+    "published": "Shared to Trending",
+    "made_private": "Now private",
+    "publish_failed": "Couldn't publish. Try again.",
+    "publish_profanity": "Please clean up the wording before sharing."
   },
   "trending": {
-    "title": "Trending"
+    "title": "Trending",
+    "search_placeholder": "Search public wheels",
+    "empty": "Nothing trending yet. Be the first — share a wheel!",
+    "load_failed": "Couldn't load trending wheels.",
+    "use": "Use",
+    "like_aria": "Like this wheel",
+    "like_failed": "Couldn't update your like.",
+    "report": "Report",
+    "report_confirm": "Report?",
+    "reported": "Thanks — we'll take a look.",
+    "report_failed": "Couldn't report. Try again.",
+    "use_failed": "Couldn't start a room. Try again.",
+    "categories": {
+      "all": "All",
+      "food": "Food",
+      "social": "Social",
+      "fun": "Fun",
+      "party": "Party",
+      "decide": "Decide",
+      "other": "Other"
+    }
   }
 }

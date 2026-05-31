@@ -21,6 +21,7 @@ export function HomePage(): JSX.Element {
   const navigate = useNavigate();
   const setCustomWheel = useCustomWheel((s) => s.set);
   const [wheels, setWheels] = useState<SavedWheel[] | null>(null);
+  const [trending, setTrending] = useState<SavedWheel[] | null>(null);
   const [templates, setTemplates] = useState<Template[] | null>(null);
   const [templatesFailed, setTemplatesFailed] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -31,6 +32,12 @@ export function HomePage(): JSX.Element {
       .then(setWheels)
       .catch(() => {
         setWheels([]);
+      });
+    void api
+      .listTrending({ limit: 10 })
+      .then(setTrending)
+      .catch(() => {
+        setTrending([]);
       });
   }, []);
 
@@ -201,6 +208,45 @@ export function HomePage(): JSX.Element {
             </div>
           )}
         </section>
+
+        {trending !== null && trending.length > 0 ? (
+          <section>
+            <div className="flex items-baseline justify-between mb-3">
+              <h2 className="font-display font-bold text-xl text-ink-light-1 dark:text-ink-dark-1">
+                {t("home:trending.title")}
+              </h2>
+              <button
+                type="button"
+                className="text-sm font-semibold text-brand-primary"
+                onClick={() => {
+                  navigate("/trending");
+                }}
+              >
+                {t("home:my_wheels.see_all")}
+              </button>
+            </div>
+            <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-1">
+              {trending.map((w) => (
+                <Card
+                  key={w.id}
+                  interactive
+                  padding="md"
+                  onClick={() => {
+                    navigate("/trending");
+                  }}
+                  className="shrink-0 w-40 flex flex-col gap-2"
+                >
+                  <span className="font-display font-semibold text-base line-clamp-2 text-ink-light-1 dark:text-ink-dark-1">
+                    {w.title}
+                  </span>
+                  <span className="text-xs text-ink-light-2 dark:text-ink-dark-2 tabular-nums">
+                    ❤️ {w.like_count}
+                  </span>
+                </Card>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </main>
     </>
   );

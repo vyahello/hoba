@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from hoba_api.api.v1 import me, rooms, templates, wheels
+from hoba_api.api.v1 import me, moderation, rooms, templates, trending, wheels
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(me.router)
 router.include_router(rooms.router)
 router.include_router(templates.router)
+router.include_router(trending.router)
 router.include_router(wheels.router)
+router.include_router(moderation.router)

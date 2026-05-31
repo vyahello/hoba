@@ -16,8 +16,13 @@ class WheelOut(BaseModel):
     title: str
     use_count: int
     is_public: bool
+    like_count: int
+    category: str | None
     segments: list[SegmentOut]
     created_at: datetime
+    # Viewer-relative: whether the current user has liked it (set on trending;
+    # always False on the owner's library listing).
+    liked: bool = False
 
 
 class WheelCreateIn(BaseModel):
@@ -36,3 +41,23 @@ class WheelUseIn(BaseModel):
     game_mode: GameMode = "classic"
     punishment_deck: PunishmentDeck | None = None
     spin_count: int = 1
+
+
+class WheelPublishIn(BaseModel):
+    """Make a wheel public (Phase 10). Category is optional + validated."""
+
+    category: str | None = None
+
+
+class WheelLikeOut(BaseModel):
+    """Result of a like toggle."""
+
+    liked: bool
+    like_count: int
+
+
+class WheelReportIn(BaseModel):
+    """Report a public wheel for moderation (spec §14)."""
+
+    wheel_id: int
+    reason: str | None = Field(default=None, max_length=200)

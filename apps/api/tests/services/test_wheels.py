@@ -103,7 +103,7 @@ async def test_use_wheel_creates_room_and_bumps_count(db: AsyncSession) -> None:
     # endpoint does via get_wheel before calling use_wheel.
     loaded = await get_wheel(db, w.id)
     assert loaded is not None
-    room = await use_wheel(db, loaded, owner_id=owner, game_mode="classic")
+    room = await use_wheel(db, loaded, user_id=owner, game_mode="classic")
     await db.commit()
     assert room.host_id == owner
     assert room.game_mode == "classic"

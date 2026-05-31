@@ -130,8 +130,21 @@ Tables (current, see `apps/api/src/hoba_api/models/`):
 - `users` — `tg_id` is the natural key from Telegram; `id` is internal.
 - `rooms` — 6-char base32 code, `host_id`, `status ∈ {lobby, active, closed}`, `game_mode ∈ {classic, elimination, punishment, chaos, rigged}` (schema-ready; only `classic` is wired today), `spin_policy ∈ {host_only, anyone, turn_based}`.
 - `participants` — `(room_id, user_id)` unique; role + presence timestamps.
-- `questions` + `segments` — versioned wheel content per room.
+- `questions` + `segments` — versioned wheel content per room. `segments` is polymorphic on `parent_type ∈ {question, wheel}`.
 - `spins` — every spin recorded for audit and replay; `result_segment_id`, `final_angle_deg`, `duration_ms`, `seed`.
+- `wheels` — saved-wheel library (Phase 9) + public/trending fields (Phase 10): `is_public`, `is_hidden`, `like_count`, `report_count`, `category`, `published_at`. Options are `segments` rows with `parent_type="wheel"`.
+- `wheel_likes` / `wheel_reports` — per-`(wheel, user)` unique join tables (Phase 10). The denormalized `like_count` / `report_count` on `wheels` are recomputed from these on each mutation so the trending sort runs off plain columns.
+
+### Trending signal (Phase 10)
+
+Public wheel discovery (`GET /api/v1/trending`) ranks **visible** wheels (`is_public AND NOT is_hidden`) by an explicit, deterministic score computed in SQL:
+
+```
+score = like_count * 3 + use_count        # a like signals more intent than a use
+ORDER BY score DESC, published_at DESC, id DESC
+```
+
+Paginated via `limit` (1–50, default 20) + `offset`. `?category=` filters to one of `food, social, fun, party, decide, other` (anything else is ignored). `GET /trending/search?q=` is a case-insensitive title substring match over the same visible set, ordered by the same score. A wheel auto-hides (`is_hidden=true`) once **3 distinct users** report it (`services.wheels.REPORT_HIDE_THRESHOLD`); the report endpoint is idempotent per user. No time decay yet — revisit if the feed staleness becomes a problem.
 
 ### Redis keys
 

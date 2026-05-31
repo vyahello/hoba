@@ -5,7 +5,13 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ds/Button";
 import { IconButton } from "@/components/ds/IconButton";
 import { RoomModePickerSheet } from "@/components/room/RoomModePickerSheet";
-import { type GameMode, type PunishmentDeck, type SavedWheel, api } from "@/lib/api";
+import {
+  ApiError,
+  type GameMode,
+  type PunishmentDeck,
+  type SavedWheel,
+  api,
+} from "@/lib/api";
 import { haptics } from "@/lib/haptics";
 import { safeNavigateBack } from "@/lib/navigation";
 import { toast } from "@/stores/toast";
@@ -38,6 +44,31 @@ export function LibraryPage(): JSX.Element {
       toast({ title: t("home:my_wheels.delete_failed"), intent: "error" });
     } finally {
       setConfirmId(null);
+    }
+  }
+
+  async function handlePublishToggle(wheel: SavedWheel): Promise<void> {
+    try {
+      const updated = wheel.is_public
+        ? await api.unpublishWheel(wheel.id)
+        : await api.publishWheel(wheel.id);
+      haptics.success();
+      setWheels((prev) => (prev ?? []).map((w) => (w.id === updated.id ? updated : w)));
+      toast({
+        title: updated.is_public
+          ? t("home:my_wheels.published")
+          : t("home:my_wheels.made_private"),
+        intent: "success",
+      });
+    } catch (exc) {
+      const code = exc instanceof ApiError ? exc.code : "publish_failed";
+      toast({
+        title:
+          code === "profanity"
+            ? t("home:my_wheels.publish_profanity")
+            : t("home:my_wheels.publish_failed"),
+        intent: "error",
+      });
     }
   }
 
@@ -106,6 +137,11 @@ export function LibraryPage(): JSX.Element {
                 <div className="flex items-start justify-between gap-2">
                   <h2 className="font-display font-bold text-base text-ink-light-1 dark:text-ink-dark-1 break-words">
                     {w.title}
+                    {w.is_public ? (
+                      <span className="ml-2 align-middle text-xs font-semibold text-brand-primary">
+                        🌐 {t("home:my_wheels.public_badge")}
+                      </span>
+                    ) : null}
                   </h2>
                   <span className="shrink-0 text-xs text-ink-light-2 dark:text-ink-dark-2 tabular-nums">
                     {t("home:my_wheels.uses", { count: w.use_count })}
@@ -164,6 +200,17 @@ export function LibraryPage(): JSX.Element {
                       : t("home:my_wheels.delete")}
                   </Button>
                 </div>
+                <button
+                  type="button"
+                  className="text-sm font-semibold text-brand-primary text-left"
+                  onClick={() => {
+                    void handlePublishToggle(w);
+                  }}
+                >
+                  {w.is_public
+                    ? t("home:my_wheels.make_private")
+                    : t("home:my_wheels.make_public")}
+                </button>
               </div>
             ))}
           </div>
