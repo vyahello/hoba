@@ -438,10 +438,11 @@ export function RoomPage(): JSX.Element {
       finalAngleDeg: currentSpin.final_angle_deg,
       durationMs: currentSpin.duration_ms,
       seed: currentSpin.seed,
-      // slow_burn: ease-in-out so the wheel starts slow (no fast whip) and
-      // crawls to a soft stop, instead of the default fast-out curve.
+      // slow_burn: gentle start, then a long flat tail so the END is slow and
+      // drawn-out (no fast whip anywhere — paired with the server trimming the
+      // turn count). The last ~half of the duration is the slow crawl to stop.
       ...(currentSpin.mode_effects?.chaos_event === "slow_burn"
-        ? { ease: [0.42, 0, 0.58, 1] as [number, number, number, number] }
+        ? { ease: [0.2, 0.1, 0.5, 1] as [number, number, number, number] }
         : {}),
     };
   }, [currentSpin, winningSegmentIndex]);

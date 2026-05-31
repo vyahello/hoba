@@ -18,8 +18,11 @@ from collections.abc import Callable
 from hoba_api.models.segment import Segment
 from hoba_api.modes.base import ModeEffects, SpinContext, SpinDecision
 
-# slow_burn feels slow (2× a normal spin) without dragging on too long.
+# slow_burn feels slow (2× a normal spin) without dragging on too long, and
+# does only a few turns (not 5–8) so it can't whip through the middle — the
+# spin service trims the rotation count to this.
 SLOW_BURN_MULTIPLIER = 2.0
+SLOW_BURN_TURNS = 3
 # multi_spin fires this many short fast spins in a row (the last one counts).
 MULTI_SPIN_MIN = 2
 MULTI_SPIN_MAX = 5

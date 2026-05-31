@@ -17,6 +17,7 @@ from hoba_api.models.segment import Segment
 from hoba_api.models.spin import Spin
 from hoba_api.modes import engine_for
 from hoba_api.modes.base import SpinContext
+from hoba_api.modes.chaos import SLOW_BURN_TURNS
 from hoba_api.redis_client import presence_user_ids
 from hoba_api.services.rooms import RoomServiceError
 from hoba_api.wheel.spin_math import MIN_FULL_ROTATIONS, compute_spin
@@ -131,7 +132,14 @@ async def trigger_spin(
     winning_index = result.result_segment_index
     sector_deg = 360.0 / len(spin_segments)
 
-    if chaos_event == "reverse":
+    if chaos_event == "slow_burn":
+        # Trim to a few full turns so the long (×2) duration is a genuinely
+        # slow crawl, not many fast revolutions. Keep the same landing sector
+        # (fractional part of the delta) — just fewer whole turns.
+        delta = result.final_angle_deg - starting_angle_deg
+        reduced = (delta % 360.0) + SLOW_BURN_TURNS * 360.0
+        result = replace(result, final_angle_deg=starting_angle_deg + reduced)
+    elif chaos_event == "reverse":
         # Same sector, but travel counter-clockwise ≥ MIN_FULL_ROTATIONS turns.
         # compute_spin only goes forward, so re-target the final angle below
         # the start (Framer animates to the smaller number = CCW).

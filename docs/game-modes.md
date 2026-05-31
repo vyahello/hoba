@@ -145,7 +145,7 @@ This reuses Punishment's whole betting/turn/standings/winner flow: backend `serv
 | Event | Effect | Where it's applied |
 |---|---|---|
 | `multi_spin` ⚡️ | a burst of `spin_reps` (2–5) short fast spins; the **last** lands the recorded result | engine picks `spin_reps`; the client plays the quick spins (random angles) then the server final |
-| `slow_burn` 🐢 | a slow spin — **starts slow** (no fast whip) and crawls to a soft stop | `duration_multiplier = 2.0` + a gentle ease-in-out (`SpinResult.ease = [0.42,0,0.58,1]`) instead of the default fast-out curve |
+| `slow_burn` 🐢 | a slow spin, no fast whip, with a **drawn-out sticky finish** | `duration_multiplier = 2.0`, the spin service **trims to `SLOW_BURN_TURNS = 3` turns** (so it can't whip through 5–8 revolutions), and `SpinResult.ease = [0.2, 0.1, 0.5, 1]` (gentle start, long flat tail = slow drawn-out end) |
 | `reverse` 🔄 | wheel travels counter-clockwise to the same sector | spin service re-targets `final_angle_deg` below the start (engines never compute angles) |
 | `swap` 🔀 | two segments trade positions; the announcement card shows the two **crossing** so it's visible | engine reorders `SpinDecision.segments` + emits `segment_order` (client renders that order) + `swap_pair` (the two ids for the card) |
 | `nudge_fwd` ⏩ / `nudge_back` ⏪ | wheel settles, "thinks" (shake), then creeps **±1 sector** — changing the result. Both share **one generic "nudge" announcement** (direction not spoiled; only the creep reveals it) | spin service records the nudged segment + the nudged `final_angle_deg`, carries the pre-nudge stop in `nudge_from_angle`; client plays settle → shake → creep |

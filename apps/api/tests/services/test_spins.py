@@ -338,6 +338,31 @@ async def test_trigger_spin_chaos_nudge_changes_result_and_records_pre_angle(
     assert 0 <= segment_under_pointer(spin.final_angle_deg, 4) < 4
 
 
+async def test_trigger_spin_chaos_slow_burn_trims_turns(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Force "slow_burn" (idx 1 of 7 → roll in [0.143, 0.286)). The spin should
+    # travel only a few turns (not the usual ≥5) so the slow duration reads as
+    # a crawl, while still landing a valid sector.
+    from hoba_api.modes.chaos import SLOW_BURN_TURNS
+    from hoba_api.modes.registry import engine_for
+
+    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.2)
+    host_id = await _make_user(db, tg_id=603)
+    room = await create_room(
+        db, host_id=host_id, question_text="Q?", segments=_drafts(4),
+        spin_policy="anyone", game_mode="chaos",
+    )
+    await db.commit()
+    spin = await trigger_spin(db, room=room, user_id=host_id)
+    await db.commit()
+    assert spin.mode_state_snapshot["mode_effects"]["chaos_event"] == "slow_burn"
+    # Started at 0 → final is between SLOW_BURN_TURNS and SLOW_BURN_TURNS+1 turns
+    # (the trimmed turn count), well under the normal ≥5-turn minimum.
+    assert SLOW_BURN_TURNS * 360 <= spin.final_angle_deg < (SLOW_BURN_TURNS + 1) * 360
+    assert 0 <= segment_under_pointer(spin.final_angle_deg, 4) < 4
+
+
 async def test_trigger_spin_chaos_blind_pointer_lands_under_pointer(
     db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
