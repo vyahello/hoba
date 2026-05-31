@@ -106,7 +106,7 @@ def test_chaos_slow_burn_is_very_slow() -> None:
     segs = [_seg(1, 0), _seg(2, 1)]
     d = ChaosEngine(rng=_seq_rng([0.2])).on_spin_request(_ctx(segs))  # idx 1
     assert d.effects == {"chaos_event": "slow_burn", "dramatic": True}
-    assert d.duration_multiplier == 4.0
+    assert d.duration_multiplier == 2.0
 
 
 def test_chaos_reverse_keeps_order_and_duration() -> None:
