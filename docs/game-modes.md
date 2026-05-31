@@ -8,7 +8,7 @@ Per-mode gameplay mechanics. See `docs/spec.md` §5 for the full product specifi
 
 The default mode. Every spin is independent — the wheel lands on a segment, the result is revealed, and the wheel resets to the full set for the next spin. No state carries between spins.
 
-**Spin policy default:** `anyone`.
+**Spin policy default:** `host_only`. The settings gear (shown only once a guest is present) offers `host_only` ("Лише я") and `turn_based` ("По черзі") — "anyone can spin" was removed, so the default is host-controlled.
 
 ---
 

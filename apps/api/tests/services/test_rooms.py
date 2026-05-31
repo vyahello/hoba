@@ -246,8 +246,9 @@ def test_derive_spin_policy_explicit_wins_for_punishment() -> None:
 
 
 def test_derive_spin_policy_default_for_classic() -> None:
-    # No explicit spin_policy + classic mode → "anyone" (party-game default).
-    assert _derive_spin_policy(None, "classic") == "anyone"
+    # No explicit spin_policy + classic mode → "host_only" (the gear offers
+    # only host_only / turn_based, so the default is host-controlled).
+    assert _derive_spin_policy(None, "classic") == "host_only"
 
 
 def test_derive_spin_policy_default_for_elimination() -> None:
@@ -311,7 +312,7 @@ async def test_create_room_explicit_spin_policy_wins_over_mode(
     assert room.game_mode == "punishment"
 
 
-async def test_create_room_classic_default_unchanged(db: AsyncSession) -> None:
+async def test_create_room_classic_defaults_host_only(db: AsyncSession) -> None:
     host_id = await _make_user(db, tg_id=104)
     room = await create_room(
         db,
@@ -320,7 +321,7 @@ async def test_create_room_classic_default_unchanged(db: AsyncSession) -> None:
         segments=_drafts(2),
     )
     assert room.game_mode == "classic"
-    assert room.spin_policy == "anyone"
+    assert room.spin_policy == "host_only"
 
 
 async def test_create_room_rejects_unknown_game_mode(db: AsyncSession) -> None:

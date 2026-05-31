@@ -165,7 +165,7 @@ def test_post_room_with_game_mode_field_round_trips(
     assert body["room"]["current_turn_user_id"] is None
 
 
-def test_post_room_without_game_mode_defaults_to_classic_anyone(
+def test_post_room_without_game_mode_defaults_to_classic_host_only(
     client: TestClient, init_data: str,
 ) -> None:
     resp = client.post(
@@ -174,7 +174,7 @@ def test_post_room_without_game_mode_defaults_to_classic_anyone(
     assert resp.status_code == 201
     body = resp.json()
     assert body["room"]["game_mode"] == "classic"
-    assert body["room"]["spin_policy"] == "anyone"
+    assert body["room"]["spin_policy"] == "host_only"
 
 
 def test_post_room_explicit_spin_policy_wins_over_mode(
