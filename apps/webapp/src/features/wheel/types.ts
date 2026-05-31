@@ -30,6 +30,12 @@ export interface SpinResult {
   finalAngleDeg: number;
   durationMs: number;
   seed: number;
+  /**
+   * Optional cubic-bezier easing override `[x1,y1,x2,y2]`. Defaults to the
+   * wheel's fast-whip curve. Chaos `slow_burn` passes a gentle ease-in-out so
+   * the wheel starts slow instead of flinging.
+   */
+  ease?: [number, number, number, number];
 }
 
 export type WheelState = "idle" | "spinning" | "settled";

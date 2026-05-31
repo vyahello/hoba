@@ -156,7 +156,7 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
 
     const controls = animate(rotation, spinResult.finalAngleDeg, {
       duration: spinResult.durationMs / 1000,
-      ease: [0.15, 0.85, 0.25, 1],
+      ease: spinResult.ease ?? [0.15, 0.85, 0.25, 1],
     });
 
     const decelerateStartMs = spinResult.durationMs * DECELERATE_START_FRACTION;
