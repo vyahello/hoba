@@ -275,7 +275,10 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
   });
 
   return (
-    <div className={cn("relative w-full aspect-square", className)}>
+    <div
+      className={cn("relative w-full aspect-square select-none", className)}
+      style={{ WebkitTouchCallout: "none" }}
+    >
       <svg
         viewBox="0 0 400 400"
         role="img"
@@ -455,10 +458,17 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
               longPressTimer.current = null;
             }
           }}
+          onContextMenu={(e) => {
+            // Long-press on iOS/Android otherwise pops the text-selection
+            // magnifier / context menu — kill it (the hub press is our gesture).
+            e.preventDefault();
+          }}
           aria-label={t("actions.spin")}
+          style={{ WebkitUserSelect: "none", WebkitTouchCallout: "none" }}
           className={cn(
             "absolute left-1/2 top-1/2 h-[22%] w-[22%]",
             "-translate-x-1/2 -translate-y-1/2 rounded-full",
+            "select-none touch-manipulation",
             "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-primary/70",
           )}
         />
