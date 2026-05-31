@@ -451,6 +451,26 @@ export function RoomPage(): JSX.Element {
     return list.findIndex((s) => s.id === currentSpin.result_segment_id);
   }, [currentSpin, segments, snapshot]);
 
+  // blind_pointer: the pointer angle that sits on the RESULT segment's centre,
+  // derived client-side from `result_segment_id` + the wheel's rest angle —
+  // the same geometry as the roaming-pointer landing. Deriving the result from
+  // a server pointer angle instead drifted out of sync (pointer on one option,
+  // highlight on another), so the client owns the placement; randomness comes
+  // from the (server-chosen) result itself.
+  const blindPointerDeg = useMemo(() => {
+    if (
+      currentSpin === null ||
+      currentSpin.mode_effects?.chaos_event !== "blind_pointer" ||
+      segments.length === 0
+    ) {
+      return 0;
+    }
+    const idx = segments.findIndex((s) => s.id === String(currentSpin.result_segment_id));
+    if (idx < 0) return 0;
+    const sec = 360 / segments.length;
+    return idx * sec + sec / 2 + currentSpin.final_angle_deg;
+  }, [currentSpin, segments]);
+
   const wheelSpin: SpinResult | undefined = useMemo(() => {
     if (currentSpin === null || winningSegmentIndex < 0) return undefined;
     return {
@@ -727,7 +747,7 @@ export function RoomPage(): JSX.Element {
               pointerDeg={
                 currentSpin?.mode_effects?.chaos_event === "blind_pointer" &&
                 wheelState === "settled"
-                  ? currentSpin.mode_effects?.pointer_deg ?? 0
+                  ? blindPointerDeg
                   : 0
               }
               // Bet-race modes have no per-spin result overlay, so flash the
