@@ -28,7 +28,7 @@ export const QUICK_WHEELS: readonly QuickWheel[] = [
   {
     id: "eat",
     titleKey: "quick_wheels.eat",
-    emoji: "🍕",
+    emoji: "🍽️",
     gradient: ["#FFB84D", "#FF5C9C"],
     segments: [
       { key: "pizza", emoji: "🍕", colorSeed: 0 },
@@ -93,7 +93,7 @@ export const QUICK_WHEELS: readonly QuickWheel[] = [
   {
     id: "friday",
     titleKey: "quick_wheels.friday",
-    emoji: "🍻",
+    emoji: "🎉",
     gradient: ["#FFB84D", "#FF9F1C"],
     segments: [
       { key: "rooftop", emoji: "🌆", colorSeed: 0 },
