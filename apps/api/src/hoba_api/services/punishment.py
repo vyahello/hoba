@@ -195,6 +195,19 @@ async def resolve_turn(
             room.punishment_winner_user_id = spinner_id
         else:
             await _advance_turn(session, room)
+    elif room.game_mode == "chaos":
+        # Chaos is a bet race with NO dares: a miss is a no-op — just confetti
+        # on the client + the next player's turn.
+        outcome = {
+            "spinner_id": spinner_id,
+            "result_segment_id": result_segment_id,
+            "kind": "miss",
+            "card": None,
+            "resolved": True,
+            "pending_approval": False,
+            "approver_user_id": None,
+        }
+        await _advance_turn(session, room)
     else:
         deck = room.punishment_deck or "mild"
         lang = host_lang or "en"

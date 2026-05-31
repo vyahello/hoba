@@ -37,6 +37,7 @@ import {
   allPresentBet,
   approverUserId,
   bettorIds,
+  isBetRace,
   isMyApproval,
   isMyPunishment,
   isPunishment,
@@ -150,8 +151,13 @@ export function RoomPage(): JSX.Element {
   const roundOver = isElimination && isRoundOver(activeQuestion);
   const survivor = roundOver ? livingSegments(activeQuestion)[0] : undefined;
 
-  // Punishment view-state (turn-based personal-bet race).
+  // Bet-race view-state. Punishment + Chaos share the betting / turn /
+  // standings / winner flow (`isBetRace`); `isPunish` stays for the
+  // punishment-only dare bits, `isChaos` for the chaos-only differences
+  // (no per-spin banner, chaos event card).
   const isPunish = isPunishment(snapshot);
+  const isChaos = snapshot?.room.game_mode === "chaos";
+  const isRace = isBetRace(snapshot);
   const punishPhase = punishmentPhase(snapshot); // "betting" | "playing" | "over"
   const myDoneCount =
     snapshot != null ? perPlayerDoneCount(snapshot, snapshot.me_user_id) : 0;
@@ -200,13 +206,13 @@ export function RoomPage(): JSX.Element {
     activeQuestion?.segments.some(
       (s) => !s.is_eliminated && !punishTakenByOther.has(s.id),
     ) ?? false;
-  const punishWaiting = isPunish ? waitingOnBetIds(snapshot, presentUserIds) : [];
+  const punishWaiting = isRace ? waitingOnBetIds(snapshot, presentUserIds) : [];
   const punishAllBet = allPresentBet(snapshot, presentUserIds);
-  const punishBetting = isPunish && punishPhase === "betting";
-  const punishPlaying = isPunish && punishPhase === "playing";
-  const punishOver = isPunish && punishPhase === "over";
+  const punishBetting = isRace && punishPhase === "betting";
+  const punishPlaying = isRace && punishPhase === "playing";
+  const punishOver = isRace && punishPhase === "over";
   const punishCurrentTurn = snapshot?.room.current_turn_user_id ?? null;
-  const isMyPunishTurn = isPunish && punishCurrentTurn === snapshot?.me_user_id;
+  const isMyPunishTurn = isRace && punishCurrentTurn === snapshot?.me_user_id;
   const punishOutcome = lastOutcome(snapshot);
   const punishPending = pendingPunishment(snapshot);
   const mustResolveMyPunish = isMyPunishment(snapshot);
@@ -222,7 +228,7 @@ export function RoomPage(): JSX.Element {
   // which seeds the host as current_turn). Deriving this from presence order
   // is wrong — that order differs per client, so each device would think it
   // is the starter and show an active spin button.
-  const punishStarter = isPunish ? (snapshot?.room.host_id ?? null) : null;
+  const punishStarter = isRace ? (snapshot?.room.host_id ?? null) : null;
   const canStartPunish =
     punishBetting && punishAllBet && punishStarter === snapshot?.me_user_id;
   const canSpinPunish =
@@ -682,7 +688,7 @@ export function RoomPage(): JSX.Element {
               // In Punishment the hub is host-only and gated on everyone
               // having locked a guess ("Spin anyway" below is the force path).
               onSpinClick={
-                isPunish
+                isRace
                   ? canStartPunish || canSpinPunish
                     ? () => {
                         triggerSpin();
@@ -905,7 +911,7 @@ export function RoomPage(): JSX.Element {
                   ) : null}
                 </div>
               )
-            ) : punishOutcome?.kind === "lucky" ? (
+            ) : !isChaos && punishOutcome?.kind === "lucky" ? (
               <div className="flex flex-col items-center gap-1 rounded-xl bg-brand-amber-3/15 px-4 py-3 text-center">
                 <HobaWord sizeClass="text-4xl" />
                 <p className="text-sm font-semibold text-ink-light-1 dark:text-ink-dark-1">
@@ -970,7 +976,7 @@ export function RoomPage(): JSX.Element {
               the sole spin control. Only status/turn lines live here. */}
           {/* Classic host_only guests get the "host spins" hint here.
               turn_based "whose turn" now shows as a banner up top. */}
-          {!isPunish && !canSpin && idleish && turnState.kind === "not_turn_based" && !roundOver ? (
+          {!isRace && !canSpin && idleish && turnState.kind === "not_turn_based" && !roundOver ? (
             <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-3">
               {t("room:spin.host_only_hint")}
             </p>
@@ -1026,21 +1032,25 @@ export function RoomPage(): JSX.Element {
                 </div>
               ) : (
                 <span className="text-5xl leading-none mt-1" aria-hidden>
-                  {CHAOS_EVENT_EMOJI[chaosAnnounce] ?? "🎲"}
+                  {chaosAnnounce.startsWith("nudge")
+                    ? "🔁"
+                    : CHAOS_EVENT_EMOJI[chaosAnnounce] ?? "🎲"}
                 </span>
               )}
+              {/* Both nudge directions share one generic card — we don't spoil
+                  which way it'll creep; that's revealed only by the wheel. */}
               <p className="font-display font-extrabold text-2xl text-brand-pink">
-                {t(`room:chaos.events.${chaosAnnounce}.title`)}
+                {t(`room:chaos.events.${chaosAnnounce.startsWith("nudge") ? "nudge" : chaosAnnounce}.title`)}
               </p>
               <p className="text-sm text-ink-light-2 dark:text-ink-dark-2">
-                {t(`room:chaos.events.${chaosAnnounce}.desc`)}
+                {t(`room:chaos.events.${chaosAnnounce.startsWith("nudge") ? "nudge" : chaosAnnounce}.desc`)}
               </p>
             </motion.div>
           ) : null}
         </AnimatePresence>
 
         <AnimatePresence>
-          {revealed && winningSegment !== undefined && !roundOver && !bonOver && !isPunish ? (
+          {revealed && winningSegment !== undefined && !roundOver && !bonOver && !isRace ? (
             isElimination ? (
               // Elimination: a light "what's out" flash. Auto-dismisses
               // (effect above) and a tap anywhere skips it — no manual close,

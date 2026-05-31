@@ -79,13 +79,9 @@
         "title": "Segment swap",
         "desc": "Two segments trade places — watch them switch!"
       },
-      "nudge_fwd": {
-        "title": "Nudge forward",
-        "desc": "It stops… thinks… then creeps one forward."
-      },
-      "nudge_back": {
-        "title": "Nudge back",
-        "desc": "It stops… thinks… then creeps one back."
+      "nudge": {
+        "title": "Nudge",
+        "desc": "It stops, thinks… then creeps one — but which way?"
       }
     }
   },

@@ -132,27 +132,27 @@ Room columns: `punishment_predictions` (`{uid: seg_id}` = the bets), `spin_count
 
 ---
 
-## Chaos (§5.4) — Live (full chaos)
+## Chaos (§5.4) — Live (bet race + chaos events)
 
-"Full chaos": **every** spin draws one of the events below — there is no plain spin. The event is announced on a ~1.5 s card (skewed "Hoba!" + the event) before the wheel fires. The roll is **server-authoritative** (`ChaosEngine.on_spin_request`, seeded RNG injected for tests) and never carries state between spins.
+Chaos is a **personal-bet race** — the same flow as Punishment, minus the dares, plus a chaos event on every spin. Each player locks a unique option (a segment); players spin **in turn** (host first); landing on **your own** bet scores a match; **first to N matches wins** (host picks `N ∈ {1,3,5,7}`). A miss is a **no-op** (just confetti + next turn — no dare). On **every** spin a chaos event also fires, announced on a ~1.5 s card before the wheel.
 
-### The six events (≈⅙ each)
+This reuses Punishment's whole betting/turn/standings/winner flow: backend `services/punishment.py` (`place_bet`, `start_game`, `resolve_turn`, `reset_game`) and the same room columns (`punishment_predictions` = bets, `spin_count` = N, `punishment_match_counts`, `punishment_winner_user_id`, `punishment_last_outcome`). The only fork is `resolve_turn`'s miss branch (`game_mode == "chaos"` → `kind: "miss"`, advance, no card). The frontend shares the UI via `isBetRace(snap) = punishment | chaos`; dare/approval UI auto-disables because chaos outcomes are never `"punish"`. Per-spin there is **no "Hoba!" result banner** (just confetti); the **winner hero** at the end matches Punishment.
+
+### The six chaos events (≈⅙ each)
 
 | Event | Effect | Where it's applied |
 |---|---|---|
 | `multi_spin` ⚡️ | a burst of `spin_reps` (2–5) short fast spins; the **last** lands the recorded result | engine picks `spin_reps`; the client plays the quick spins (random angles) then the server final |
-| `slow_burn` 🐢 | a genuinely slow crawl (×3 duration) | `duration_multiplier = 3.0` |
+| `slow_burn` 🐢 | a genuinely slow crawl (×4 duration) | `duration_multiplier = 4.0` |
 | `reverse` 🔄 | wheel travels counter-clockwise to the same sector | spin service re-targets `final_angle_deg` below the start (engines never compute angles) |
 | `swap` 🔀 | two segments trade positions; the announcement card shows the two **crossing** so it's visible | engine reorders `SpinDecision.segments` + emits `segment_order` (client renders that order) + `swap_pair` (the two ids for the card) |
-| `nudge_fwd` ⏩ / `nudge_back` ⏪ | wheel settles, "thinks" (shake), then creeps **±1 sector** — changing the result | spin service records the nudged segment + the nudged `final_angle_deg`, and carries the pre-nudge stop in `nudge_from_angle`; the client plays settle → shake → creep |
+| `nudge_fwd` ⏩ / `nudge_back` ⏪ | wheel settles, "thinks" (shake), then creeps **±1 sector** — changing the result. Both share **one generic "nudge" announcement** (direction is not spoiled; only the creep reveals it) | spin service records the nudged segment + the nudged `final_angle_deg`, carries the pre-nudge stop in `nudge_from_angle`; client plays settle → shake → creep |
 
-### Attempts (best-of-N)
-
-The host picks **N ∈ {1, 3, 5, 7}** in the mode picker (like Punishment). With N > 1 the room runs a **best-of-N** round: each spin (turn-based) is one chaotic spin, the server tallies `result_segment_id` across the round, and the **most-frequent segment wins** (ties keep the round open; host "New round" resets). This reuses the Classic best-of-N machinery (`game_mode in (classic, chaos)` gate in `_emit_settled`, `bon_*` columns, `bestOfN.ts` helpers). N = 1 is a single chaotic spin, no contest.
+The match-count uses the **recorded** `result_segment_id` (the *nudged* one for nudge events), so the race stays consistent with what the wheel finally shows.
 
 ### Spin policy
 
-`spin_policy` default: **`turn_based`** (host first, then take turns). The settings sheet offers **host_only** and **turn_based** only — "anyone can spin" is hidden for Chaos.
+`spin_policy` default: **`turn_based`** (host first, then take turns; if nobody else is present the host plays alone). The settings sheet offers **host_only** and **turn_based** only — "anyone can spin" is hidden for Chaos. The host picks **N** (matches to win) in the mode picker.
 
 ### Wire
 
@@ -161,7 +161,7 @@ The event is **folded into `spin:started.mode_effects`** (no separate `chaos:eve
 ### Client
 
 - `apps/webapp/src/features/rooms/chaos.ts` — `CHAOS_EVENTS`, `CHAOS_EVENT_EMOJI`, `orderSegmentsForSpin` (the swap reorder).
-- The RoomPage spin-drive effect is an **async choreography** (guarded by a `cancelled` flag): a `CHAOS_ANNOUNCE_MS = 1500` announcement card (skewed `<HobaWord/>` + event; for `swap`, the two `swap_pair` labels visibly cross) → the wheel phases → settle → reveal. `multi_spin` feeds `spin_reps` sequential `SpinResult`s to `<Wheel>` (via a `phaseSpin` override + `wheelRef.getCurrentRotation()`); `nudge_*` does spin → container shake (`useAnimate` on the wheel scope) → one-sector creep. `reverse`/`slow_burn` need no extra client work (the server angle/duration already encode them). Tunable constants: `MULTI_SPIN_STEP_MS`, `MULTI_SPIN_FINAL_MS`, `NUDGE_SHAKE_MS`, `NUDGE_CREEP_MS`.
+- The RoomPage spin-drive effect is an **async choreography** (guarded by a `cancelled` flag): a `CHAOS_ANNOUNCE_MS = 1500` announcement card (skewed `<HobaWord/>` + event; for `swap`, the two `swap_pair` labels visibly cross; `nudge_fwd`/`nudge_back` share one generic "nudge" card) → the wheel phases → settle → confetti. `multi_spin` feeds `spin_reps` sequential `SpinResult`s to `<Wheel>` (via a `phaseSpin` override + `wheelRef.getCurrentRotation()`); `nudge_*` does spin → container shake (`useAnimate` on the wheel scope) → one-sector creep. `reverse`/`slow_burn` need no extra client work (the server angle/duration already encode them). Tunable constants: `MULTI_SPIN_STEP_MS`, `MULTI_SPIN_FINAL_MS`, `NUDGE_SHAKE_MS`, `NUDGE_CREEP_MS`.
 
 ### Deferred (spec §5.4, not yet built)
 

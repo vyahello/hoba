@@ -206,7 +206,7 @@ export function RoomModePickerSheet({
       {selected === "chaos" ? (
         <div className="mt-3">
           <p className="text-sm font-medium text-ink-light-2 dark:text-ink-dark-2 mb-2">
-            {t("room:spin_count.label")}
+            {t("room:punishment.spin_count_label")}
           </p>
           <div className="flex gap-2">
             {SPIN_COUNTS.map((n) => {

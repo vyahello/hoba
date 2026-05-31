@@ -4,6 +4,17 @@ export function isPunishment(snap: RoomState | null): boolean {
   return snap?.room.game_mode === "punishment";
 }
 
+/**
+ * Punishment + Chaos share the personal-bet race: pick a unique option, spin
+ * in turn, first to N matches (own bet hit) wins. The only difference is the
+ * miss branch — Punishment deals a dare, Chaos just confetti + next turn — so
+ * the betting / turn / standings / winner UI is shared via this predicate.
+ */
+export function isBetRace(snap: RoomState | null): boolean {
+  const mode = snap?.room.game_mode;
+  return mode === "punishment" || mode === "chaos";
+}
+
 /** Cumulative dares actually performed this session (global). */
 export function doneCount(snap: RoomState | null): number {
   return snap?.room.punishment_done_count ?? 0;

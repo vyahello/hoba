@@ -174,6 +174,44 @@ async def test_resolve_miss_deals_card_and_holds_turn(db: AsyncSession) -> None:
     assert room.current_turn_user_id == spinner  # turn HELD until resolved
 
 
+async def test_chaos_miss_is_noop_and_advances(db: AsyncSession) -> None:
+    # Chaos shares the bet race but deals NO dare on a miss — it's a no-op
+    # (resolved, no card) and the turn advances immediately.
+    host_id = await _make_user(db, tg_id=230)
+    room = await create_room(
+        db, host_id=host_id, question_text="?", segments=_drafts(4),
+        game_mode="chaos", spin_count=3,
+    )
+    guest_id = await _make_user(db, tg_id=231)
+    db.add(Participant(room_id=room.id, user_id=guest_id, role="guest"))
+    await db.commit()
+    for uid in (host_id, guest_id):
+        await presence_set(room.id, uid)
+    seg = await _segment_ids(db, room)
+    await punishment.place_bet(db, room, host_id, seg[0])
+    await punishment.place_bet(db, room, guest_id, seg[1])
+    await punishment.start_game(db, room)
+    spinner = room.current_turn_user_id
+    assert spinner is not None
+
+    outcome = await punishment.resolve_turn(
+        db, room, spinner, result_segment_id=seg[2], host_lang="en",  # nobody's bet
+    )
+    assert outcome["kind"] == "miss"
+    assert outcome["card"] is None
+    assert outcome["resolved"] is True
+    assert room.current_turn_user_id != spinner  # advanced, no dare hold
+    assert room.punishment_match_counts in (None, {})  # no match scored
+
+    # A hit still scores a match (shared lucky path).
+    nxt = room.current_turn_user_id
+    assert nxt is not None
+    hit = room.punishment_predictions[str(nxt)]
+    out2 = await punishment.resolve_turn(db, room, nxt, result_segment_id=hit, host_lang="en")
+    assert out2["kind"] == "lucky"
+    assert room.punishment_match_counts[str(nxt)] == 1
+
+
 async def test_resolve_lucky_to_n_sets_winner(db: AsyncSession) -> None:
     room, seg, users = await _make_room(db, tg_base=230, n=3)
     await punishment.place_bet(db, room, users[0], seg[0])

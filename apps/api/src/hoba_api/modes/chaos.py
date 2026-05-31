@@ -19,7 +19,7 @@ from hoba_api.models.segment import Segment
 from hoba_api.modes.base import ModeEffects, SpinContext, SpinDecision
 
 # slow_burn is meant to feel *genuinely* slow — a long, suspenseful crawl.
-SLOW_BURN_MULTIPLIER = 3.0
+SLOW_BURN_MULTIPLIER = 4.0
 # multi_spin fires this many short fast spins in a row (the last one counts).
 MULTI_SPIN_MIN = 2
 MULTI_SPIN_MAX = 5

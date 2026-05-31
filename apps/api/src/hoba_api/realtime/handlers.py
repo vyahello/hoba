@@ -194,7 +194,7 @@ async def _emit_settled(
                             "round_over": effects.round_over,
                             "survivor_segment_id": survivor_id,
                         }
-            if room.game_mode == "punishment":
+            if room.game_mode in ("punishment", "chaos"):
                 host = await session.get(User, room.host_id)
                 host_lang = (host.language_code if host is not None else None) or "en"
                 spin = await session.get(Spin, spin_id)
@@ -211,7 +211,7 @@ async def _emit_settled(
                         "current_turn_user_id": room.current_turn_user_id,
                     }
 
-            # Best-of-N (Classic + Chaos, spin_count > 1): recompute the round from
+            # Best-of-N (Classic, spin_count > 1): recompute the round from
             # the committed Spin rows rather than incrementing shared
             # counters. _emit_settled runs as overlapping background tasks,
             # so an increment-based count races: a late stale patch (e.g.
@@ -220,7 +220,7 @@ async def _emit_settled(
             # Counting committed spins is order-independent — every settle
             # after the Nth spin commits converges to the same result.
             if (
-                room.game_mode in ("classic", "chaos")
+                room.game_mode == "classic"
                 and room.spin_count > 1
                 and question is not None
             ):
@@ -253,10 +253,13 @@ async def _emit_settled(
                     "bon_winner_segment_id": winner_id,
                 }
 
-            # Punishment runs its own turn logic in resolve_turn (it must NOT
-            # advance on an unresolved dare), so only the generic modes advance
-            # the cursor here.
-            if room.spin_policy == "turn_based" and room.game_mode != "punishment":
+            # Punishment + Chaos run their own turn logic in resolve_turn (the
+            # bet race advances there — punishment must NOT advance on an
+            # unresolved dare), so only the generic modes advance here.
+            if room.spin_policy == "turn_based" and room.game_mode not in (
+                "punishment",
+                "chaos",
+            ):
                 new_cursor = await advance_turn(session, room)
                 advanced = True
             await session.commit()
@@ -334,7 +337,7 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                     room = await session.get(Room, room_id)
                     if (
                         room is not None
-                        and room.game_mode == "punishment"
+                        and room.game_mode in ("punishment", "chaos")
                         and room.status == "lobby"
                         and str(user_id) in (room.punishment_predictions or {})
                     ):
@@ -456,11 +459,11 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                     "error", {"code": "room_not_found"}, to=sid, namespace=NAMESPACE,
                 )
                 return
-            # Punishment v3 gate: turn-based personal-bet race. Players spin
-            # in turn; a miss deals a dare that BLOCKS the turn until resolved.
-            # This whole block stands in for the generic user_can_spin check
-            # (which is run for every other mode in the elif just below).
-            if room.game_mode == "punishment":
+            # Punishment + Chaos: turn-based personal-bet race. Players spin in
+            # turn; in Punishment a miss deals a dare that BLOCKS the turn (in
+            # Chaos a miss is a no-op). This block stands in for the generic
+            # user_can_spin check (run for every other mode in the elif below).
+            if room.game_mode in ("punishment", "chaos"):
                 if room.punishment_winner_user_id is not None:
                     await sio.emit(
                         "error", {"code": "game_over"}, to=sid, namespace=NAMESPACE,
@@ -624,7 +627,7 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
             if room.host_id != user_id:
                 await sio.emit("error", {"code": "not_host"}, to=sid, namespace=NAMESPACE)
                 return
-            if room.game_mode == "punishment":
+            if room.game_mode in ("punishment", "chaos"):
                 # New game: clear bets/counts/winner/outcome, back to lobby so
                 # players re-bet (cumulative done_count is preserved).
                 await reset_game(session, room)
