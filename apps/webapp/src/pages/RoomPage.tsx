@@ -61,6 +61,7 @@ import {
   type SpinResult,
   type WheelState,
 } from "@/features/wheel/types";
+import { api } from "@/lib/api";
 import { haptics } from "@/lib/haptics";
 import { safeNavigateBack } from "@/lib/navigation";
 import {
@@ -122,6 +123,7 @@ export function RoomPage(): JSX.Element {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [rigOpen, setRigOpen] = useState(false);
   const [rigRevealShown, setRigRevealShown] = useState(false);
+  const [savingWheel, setSavingWheel] = useState(false);
   // Chaos (§5.4): the rolled event for the in-flight spin while its 1.5 s
   // pre-roll announcement card is showing, then null once the wheel releases.
   const [chaosAnnounce, setChaosAnnounce] = useState<string | null>(null);
@@ -554,6 +556,29 @@ export function RoomPage(): JSX.Element {
     }
   }
 
+  async function handleSaveWheel(): Promise<void> {
+    const question = snapshot?.active_question;
+    if (question == null || savingWheel) return;
+    setSavingWheel(true);
+    try {
+      await api.createWheel({
+        title: question.text,
+        segments: question.segments.map((s) => ({
+          label: s.label,
+          emoji: s.emoji,
+          color_seed: s.color_seed,
+          weight: s.weight,
+        })),
+      });
+      haptics.success();
+      toast({ title: t("room:actions.saved"), intent: "success" });
+    } catch {
+      toast({ title: t("room:actions.save_failed"), intent: "error" });
+    } finally {
+      setSavingWheel(false);
+    }
+  }
+
   if (snapshot === null) {
     return (
       <>
@@ -626,6 +651,18 @@ export function RoomPage(): JSX.Element {
                 void handleShare();
               }}
             />
+            {callerIsHost ? (
+              <IconButton
+                aria-label={t("room:actions.save_wheel")}
+                variant="tonal"
+                size="md"
+                disabled={savingWheel}
+                icon={<span aria-hidden>💾</span>}
+                onClick={() => {
+                  void handleSaveWheel();
+                }}
+              />
+            ) : null}
             {callerIsHost && !isRace && hasOtherPlayers ? (
               <IconButton
                 aria-label={t("room:settings.open_aria")}

@@ -7,6 +7,7 @@ from hoba_api.models.room import Room
 from hoba_api.models.segment import Segment
 from hoba_api.models.spin import Spin
 from hoba_api.models.user import User
+from hoba_api.models.wheel import Wheel
 
 __all__ = [
     "Base",
@@ -16,4 +17,5 @@ __all__ = [
     "Segment",
     "Spin",
     "User",
+    "Wheel",
 ]

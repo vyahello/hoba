@@ -64,7 +64,16 @@
   },
   "my_wheels": {
     "title": "My wheels",
-    "empty": "Nothing saved yet. Build a wheel and tap Save to keep it."
+    "empty": "Nothing saved yet. Build a wheel and tap Save to keep it.",
+    "uses": "Used {count}×",
+    "use": "Use",
+    "edit": "Edit",
+    "delete": "Delete",
+    "delete_confirm": "Sure?",
+    "load_failed": "Couldn't load your wheels.",
+    "delete_failed": "Couldn't delete. Try again.",
+    "use_failed": "Couldn't start a room. Try again.",
+    "see_all": "See all"
   },
   "trending": {
     "title": "Trending"

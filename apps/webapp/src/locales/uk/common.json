@@ -17,7 +17,8 @@
   },
   "status": {
     "coming_soon": "Невдовзі",
-    "phase_label": "Фаза {phase}"
+    "phase_label": "Фаза {phase}",
+    "loading": "Завантаження…"
   },
   "not_found": {
     "wheel": "Колесо не знайдено."

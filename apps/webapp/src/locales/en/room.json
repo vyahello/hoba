@@ -7,7 +7,10 @@
     "share": "Share",
     "invite_friends": "+ Invite friends",
     "go_multiplayer": "Play together",
-    "create_room": "Create room"
+    "create_room": "Create room",
+    "save_wheel": "Save this wheel",
+    "saved": "Saved to your wheels",
+    "save_failed": "Couldn't save. Try again."
   },
   "share": {
     "message": "Join my Hoba! wheel · {code}",

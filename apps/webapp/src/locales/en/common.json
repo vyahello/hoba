@@ -17,7 +17,8 @@
   },
   "status": {
     "coming_soon": "Coming soon",
-    "phase_label": "Phase {phase}"
+    "phase_label": "Phase {phase}",
+    "loading": "Loading…"
   },
   "not_found": {
     "wheel": "Wheel not found."

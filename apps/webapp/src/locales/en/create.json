@@ -7,6 +7,11 @@
   "add_segment": "Add option",
   "remove_segment": "Remove",
   "spin_solo": "Spin solo",
+  "save_to_library": "Save to my wheels",
+  "save_changes": "Save changes",
+  "edit_title": "Edit wheel",
+  "saved": "Saved to your wheels",
+  "save_failed": "Couldn't save. Try again.",
   "too_few": "At least 2 options needed",
   "too_many": "Up to 12 options"
 }

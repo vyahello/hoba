@@ -42,6 +42,7 @@ async function request<T>(path: string, opts: FetchOptions = {}): Promise<T> {
     }
     throw new ApiError(response.status, code);
   }
+  if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
 
@@ -184,6 +185,41 @@ export interface RoomCreatePayload {
   spin_count?: number;
 }
 
+// --- Saved wheels (library, spec §8 / F10) -------------------------------
+
+export interface SavedWheelSegment {
+  id: number;
+  label: string;
+  emoji: string | null;
+  color_seed: number;
+  weight: number;
+}
+
+export interface SavedWheel {
+  id: number;
+  title: string;
+  use_count: number;
+  is_public: boolean;
+  segments: SavedWheelSegment[];
+  created_at: string;
+}
+
+export interface WheelSavePayload {
+  title: string;
+  segments: Array<{
+    label: string;
+    emoji?: string | null;
+    color_seed?: number;
+    weight?: number;
+  }>;
+}
+
+export interface WheelUsePayload {
+  game_mode?: GameMode;
+  punishment_deck?: PunishmentDeck;
+  spin_count?: number;
+}
+
 export interface RoomPatchPayload {
   title?: string;
   spin_policy?: SpinPolicy;
@@ -213,6 +249,21 @@ export const api = {
   /** Rigged Mode 🎭 (host only): reveal the rig — un-redacts for everyone. */
   revealRig: (code: string): Promise<RoomState> =>
     request(`/rooms/${encodeURIComponent(code)}/reveal`, { method: "POST" }),
+
+  // --- Saved-wheel library (F10) ---
+  listWheels: (): Promise<SavedWheel[]> => request("/wheels"),
+
+  createWheel: (payload: WheelSavePayload): Promise<SavedWheel> =>
+    request("/wheels", { method: "POST", body: payload }),
+
+  updateWheel: (id: number, payload: WheelSavePayload): Promise<SavedWheel> =>
+    request(`/wheels/${id}`, { method: "PATCH", body: payload }),
+
+  deleteWheel: (id: number): Promise<void> =>
+    request(`/wheels/${id}`, { method: "DELETE" }),
+
+  useWheel: (id: number, payload: WheelUsePayload = {}): Promise<RoomState> =>
+    request(`/wheels/${id}/use`, { method: "POST", body: payload }),
 
   closeRoom: (code: string): Promise<RoomState> =>
     request(`/rooms/${encodeURIComponent(code)}/close`, { method: "POST" }),

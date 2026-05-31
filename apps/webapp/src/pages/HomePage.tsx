@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -6,6 +7,7 @@ import { EmptyState } from "@/components/ds/EmptyState";
 import { IconButton } from "@/components/ds/IconButton";
 import { QuickWheelCard } from "@/components/ds/QuickWheelCard";
 import { QUICK_WHEELS } from "@/data/quickWheels";
+import { type SavedWheel, api } from "@/lib/api";
 
 /**
  * Home (F2) — the screen 80% of opens land on. "Tap me, I'm fun", not
@@ -17,6 +19,16 @@ import { QUICK_WHEELS } from "@/data/quickWheels";
 export function HomePage(): JSX.Element {
   const { t } = useTranslation(["home", "common"]);
   const navigate = useNavigate();
+  const [wheels, setWheels] = useState<SavedWheel[] | null>(null);
+
+  useEffect(() => {
+    void api
+      .listWheels()
+      .then(setWheels)
+      .catch(() => {
+        setWheels([]);
+      });
+  }, []);
 
   return (
     <>
@@ -78,15 +90,51 @@ export function HomePage(): JSX.Element {
         </section>
 
         <section>
-          <h2 className="font-display font-bold text-xl mb-3 text-ink-light-1 dark:text-ink-dark-1">
-            {t("home:my_wheels.title")}
-          </h2>
-          <Card padding="none" className="overflow-hidden">
-            <EmptyState
-              title={t("home:my_wheels.title")}
-              description={t("home:my_wheels.empty")}
-            />
-          </Card>
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="font-display font-bold text-xl text-ink-light-1 dark:text-ink-dark-1">
+              {t("home:my_wheels.title")}
+            </h2>
+            {wheels !== null && wheels.length > 0 ? (
+              <button
+                type="button"
+                className="text-sm font-semibold text-brand-primary"
+                onClick={() => {
+                  navigate("/library");
+                }}
+              >
+                {t("home:my_wheels.see_all")}
+              </button>
+            ) : null}
+          </div>
+          {wheels === null || wheels.length === 0 ? (
+            <Card padding="none" className="overflow-hidden">
+              <EmptyState
+                title={t("home:my_wheels.title")}
+                description={t("home:my_wheels.empty")}
+              />
+            </Card>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {wheels.slice(0, 3).map((w) => (
+                <Card
+                  key={w.id}
+                  interactive
+                  padding="md"
+                  onClick={() => {
+                    navigate("/library");
+                  }}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <span className="font-display font-semibold text-base truncate text-ink-light-1 dark:text-ink-dark-1">
+                    {w.title}
+                  </span>
+                  <span className="shrink-0 text-xs text-ink-light-2 dark:text-ink-dark-2 tabular-nums">
+                    {w.segments.length}
+                  </span>
+                </Card>
+              ))}
+            </div>
+          )}
         </section>
       </main>
     </>
