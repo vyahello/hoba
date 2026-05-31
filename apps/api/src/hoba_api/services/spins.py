@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import math
 import secrets
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
@@ -17,7 +19,7 @@ from hoba_api.modes import engine_for
 from hoba_api.modes.base import SpinContext
 from hoba_api.redis_client import presence_user_ids
 from hoba_api.services.rooms import RoomServiceError
-from hoba_api.wheel.spin_math import compute_spin
+from hoba_api.wheel.spin_math import MIN_FULL_ROTATIONS, compute_spin
 
 MIN_SEGMENTS_TO_SPIN = 2
 def best_of_n_leaders(tally: dict[int, int]) -> list[int]:
@@ -107,6 +109,16 @@ async def trigger_spin(
         weights=weights,
     )
     duration_ms = round(result.duration_ms * decision.duration_multiplier)
+
+    # Chaos "reverse": land on the same sector but travel counter-clockwise at
+    # least MIN_FULL_ROTATIONS turns. compute_spin only ever goes forward, so
+    # we re-target the final angle below the starting angle (Framer animates to
+    # the smaller number = CCW). The result segment is unchanged.
+    if decision.effects.get("chaos_event") == "reverse":
+        final_mod = result.final_angle_deg % 360.0
+        ceiling = starting_angle_deg - MIN_FULL_ROTATIONS * 360.0
+        turns = math.floor((ceiling - final_mod) / 360.0)
+        result = replace(result, final_angle_deg=final_mod + turns * 360.0)
 
     winning_segment = spin_segments[result.result_segment_index]
     started_at = datetime.now(UTC)

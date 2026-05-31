@@ -22,6 +22,15 @@ import {
 const NAMESPACE = "/rooms";
 const REACTION_TTL_MS = 2200;
 
+/** Chaos mode (§5.4) per-spin effects, folded into `spin:started`. */
+export interface SpinModeEffects {
+  /** One of: speed_run | slow_burn | reverse | swap | jackpot. */
+  chaos_event?: string;
+  /** Swap event only: segment ids in the order to render this spin. */
+  segment_order?: number[];
+  dramatic?: boolean;
+}
+
 export interface SpinStartedEvent {
   spin_id: number;
   question_id: number;
@@ -31,6 +40,7 @@ export interface SpinStartedEvent {
   duration_ms: number;
   seed: number;
   started_at_server: string;
+  mode_effects?: SpinModeEffects;
 }
 
 export interface SpinSettledEvent {

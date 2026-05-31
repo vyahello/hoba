@@ -1,11 +1,20 @@
 """Mode engine behaviour — pure, no DB."""
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
+
 from hoba_api.models.room import Room
 from hoba_api.models.segment import Segment
 from hoba_api.modes.base import SpinContext
+from hoba_api.modes.chaos import ChaosEngine
 from hoba_api.modes.classic import ClassicEngine
 from hoba_api.modes.elimination import EliminationEngine
+
+
+def _seq_rng(values: Iterable[float]) -> Callable[[], float]:
+    """RNG stub that yields the given floats in order."""
+    it = iter(values)
+    return lambda: next(it)
 
 
 def _seg(seg_id: int, position: int, eliminated: bool = False) -> Segment:
@@ -77,3 +86,52 @@ def test_elimination_settled_marks_winner_and_round_over() -> None:
     eff3 = e.on_spin_settled(_ctx(segs3), segs3[0])
     assert eff3.eliminate_segment_ids == [1]
     assert eff3.round_over is False
+
+
+def test_chaos_no_event_when_roll_above_probability() -> None:
+    segs = [_seg(1, 0), _seg(2, 1), _seg(3, 2)]
+    e = ChaosEngine(rng=_seq_rng([0.5]))
+    d = e.on_spin_request(_ctx(segs))
+    assert d.segments == segs
+    assert d.duration_multiplier == 1.0
+    assert d.effects == {}
+    assert e.is_round_over(_ctx(segs)) is False
+
+
+def test_chaos_speed_run() -> None:
+    segs = [_seg(1, 0), _seg(2, 1)]
+    d = ChaosEngine(rng=_seq_rng([0.0])).on_spin_request(_ctx(segs))
+    assert d.effects == {"chaos_event": "speed_run"}
+    assert d.duration_multiplier == 0.5
+    assert d.segments == segs
+
+
+def test_chaos_slow_burn() -> None:
+    segs = [_seg(1, 0), _seg(2, 1)]
+    d = ChaosEngine(rng=_seq_rng([0.06])).on_spin_request(_ctx(segs))
+    assert d.effects == {"chaos_event": "slow_burn", "dramatic": True}
+    assert d.duration_multiplier == 1.5
+
+
+def test_chaos_reverse_keeps_order_and_duration() -> None:
+    segs = [_seg(1, 0), _seg(2, 1)]
+    d = ChaosEngine(rng=_seq_rng([0.11])).on_spin_request(_ctx(segs))
+    assert d.effects == {"chaos_event": "reverse"}
+    assert d.duration_multiplier == 1.0
+    assert d.segments == segs
+
+
+def test_chaos_swap_reorders_and_emits_segment_order() -> None:
+    segs = [_seg(1, 0), _seg(2, 1), _seg(3, 2)]
+    # roll -> swap; i = floor(0.0*3)=0; j = floor(0.99*2)=1, j>=i -> j=2.
+    d = ChaosEngine(rng=_seq_rng([0.16, 0.0, 0.99])).on_spin_request(_ctx(segs))
+    assert d.effects["chaos_event"] == "swap"
+    assert [s.id for s in d.segments] == [3, 2, 1]
+    assert d.effects["segment_order"] == [3, 2, 1]
+
+
+def test_chaos_jackpot() -> None:
+    segs = [_seg(1, 0), _seg(2, 1)]
+    d = ChaosEngine(rng=_seq_rng([0.21])).on_spin_request(_ctx(segs))
+    assert d.effects == {"chaos_event": "jackpot"}
+    assert d.duration_multiplier == 1.0

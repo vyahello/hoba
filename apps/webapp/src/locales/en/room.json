@@ -61,6 +61,32 @@
       "tagline": "Random twist before every spin."
     }
   },
+  "chaos": {
+    "banner": "CHAOS!",
+    "events": {
+      "speed_run": {
+        "title": "Speed run",
+        "desc": "The wheel spins twice as fast."
+      },
+      "slow_burn": {
+        "title": "Slow burn",
+        "desc": "A long, dramatic spin."
+      },
+      "reverse": {
+        "title": "Reverse!",
+        "desc": "The wheel spins backwards."
+      },
+      "swap": {
+        "title": "Segment swap",
+        "desc": "Two segments traded places."
+      },
+      "jackpot": {
+        "title": "Jackpot!",
+        "desc": "Big-win energy — extra confetti.",
+        "win": "JACKPOT!"
+      }
+    }
+  },
   "settings": {
     "open_aria": "Room settings",
     "title": "Room settings",

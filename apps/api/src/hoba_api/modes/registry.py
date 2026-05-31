@@ -3,6 +3,7 @@ to Classic so they keep spinning until their own slice lands."""
 from __future__ import annotations
 
 from hoba_api.modes.base import GameModeEngine
+from hoba_api.modes.chaos import ChaosEngine
 from hoba_api.modes.classic import ClassicEngine
 from hoba_api.modes.elimination import EliminationEngine
 from hoba_api.modes.punishment import PunishmentEngine
@@ -11,6 +12,7 @@ _ENGINES: dict[str, GameModeEngine] = {
     "classic": ClassicEngine(),
     "elimination": EliminationEngine(),
     "punishment": PunishmentEngine(),
+    "chaos": ChaosEngine(),
 }
 _FALLBACK: GameModeEngine = _ENGINES["classic"]
 

@@ -23,6 +23,7 @@ import {
   livingSegments,
   remainingCount,
 } from "@/features/rooms/elimination";
+import { CHAOS_EVENT_EMOJI, orderSegmentsForSpin } from "@/features/rooms/chaos";
 import { computeCanSpin, isHost } from "@/features/rooms/permissions";
 import {
   attempts as bonAttemptsCount,
@@ -77,6 +78,9 @@ import { WHEEL_PALETTE } from "../../tailwind.config";
 // enough to register the landed segment, short enough to feel instant.
 const REVEAL_DELAY_MS = 400;
 const ELIM_REVEAL_DELAY_MS = 400;
+// Chaos (§5.4): how long the pre-spin event announcement card holds before
+// the wheel is released. Spec calls for a ~1.5 s beat.
+const CHAOS_ANNOUNCE_MS = 1500;
 
 export function RoomPage(): JSX.Element {
   const { code = "" } = useParams<{ code: string }>();
@@ -107,6 +111,9 @@ export function RoomPage(): JSX.Element {
   const [wheelState, setWheelState] = useState<WheelState>("idle");
   const [revealed, setRevealed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Chaos (§5.4): the rolled event for the in-flight spin while its 1.5 s
+  // pre-roll announcement card is showing, then null once the wheel releases.
+  const [chaosAnnounce, setChaosAnnounce] = useState<string | null>(null);
 
   // Shatter thunk: when a segment is eliminated, briefly compress the wheel
   // (scale 1 → 0.97 → 1, ~300 ms) so players feel the winner "pop off".
@@ -127,6 +134,9 @@ export function RoomPage(): JSX.Element {
   // flow can branch on it (classic celebrates; elimination just flags
   // what's out and saves the celebration for the final survivor).
   const isElimination = snapshot?.room.game_mode === "elimination";
+  // Chaos event rolled for the current spin (server-authoritative, arrives in
+  // spin:started.mode_effects). Null on every non-chaos / no-event spin.
+  const chaosEvent = currentSpin?.mode_effects?.chaos_event ?? null;
   const activeQuestion = snapshot?.active_question ?? null;
   const remaining = remainingCount(activeQuestion);
   const roundOver = isElimination && isRoundOver(activeQuestion);
@@ -219,30 +229,49 @@ export function RoomPage(): JSX.Element {
   const bonOver = bonRoundOver(snapshot);
   const bestOfNReset = useRoomStore((s) => s.bestOfNReset);
 
-  // Each spin is a single full animation, then settle + reveal.
+  // Each spin is a single full animation, then settle + reveal. In Chaos,
+  // a rolled event gets a CHAOS_ANNOUNCE_MS announcement card first; the
+  // wheel and all downstream timers are pushed back by that pre-roll.
   useEffect(() => {
     if (currentSpin === null) {
       setWheelState("idle");
       setRevealed(false);
+      setChaosAnnounce(null);
       return undefined;
     }
-    setWheelState("spinning");
+    const event = currentSpin.mode_effects?.chaos_event ?? null;
+    const preroll = event !== null ? CHAOS_ANNOUNCE_MS : 0;
     setRevealed(false);
+    if (event !== null) {
+      setChaosAnnounce(event);
+      setWheelState("idle"); // hold while the card is up
+    } else {
+      setWheelState("spinning");
+    }
+
+    const startAt = window.setTimeout(() => {
+      if (event !== null) {
+        setChaosAnnounce(null);
+        setWheelState("spinning");
+      }
+    }, preroll);
 
     const settleAt = window.setTimeout(() => {
       haptics.heavy();
       haptics.success();
       audio.play("result_chime");
       setWheelState("settled");
-    }, currentSpin.duration_ms);
+    }, preroll + currentSpin.duration_ms);
 
     const revealAt = window.setTimeout(() => {
       audio.play("hoba_pop");
       if (!isElimination) fireConfetti();
+      if (event === "jackpot") fireConfetti(); // double burst for the jackpot
       setRevealed(true);
-    }, currentSpin.duration_ms + (isElimination ? ELIM_REVEAL_DELAY_MS : REVEAL_DELAY_MS));
+    }, preroll + currentSpin.duration_ms + (isElimination ? ELIM_REVEAL_DELAY_MS : REVEAL_DELAY_MS));
 
     return () => {
+      window.clearTimeout(startAt);
       window.clearTimeout(settleAt);
       window.clearTimeout(revealAt);
     };
@@ -307,15 +336,17 @@ export function RoomPage(): JSX.Element {
 
   const segments: SegmentDef[] = useMemo(() => {
     if (snapshot?.active_question == null) return [];
-    return snapshot.active_question.segments
-      .filter((s) => !s.is_eliminated)
-      .map((s) => ({
-        id: String(s.id),
-        label: s.label,
-        emoji: s.emoji ?? undefined,
-        colorSeed: s.color_seed,
-      }));
-  }, [snapshot]);
+    const living = snapshot.active_question.segments.filter((s) => !s.is_eliminated);
+    // Chaos "swap": the server spun over a re-ordered set, so we must render
+    // that same order or the wheel lands on the wrong sector.
+    const ordered = orderSegmentsForSpin(living, currentSpin?.mode_effects?.segment_order);
+    return ordered.map((s) => ({
+      id: String(s.id),
+      label: s.label,
+      emoji: s.emoji ?? undefined,
+      colorSeed: s.color_seed,
+    }));
+  }, [snapshot, currentSpin]);
 
   const winningSegmentIndex = useMemo(() => {
     if (currentSpin === null || segments.length === 0) return -1;
@@ -897,6 +928,37 @@ export function RoomPage(): JSX.Element {
           />
         ) : null}
 
+        {/* Chaos (§5.4): pre-spin event announcement card. Holds for
+            CHAOS_ANNOUNCE_MS (the spin-drive effect clears it), then the
+            wheel releases. pointer-events-none so it never blocks the hub. */}
+        <AnimatePresence>
+          {chaosAnnounce !== null ? (
+            <motion.div
+              key="chaos-announce"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.12 }}
+              transition={{ type: "spring", damping: 14, stiffness: 220 }}
+              className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 px-6 text-center bg-bg-light/95 dark:bg-bg-dark/95 pointer-events-none"
+              aria-live="assertive"
+              role="status"
+            >
+              <span className="text-6xl leading-none" aria-hidden>
+                {CHAOS_EVENT_EMOJI[chaosAnnounce] ?? "🎲"}
+              </span>
+              <p className="font-display font-extrabold text-3xl text-brand-pink">
+                {t("room:chaos.banner")}
+              </p>
+              <p className="font-display font-bold text-xl text-ink-light-1 dark:text-ink-dark-1">
+                {t(`room:chaos.events.${chaosAnnounce}.title`)}
+              </p>
+              <p className="text-sm text-ink-light-2 dark:text-ink-dark-2">
+                {t(`room:chaos.events.${chaosAnnounce}.desc`)}
+              </p>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+
         <AnimatePresence>
           {revealed && winningSegment !== undefined && !roundOver && !bonOver && !isPunish ? (
             isElimination ? (
@@ -946,6 +1008,16 @@ export function RoomPage(): JSX.Element {
                 aria-live="polite"
                 role="status"
               >
+                {chaosEvent === "jackpot" ? (
+                  <motion.p
+                    initial={{ scale: 0.4, opacity: 0, rotate: -8 }}
+                    animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                    transition={{ type: "spring", damping: 9, stiffness: 240 }}
+                    className="mb-2 font-display font-extrabold text-3xl text-brand-pink"
+                  >
+                    💰 {t("room:chaos.events.jackpot.win")}
+                  </motion.p>
+                ) : null}
                 <HobaWord />
                 <ResultBanner
                   segmentLabel={winningSegment.label}

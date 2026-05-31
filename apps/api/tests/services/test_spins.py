@@ -287,6 +287,29 @@ async def test_trigger_spin_punishment_is_normal_spin(
     assert room.punishment_cards is None
 
 
+async def test_trigger_spin_chaos_reverse_flips_angle_backward(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Force the chaos engine to roll "reverse" (band [0.10, 0.15)). The
+    # service must re-target the final angle below the start so the wheel
+    # animates counter-clockwise, while still landing a valid sector.
+    from hoba_api.modes.registry import engine_for
+
+    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.11)
+    host_id = await _make_user(db, tg_id=600)
+    room = await create_room(
+        db, host_id=host_id, question_text="Q?", segments=_drafts(4),
+        spin_policy="anyone", game_mode="chaos",
+    )
+    await db.commit()
+    spin = await trigger_spin(db, room=room, user_id=host_id)
+    await db.commit()
+    assert spin.mode_state_snapshot["mode_effects"] == {"chaos_event": "reverse"}
+    # Started at 0, so a CCW spin of ≥5 turns lands well below zero.
+    assert spin.final_angle_deg <= -5 * 360
+    assert 0 <= segment_under_pointer(spin.final_angle_deg, 4) < 4
+
+
 def test_best_of_n_leaders() -> None:
     from hoba_api.services.spins import best_of_n_leaders
 

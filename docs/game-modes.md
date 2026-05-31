@@ -132,9 +132,32 @@ Room columns: `punishment_predictions` (`{uid: seg_id}` = the bets), `spin_count
 
 ---
 
-## Chaos (§5.4) — Planned — next slice
+## Chaos (§5.4) — Live
 
-A pre-spin event is announced to the room (e.g. "Double spin", "Reverse order") before the wheel fires. Planned for the next Stage D slice.
+About a quarter of spins (`CHAOS_PROBABILITY = 0.25`) roll one of five events, announced to the room on a ~1.5 s card before the wheel fires; the rest behave exactly like Classic. The roll is **server-authoritative** (`ChaosEngine.on_spin_request`, seeded RNG injected for tests) and never carries state between spins.
+
+### The five events (≈5% each)
+
+| Event | Effect | Where it's applied |
+|---|---|---|
+| `speed_run` ⚡️ | spin runs at ×0.5 duration | `duration_multiplier` on `SpinDecision` |
+| `slow_burn` 🐢 | spin runs at ×1.5 duration (+ `dramatic`) | `duration_multiplier` |
+| `reverse` 🔄 | wheel travels counter-clockwise to the same sector | spin service re-targets `final_angle_deg` below the start (engines never compute angles) |
+| `swap` 🔀 | two segments trade positions for this spin | engine reorders `SpinDecision.segments` + emits `segment_order` (the client renders that order or it lands on the wrong sector) |
+| `jackpot` 💰 | "JACKPOT!" flourish + a second confetti burst at reveal | client reads `chaos_event` at reveal |
+
+### Wire
+
+The event is **folded into `spin:started.mode_effects`** (no separate `chaos:event` broadcast — the documented `mode:event` shape was not needed): `{ "chaos_event": "<name>", "segment_order"?: [int...], "dramatic"?: true }`. No new DB columns; the whole feature rides the existing `SpinDecision.effects` → `mode_state_snapshot.mode_effects` → `spin:started` channel.
+
+### Client
+
+- `apps/webapp/src/features/rooms/chaos.ts` — `CHAOS_EVENTS`, `CHAOS_EVENT_EMOJI`, `orderSegmentsForSpin` (the swap reorder).
+- RoomPage spin-drive effect holds a `CHAOS_ANNOUNCE_MS = 1500` announcement card before releasing the wheel and pushes the settle/reveal timers back by that pre-roll; `reverse` needs no extra client work (the server angle already goes backwards, Framer animates to the smaller number); `jackpot` adds the flourish + extra confetti.
+
+### Defaults
+
+`spin_policy` default: `anyone` (Classic-flavoured, not a turn race). `spin_count` is always 1 for Chaos — the mode picker shows no best-of-N selector, so Double-spin never collides with a series. (Double-spin and Phantom-segment from spec §5.4 are deferred to a follow-up slice.)
 
 ---
 

@@ -4,7 +4,17 @@
 
 ---
 
-## Stage D — in progress (Punishment turn-based race + Elimination + foundation)
+## Stage D — in progress (Chaos + Punishment turn-based race + Elimination + foundation)
+
+### Slice 6 — Chaos mode (2026-05-31) — committed, pending owner deploy
+
+Implemented Chaos (spec §5.4) as the fourth `GameModeEngine`. ~25% of spins (`CHAOS_PROBABILITY`) roll one of five events — **speed_run** (×0.5 duration), **slow_burn** (×1.5 + dramatic), **reverse** (CCW to the same sector), **swap** (two segments trade places), **jackpot** (reveal flourish + extra confetti) — each ≈5%; the rest behave like Classic. Owner chose the "safe 5" (Double-spin + Phantom-segment deferred) and to **fold the event into `spin:started.mode_effects`** rather than a separate `chaos:event` broadcast.
+
+Server-authoritative roll in `apps/api/src/hoba_api/modes/chaos.py` (`ChaosEngine`, RNG injected for deterministic tests; registered in `modes/registry.py`). The `reverse` angle flip is applied in `services/spins.py` (engines never compute angles): the final angle is re-targeted below the start so Framer animates counter-clockwise to the same landing sector. `swap` reorders `SpinDecision.segments` and emits `segment_order` so the client renders the same order (or the wheel lands wrong). **No DB change** — everything rides the existing `SpinDecision.effects` → `mode_state_snapshot.mode_effects` → `spin:started` channel.
+
+Frontend: `features/rooms/chaos.ts` (`CHAOS_EVENTS`, `CHAOS_EVENT_EMOJI`, `orderSegmentsForSpin`); RoomPage holds a `CHAOS_ANNOUNCE_MS = 1500` announcement card before releasing the wheel (settle/reveal timers offset by the pre-roll), renders the swap order, and adds the jackpot flourish + double confetti. The mode picker, badge, `GameMode` type, and `modes.chaos` label were already wired from Slice 2 — Chaos sends no best-of-N (`spin_count` always 1, so Double-spin can't collide with a series). Default spin policy `anyone`. EN+UK i18n `chaos.*` block.
+
+Gates green (Opus 4.8, inline — no subagent fan-out): **214 backend** (coverage 86%) / **103 frontend**, ruff + mypy --strict + tsc + eslint + i18n parity all clean. Doc `docs/game-modes.md` Chaos section rewritten from Planned → Live. Deferred: Double-spin, Phantom-segment (`docs/TODO.md`).
 
 ### Slice 5 — Punishment v3/v4: turn-based personal-bet race (2026-05-30) — committed, pending owner deploy
 
