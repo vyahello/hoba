@@ -309,14 +309,15 @@ export function RoomPage(): JSX.Element {
         if (cancelled) return;
         // "Thinking" wobble — does it stay, or creep forward/back?
         if (wheelScope.current !== null) {
-          await animateWheel(
+          // Fire the shake; wait its duration with our own timer (the
+          // returned controls aren't awaitable in this Framer version).
+          void animateWheel(
             wheelScope.current,
             { rotate: [0, -5, 5, -4, 4, -2, 2, 0] },
             { duration: NUDGE_SHAKE_MS / 1000, ease: "easeInOut" },
           );
-        } else {
-          await sleep(NUDGE_SHAKE_MS);
         }
+        await sleep(NUDGE_SHAKE_MS);
         if (cancelled) return;
         setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: finalAngle, durationMs: NUDGE_CREEP_MS, seed: freshSeed() });
         await sleep(NUDGE_CREEP_MS);

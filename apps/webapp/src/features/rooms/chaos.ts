@@ -56,18 +56,19 @@ export function buildRoamHops(
   const hops: RoamHop[] = [];
   let v = 0; // start at the top option
   let dir = rng() < 0.5 ? 1 : -1;
-  const wander = 9 + Math.floor(rng() * 5); // 9–13 wandering hops
+  const wander = 7 + Math.floor(rng() * 4); // 7–10 wandering hops
   for (let k = 0; k < wander; k++) {
     if (rng() < 0.4) dir = -dir; // frequent reversals
-    v += dir * (rng() < 0.7 ? 1 : 2);
-    hops.push({ deg: centerDeg(v), ms: 150 + Math.round((k / wander) * 150) });
+    v += dir; // one option at a time, so each hop is clearly visible
+    // Slow down progressively so the travel reads (and builds tension).
+    hops.push({ deg: centerDeg(v), ms: 280 + Math.round((k / wander) * 260) });
   }
   // Settle: hover one before / one after the result, then land on it.
   const gap = (((v - resultIndex) % segmentCount) + segmentCount) % segmentCount;
   const landingV = v - gap; // ≡ resultIndex (mod n)
-  hops.push({ deg: centerDeg(landingV - 1), ms: 360 });
-  hops.push({ deg: centerDeg(landingV + 1), ms: 300 });
-  hops.push({ deg: centerDeg(landingV), ms: 560 });
+  hops.push({ deg: centerDeg(landingV - 1), ms: 520 });
+  hops.push({ deg: centerDeg(landingV + 1), ms: 460 });
+  hops.push({ deg: centerDeg(landingV), ms: 720 });
   return hops;
 }
 

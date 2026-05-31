@@ -170,10 +170,16 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
     () => ({
       getCurrentRotation: (): number => rotation.get(),
       roamPointer: async (hops): Promise<void> => {
+        // Start each hop's animation, then wait its duration with a timer.
+        // (This Framer's controls aren't awaitable, so awaiting them resolved
+        // instantly and collapsed the roam into one fast jump.)
         for (const hop of hops) {
-          await animate(pointerRotation, hop.deg, {
+          animate(pointerRotation, hop.deg, {
             duration: hop.ms / 1000,
             ease: "easeInOut",
+          });
+          await new Promise<void>((resolve) => {
+            window.setTimeout(resolve, hop.ms);
           });
         }
       },
