@@ -26,8 +26,8 @@
       "you": "You",
       "me": "Me",
       "split": "Split it",
-      "rps": "Rock-paper-scissors",
-      "late": "Whoever's late"
+      "guys": "The boys",
+      "next_time": "Next time"
     },
     "watch": {
       "superhero": "Superhero",
@@ -52,10 +52,10 @@
     },
     "friday": {
       "rooftop": "Rooftop drinks",
-      "game_night": "Game night",
-      "karaoke": "Karaoke",
-      "road_trip": "Spontaneous road trip",
-      "house_party": "House party",
+      "ps5": "PS5",
+      "walk": "Walk",
+      "trip": "Trip",
+      "party": "Party",
       "midnight_snack": "Midnight snack run"
     }
   },
