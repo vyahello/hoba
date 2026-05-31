@@ -1,9 +1,11 @@
 # Hoba! — Production deployment
 
-> Stage C / soft-launch deploy walkthrough. Assumes an SSH-able Linux VPS
-> with Docker + Docker Compose installed and ports 80/443 open. A domain
-> you control (or a subdomain you can point) is required for Caddy's
-> auto-TLS via Let's Encrypt.
+> Production deploy walkthrough (in use since the Stage C deploy chain;
+> current as of Stage G). Assumes an SSH-able Linux VPS with Docker +
+> Docker Compose installed and ports 80/443 open. A domain you control
+> (or a subdomain you can point) is required for Caddy's auto-TLS via
+> Let's Encrypt. Day-to-day, `./scripts/deploy.sh` wraps the pull/build/up
+> cycle (see § 8).
 
 The webapp container is a **multi-stage build** (commit `2050774`,
 pulled forward from Stage G during the Stage C deploy chain when the

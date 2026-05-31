@@ -15,9 +15,9 @@ Spin together, share a single source of truth, settle it in five seconds.
 
 ## Status
 
-**Stage C — soft launch (May 2026).** Invite-only validation with a small friend group; not yet public. Once Stages D–G land (more game modes, polish, hardening), the bot opens to everyone.
+**Feature-complete (June 2026).** All stages A→G of the post-MVP roadmap are delivered — the codebase implements the full spec: five game modes, the saved-wheel library + public trending, the host moderation toolkit, and launch hardening. Remaining work is owner-side launch ops (BotFather config, walkthrough GIF, production smoke + device audit).
 
-The bot lives at [@hobagame_bot](https://t.me/hobagame_bot). The Mini App URL is private during the soft-launch phase.
+The bot lives at [@hobagame_bot](https://t.me/hobagame_bot).
 
 ---
 
@@ -25,11 +25,11 @@ The bot lives at [@hobagame_bot](https://t.me/hobagame_bot). The Mini App URL is
 
 - **Solo mode.** Pick a Quick Wheel ("Where to eat?", "Who pays?", "Truth or Dare", …) or build your own in `/create`. Spin → branded `Hoba!` / `Хоба!` reveal → confetti + haptics + sound.
 - **Multiplayer rooms.** Server-authoritative spin. Two phones, one room, identical animation within ±50 ms. Reactions fly across every connected client during the spin. Share via Telegram's native picker.
-- **Host controls.** Live spin-policy toggle, in-flight `room:updated` broadcasts so guests see policy changes without a reconnect.
-- **Two languages, full parity.** EN + UK end-to-end; CI enforces locale parity via `pnpm i18n:check`. Brand word flips with the locale.
+- **Five game modes.** Classic, Elimination, Punishment (turn-based dare race), Chaos (a random event every spin), and the legendary **Rigged 🎭** — the host secretly weights the wheel; guests can't tell until the reveal.
+- **Host moderation.** Spin-policy toggle, lock room, anonymous mode (auto nicknames), mid-room mode change, kick, and close — all from the host settings sheet, broadcast live to guests.
+- **Wheel library + discovery.** Save wheels to your library, reuse or edit them, make them public, and browse the **Trending** feed (like / search / report, auto-hidden after enough reports).
+- **Two languages, full parity.** EN + UK end-to-end including Privacy + Terms; CI enforces locale parity via `pnpm i18n:check`. Brand word flips with the locale.
 - **Mobile-native.** No hover states, 44×44 px tap targets, sheets instead of modals. If a screen looks at home on a desktop browser, the spec considers it a bug.
-
-Coming in Stages D–E: **five game modes** (Classic, Elimination, Punishment, Chaos, and the legendary **Rigged 🎭**).
 
 ---
 
@@ -45,7 +45,7 @@ Coming in Stages D–E: **five game modes** (Classic, Elimination, Punishment, C
 | Quality | **pytest**, **ruff**, **mypy --strict**, **eslint**, **tsc --noEmit**, **vitest** | Every gate green at every stage close. |
 | Deploy | Docker Compose; Caddy auto-TLS in the bundled prod profile, or host nginx in shared-VPS mode | One command up, both flavours documented. |
 
-113 backend tests + 53 frontend tests at Stage C entry, 91 % backend coverage.
+289 backend tests + 106 frontend tests at the Stage G close, 86 % backend coverage.
 
 ---
 

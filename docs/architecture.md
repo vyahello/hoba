@@ -128,7 +128,7 @@ SQLAlchemy 2.0 async, with `aiosqlite` driver by default. Swap to Postgres by ch
 Tables (current, see `apps/api/src/hoba_api/models/`):
 
 - `users` — `tg_id` is the natural key from Telegram; `id` is internal.
-- `rooms` — 6-char base32 code, `host_id`, `status ∈ {lobby, active, closed}`, `game_mode ∈ {classic, elimination, punishment, chaos, rigged}` (schema-ready; only `classic` is wired today), `spin_policy ∈ {host_only, anyone, turn_based}`.
+- `rooms` — 6-char base32 code, `host_id`, `status ∈ {lobby, active, closed}`, `game_mode ∈ {classic, elimination, punishment, chaos, rigged}` (all five wired), `spin_policy ∈ {host_only, anyone, turn_based}`, plus `is_locked` / `is_anonymous` moderation flags.
 - `participants` — `(room_id, user_id)` unique; role + presence timestamps.
 - `questions` + `segments` — versioned wheel content per room. `segments` is polymorphic on `parent_type ∈ {question, wheel}`.
 - `spins` — every spin recorded for audit and replay; `result_segment_id`, `final_angle_deg`, `duration_ms`, `seed`.
@@ -195,8 +195,10 @@ apps/webapp/src/
 │   ├── SpinPage.tsx      # Solo spin flow
 │   ├── CreatePage.tsx    # Custom wheel editor
 │   ├── RoomPage.tsx      # Multiplayer room (Socket.IO)
-│   ├── LibraryPage.tsx   # Stub for Stage F
+│   ├── LibraryPage.tsx   # Saved-wheel library (Stage F)
+│   ├── TrendingPage.tsx  # Public wheels / discovery (Stage F)
 │   ├── SettingsPage.tsx  # Locale + toggles
+│   ├── LegalPage.tsx     # /privacy + /terms (Stage G)
 │   └── DevDSPage.tsx     # /dev/ds — design system showcase
 ├── features/wheel/
 │   ├── Wheel.tsx         # SVG wheel + Framer Motion animation
@@ -225,8 +227,11 @@ apps/webapp/src/
 | `/spin/:wheelId` | `SpinPage` (solo) | 5 |
 | `/create` | `CreatePage` (custom wheel) | 5 |
 | `/room/:code` | `RoomPage` (multiplayer) | 6 |
-| `/library` | `LibraryPage` (stub) | 9 (Stage F) |
+| `/library` | `LibraryPage` (saved wheels) | 9 (Stage F) |
+| `/trending` | `TrendingPage` (public wheels) | 10 (Stage F) |
 | `/settings` | `SettingsPage` | 4 |
+| `/privacy` | `LegalPage` (Privacy Policy) | 12 (Stage G) |
+| `/terms` | `LegalPage` (Terms of Service) | 12 (Stage G) |
 | `/dev/ds` | `DevDSPage` (design system showcase) | 4 |
 
 ### Deep-link entry

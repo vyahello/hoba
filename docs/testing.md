@@ -35,7 +35,7 @@ cd /home/kali/hoba
 pnpm typecheck && pnpm lint && pnpm test && pnpm i18n:check
 ```
 
-Expected as of Stage C entry (2026-05-27): **113 pytest passed**, **53 vitest passed**, **91 % backend coverage**, mypy / ruff / eslint / tsc clean, `i18n:check` exits 0 (with advisory warnings for unused-but-reserved keys).
+Expected as of the Stage G close (2026-06-01): **289 pytest passed**, **106 vitest passed**, **86 % backend coverage**, mypy / ruff / eslint / tsc clean, `i18n:check` exits 0 (with advisory warnings for unused-but-reserved keys).
 
 ---
 
