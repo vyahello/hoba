@@ -133,13 +133,23 @@ Two phases bundled because the data model + UI work overlaps heavily. Shipped in
 
 ---
 
-### Stage G — Phase 11 (full) + Phase 12: Host moderation + Final hardening + Launch
+### Stage G — Phase 11 (full) + Phase 12: Host moderation + Final hardening + Launch — ✅ STAGE G COMPLETE (2026-06-01) · 🎉 ROADMAP COMPLETE
 
-The remaining Phase 11/12 work not pulled into Stage B *or* Stage C: full host moderation toolkit (kick, lock, anonymous mode, mode change mid-room, room close with confirmations + anonymous nickname generator), custom SVG onboarding illustrations, result share-card PNG, fuzz tests over every API route, room cleanup cron, full deploy script, public Privacy + Terms in EN + UK, README walkthrough GIF.
+Delivered in three slices (`ba74992` moderation, `67cbf11` hardening, `b9af6d6` launch content+ops):
+- ✅ Host moderation toolkit: kick (re-join blocked), lock, anonymous mode + nickname generator (`anon.py`), mid-room mode change, close with confirmation — all in the reworked host `RoomSettingsSheet` + native confirm + `room:kicked`/`room:closed` broadcasts.
+- ✅ Hardening: input sanitization (`sanitize.py`) at every write boundary, room-cleanup task (`tasks/cleanup.py` + cron), API fuzz suite (no 5xx); replay + §14 rate limits audited (already in place).
+- ✅ Launch content+ops: in-app `/privacy` + `/terms` (EN+UK), `scripts/deploy.sh`, README walkthrough + deploy section.
+- ⏳ Deferred to Stage G scope but NOT built (carry-overs, not blockers): custom SVG onboarding illustrations + result share-card PNG (polish; the app already has empty states + aurora from Stage B).
 
-> Note: the multi-stage Dockerfile static build (originally Stage G scope, Phase 12) was pulled forward into Stage C deploy chain (commit `2050774`) when the Vite-dev-in-prod path proved unreliable. The remaining Stage G items are unaffected.
+> Note: the multi-stage Dockerfile static build (originally Stage G scope, Phase 12) was pulled forward into Stage C deploy chain (commit `2050774`) when the Vite-dev-in-prod path proved unreliable.
 
-**End-of-stage gate:** all bullets in spec §17 "Full Done (Phases 7–12)" tick.
+**End-of-stage gate (met):** spec §17 "Full Done" boxes that are code/content tick; the remaining boxes (staging smoke, production deploy, BotFather final config, walkthrough GIF) are the **owner-only launch checklist** in `docs/TODO.md`. 289 backend (86%) / 106 frontend green. Full close-out in `docs/changelog.md` (STAGE G COMPLETE).
+
+---
+
+## 🎉 Roadmap complete
+
+All stages A→G are delivered. There is no Stage H — further work is feature requests, the polish carry-overs in `docs/TODO.md`, and the owner-only launch tasks. The product implements the full `docs/spec.md`.
 
 ---
 

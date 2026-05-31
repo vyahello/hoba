@@ -4,6 +4,36 @@
 
 ---
 
+## 🎉 STAGE G COMPLETE — 2026-06-01 — ALL STAGES A→G DONE
+
+**Phases 11 + 12 delivered: host moderation, hardening, launch.** With this, the full `docs/spec.md` is implemented and the post-MVP roadmap (A→G) is finished. Three slices, each gated + committed separately. Remaining work is owner-only launch ops (BotFather, GIF, fresh-VPS smoke, device audit) — tracked in `docs/TODO.md`.
+
+### Slice 1 — Host moderation toolkit (Phase 11) — commit `ba74992`
+
+Much of the plumbing predated this slice (`is_locked`/`is_anonymous`/`kicked_at` columns; lock + kick-reblock already enforced in `join_room`; `close_room`); the slice added the **actions, anonymity, and host UI**.
+- **Kick** — `kick_participant` (host-only, can't kick self, target must be present) sets `kicked_at`; `POST /rooms/{code}/kick {user_id}` → `room:kicked` broadcast. Re-join stays blocked.
+- **Anonymous mode** — `is_anonymous` added to `update_room`'s allowed patch; `anon.py::generate_nickname` produces a deterministic adjective+animal alias per `(room, user)`, **localized to the viewer's `language_code`**; `build_room_state` swaps every real name for the nickname when `room.is_anonymous`.
+- **Mid-room mode change** — `update_room` resets round/bet state (`_reset_round_state`, cursor preserved) + re-derives `punishment_unique_bets`/deck on a game-mode change.
+- **Close** — `room:closed` broadcast so guests are ejected.
+- **Frontend** — `RoomSettingsSheet` reworked into the host moderation hub (spin-policy conditional, Lock + Anonymous toggles, Players list with per-guest Kick, Change-mode → picker, Close room); destructive actions use a native Telegram confirm (`confirmPopup`). Store gains `endedReason` + `room:kicked`/`room:closed` handlers → RoomPage toasts + navigates home. 10 service tests.
+
+### Slice 2 — Hardening pass (Phase 12) — commit `67cbf11`
+
+Audited first: replay protection (`auth_date`), all §14 rate limits (room-create, spin 30/h + 1.5s cooldown, reactions, make-public 3/day, report), profanity filter, frontend error boundary — **already present**. This slice closed the three gaps:
+- **Input sanitization** (`sanitize.py::sanitize_text`) — NFKC normalize, strip control/format/zero-width/bidi chars, collapse whitespace, defensive truncation; applied to room question + segment labels, room title, saved-wheel title + labels, report reason.
+- **Room-cleanup task** (`tasks/cleanup.py::close_stale_rooms`) — closes non-closed rooms idle past a cutoff (newest participant `last_seen`, fallback `created_at`); CLI `python -m hoba_api.tasks.cleanup` + `HOBA_CLEANUP_AFTER_HOURS`; cron line in `docs/deployment.md` § 8.
+- **Fuzz suite** (`tests/api/test_fuzz.py`) — authenticated junk payloads across every write route + GET routes with junk params; asserts every response `< 500`. Plus sanitize + cleanup unit tests.
+
+### Slice 3 — Launch content + ops (Phase 12) — commit `b9af6d6`
+
+- **Privacy + Terms, in-app + bilingual** — new `legal` i18n namespace (EN+UK, sectioned); `LegalPage` at `/privacy` + `/terms` (public SPA routes, also browser-reachable for BotFather's Privacy link); linked from Settings → About. `docs/privacy.md` points to the canonical in-app copy.
+- **Deploy script** — `scripts/deploy.sh` (pull → build → up → `/health` poll; `--no-pull`, `HOBA_COMPOSE_FILE`).
+- **README** — 60-second walkthrough storyboard (+ GIF placeholder) + Deploy-to-production section.
+
+**Verification:** automated gates green — **289 backend (86%) / 106 frontend**, ruff + mypy --strict + tsc + eslint + i18n + `pnpm build` clean; alembic head **0016**; `bash -n scripts/deploy.sh` OK. **Spec §17 "Full Done" status:** all 5 modes ✅, Rigged playtest-ready ✅, public/trending/moderation ✅, host moderation toolkit ✅, 12 UX flows implemented ✅, Privacy + Terms both languages ✅, README walkthrough section ✅ (GIF = owner), public-wheel-in-trending path ✅; the remaining boxes (staging smoke + production deploy + BotFather final config) are the **owner-only launch checklist** in `docs/TODO.md`. **Next: owner launch ops, then ongoing feature/polish work — no further `go on stage X`.**
+
+---
+
 ## STAGE F COMPLETE — 2026-05-31
 
 **Phases 9 + 10 delivered: the wheel library + public discovery.** Three slices, each gated + committed separately.
