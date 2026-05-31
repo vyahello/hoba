@@ -138,6 +138,8 @@ Chaos is a **personal-bet race** — the same flow as Punishment, minus the dare
 
 This reuses Punishment's whole betting/turn/standings/winner flow: backend `services/punishment.py` (`place_bet`, `start_game`, `resolve_turn`, `reset_game`) and the same room columns (`punishment_predictions` = bets, `spin_count` = N, `punishment_match_counts`, `punishment_winner_user_id`, `punishment_last_outcome`). The only fork is `resolve_turn`'s miss branch (`game_mode == "chaos"` → `kind: "miss"`, advance, no card). The frontend shares the UI via `isBetRace(snap) = punishment | chaos`; dare/approval UI auto-disables because chaos outcomes are never `"punish"`.
 
+During play, the standings list every player's `option matches/N`; the **viewer's own row is highlighted** (★ "You", brand-primary) so they always know which option is theirs.
+
 **Per-spin feedback:** no confetti on every stop. When the wheel settles, the **landed wedge flashes** (an animated highlight on the `<Wheel>` via `highlightSegmentId`, used by both Chaos and Punishment) so it's clear which option came up. A **hit** (lands your own option, non-winning) also shows the **"Hoba! {option}"** lucky banner in the standings area; a **miss** shows nothing. The **winning** hit flips the phase to `over` immediately, so the lucky banner is skipped and only the **winner hero** ("{option} wins! 🏆") shows — they never overlap. The winner hero fires its own confetti (chaos-only effect, since Chaos has no per-spin burst).
 
 ### The seven chaos events (≈⅐ each)

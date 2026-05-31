@@ -860,12 +860,19 @@ export function RoomPage(): JSX.Element {
             <div className="flex flex-wrap justify-center gap-2 text-xs">
               {punishBettors.map((uid) => {
                 const betSeg = snapshot.room.punishment_bets?.[String(uid)];
+                // Highlight the viewer's OWN row so they always know which
+                // option is theirs throughout the game.
+                const isMe = uid === snapshot.me_user_id;
                 return (
                   <span
                     key={uid}
-                    className="rounded-full bg-surface-light-2 dark:bg-surface-dark-2 px-2.5 py-1 text-ink-light-1 dark:text-ink-dark-1"
+                    className={`rounded-full px-2.5 py-1 ${
+                      isMe
+                        ? "bg-brand-primary text-white font-semibold ring-2 ring-brand-primary/40"
+                        : "bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1"
+                    }`}
                   >
-                    {nameFor(uid)}
+                    {isMe ? `★ ${t("room:punishment.you")}` : nameFor(uid)}
                     {betSeg !== undefined ? ` (${segLabel(betSeg)})` : ""}{" "}
                     {matchCount(snapshot, uid)}/{matchesToWin(snapshot)}
                   </span>

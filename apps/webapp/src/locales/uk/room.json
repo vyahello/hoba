@@ -141,6 +141,7 @@
     "waiting_start": "Чекаємо, поки {name} почне",
     "your_turn_spin": "Твій хід — крути!",
     "turn_of": "Хід гравця {name}",
+    "you": "Ти",
     "lucky_you": "Тобі",
     "lucky_tail": "повезло — випало {item} 🍀",
     "must_do": "{name} має виконати: {card}",
