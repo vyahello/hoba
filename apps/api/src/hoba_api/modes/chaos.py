@@ -35,18 +35,25 @@ def _default_rng() -> float:
 class ChaosEngine:
     mode_id = "chaos"
 
-    def __init__(self, rng: Callable[[], float] | None = None) -> None:
+    def __init__(
+        self,
+        rng: Callable[[], float] | None = None,
+        probability: float | None = None,
+    ) -> None:
         self._rng = rng if rng is not None else _default_rng
+        self._probability = (
+            probability if probability is not None else CHAOS_PROBABILITY
+        )
 
     def get_visible_segments(self, ctx: SpinContext) -> list[Segment]:
         return ctx.segments
 
     def on_spin_request(self, ctx: SpinContext) -> SpinDecision:
         roll = self._rng()
-        if roll >= CHAOS_PROBABILITY:
+        if roll >= self._probability:
             return SpinDecision(segments=ctx.segments)
         idx = min(
-            int(roll / CHAOS_PROBABILITY * len(CHAOS_EVENTS)),
+            int(roll / self._probability * len(CHAOS_EVENTS)),
             len(CHAOS_EVENTS) - 1,
         )
         event = CHAOS_EVENTS[idx]

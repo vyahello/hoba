@@ -42,5 +42,10 @@ class Settings(BaseSettings):
     reactions_per_window: int = 40
     reactions_window_seconds: int = 5
 
+    # Chaos mode (spec §5.4): chance per spin that a chaos event fires.
+    # Default 0.25 per spec. Bump on the VPS (e.g. CHAOS_PROBABILITY=1.0)
+    # to force an event on every spin for manual verification, then revert.
+    chaos_probability: float = 0.25
+
 
 settings = Settings()

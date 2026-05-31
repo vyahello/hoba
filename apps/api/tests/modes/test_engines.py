@@ -135,3 +135,17 @@ def test_chaos_jackpot() -> None:
     d = ChaosEngine(rng=_seq_rng([0.21])).on_spin_request(_ctx(segs))
     assert d.effects == {"chaos_event": "jackpot"}
     assert d.duration_multiplier == 1.0
+
+
+def test_chaos_probability_override_forces_event() -> None:
+    # probability=1.0 → every roll fires (the VPS verification knob). The
+    # band is re-partitioned over the new probability, so roll 0.5 → idx 2.
+    segs = [_seg(1, 0), _seg(2, 1)]
+    d = ChaosEngine(rng=_seq_rng([0.5]), probability=1.0).on_spin_request(_ctx(segs))
+    assert d.effects == {"chaos_event": "reverse"}
+
+
+def test_chaos_probability_zero_never_fires() -> None:
+    segs = [_seg(1, 0), _seg(2, 1)]
+    d = ChaosEngine(rng=_seq_rng([0.0]), probability=0.0).on_spin_request(_ctx(segs))
+    assert d.effects == {}
