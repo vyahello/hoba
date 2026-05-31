@@ -74,9 +74,8 @@ export const QUICK_WHEELS: readonly QuickWheel[] = [
     segments: [
       { key: "truth", emoji: "💬", colorSeed: 6 },
       { key: "dare", emoji: "🔥", colorSeed: 10 },
-      { key: "double_dare", emoji: "😈", colorSeed: 4 },
       { key: "spicy_truth", emoji: "🌶️", colorSeed: 3 },
-      { key: "crowd", emoji: "👥", colorSeed: 8 },
+      { key: "double_dare", emoji: "😈", colorSeed: 4 },
     ],
   },
   {

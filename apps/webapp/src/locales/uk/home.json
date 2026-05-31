@@ -40,9 +40,8 @@
     "truth_dare": {
       "truth": "Правда",
       "dare": "Дія",
-      "double_dare": "Подвійне слабо",
       "spicy_truth": "Гостра правда",
-      "crowd": "Натовп вирішує"
+      "double_dare": "Подвійна дія"
     },
     "yes_no": {
       "yes": "Так",

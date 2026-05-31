@@ -40,9 +40,8 @@
     "truth_dare": {
       "truth": "Truth",
       "dare": "Dare",
-      "double_dare": "Double dare",
       "spicy_truth": "Spicy truth",
-      "crowd": "Crowd decides"
+      "double_dare": "Double dare"
     },
     "yes_no": {
       "yes": "Yes",
