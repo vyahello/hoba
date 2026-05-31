@@ -199,4 +199,7 @@ async def use_wheel_endpoint(
     except RoomServiceError as exc:
         raise _error_to_http(exc) from exc
     await db.commit()
+    # Reload eager (selectin) relationships — `room` came straight from
+    # create_room, so its questions/segments aren't loaded yet.
+    await db.refresh(room)
     return await build_room_state(db, room, current_user_id=user.id)
