@@ -58,11 +58,10 @@
     },
     "chaos": {
       "label": "Chaos",
-      "tagline": "Random twist before every spin."
+      "tagline": "Total chaos — a wild twist on every single spin."
     }
   },
   "chaos": {
-    "banner": "CHAOS!",
     "events": {
       "speed_run": {
         "title": "Speed run",
@@ -79,11 +78,6 @@
       "swap": {
         "title": "Segment swap",
         "desc": "Two segments traded places."
-      },
-      "jackpot": {
-        "title": "Jackpot!",
-        "desc": "Big-win energy — extra confetti.",
-        "win": "JACKPOT!"
       }
     }
   },

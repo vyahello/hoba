@@ -132,11 +132,11 @@ Room columns: `punishment_predictions` (`{uid: seg_id}` = the bets), `spin_count
 
 ---
 
-## Chaos (§5.4) — Live
+## Chaos (§5.4) — Live (full chaos)
 
-About a quarter of spins (`CHAOS_PROBABILITY = 0.25`) roll one of five events, announced to the room on a ~1.5 s card before the wheel fires; the rest behave exactly like Classic. The roll is **server-authoritative** (`ChaosEngine.on_spin_request`, seeded RNG injected for tests) and never carries state between spins.
+"Full chaos": **every** spin draws one of the events below — there is no plain spin. The event is announced on a ~1.5 s card (skewed "Hoba!" + the event) before the wheel fires. The roll is **server-authoritative** (`ChaosEngine.on_spin_request`, seeded RNG injected for tests) and never carries state between spins.
 
-### The five events (≈5% each)
+### The four events (25% each)
 
 | Event | Effect | Where it's applied |
 |---|---|---|
@@ -144,20 +144,28 @@ About a quarter of spins (`CHAOS_PROBABILITY = 0.25`) roll one of five events, a
 | `slow_burn` 🐢 | spin runs at ×1.5 duration (+ `dramatic`) | `duration_multiplier` |
 | `reverse` 🔄 | wheel travels counter-clockwise to the same sector | spin service re-targets `final_angle_deg` below the start (engines never compute angles) |
 | `swap` 🔀 | two segments trade positions for this spin | engine reorders `SpinDecision.segments` + emits `segment_order` (the client renders that order or it lands on the wrong sector) |
-| `jackpot` 💰 | "JACKPOT!" flourish + a second confetti burst at reveal | client reads `chaos_event` at reveal |
+
+### Attempts (best-of-N)
+
+The host picks **N ∈ {1, 3, 5, 7}** in the mode picker (like Punishment). With N > 1 the room runs a **best-of-N** round: each spin (turn-based) is one chaotic spin, the server tallies `result_segment_id` across the round, and the **most-frequent segment wins** (ties keep the round open; host "New round" resets). This reuses the Classic best-of-N machinery (`game_mode in (classic, chaos)` gate in `_emit_settled`, `bon_*` columns, `bestOfN.ts` helpers). N = 1 is a single chaotic spin, no contest.
+
+### Spin policy
+
+`spin_policy` default: **`turn_based`** (host first, then take turns). The settings sheet offers **host_only** and **turn_based** only — "anyone can spin" is hidden for Chaos.
 
 ### Wire
 
-The event is **folded into `spin:started.mode_effects`** (no separate `chaos:event` broadcast — the documented `mode:event` shape was not needed): `{ "chaos_event": "<name>", "segment_order"?: [int...], "dramatic"?: true }`. No new DB columns; the whole feature rides the existing `SpinDecision.effects` → `mode_state_snapshot.mode_effects` → `spin:started` channel.
+The event is **folded into `spin:started.mode_effects`** (no separate `chaos:event` broadcast): `{ "chaos_event": "<name>", "segment_order"?: [int...], "dramatic"?: true }`. No new DB columns; the whole feature rides the existing `SpinDecision.effects` → `mode_state_snapshot.mode_effects` → `spin:started` channel.
 
 ### Client
 
 - `apps/webapp/src/features/rooms/chaos.ts` — `CHAOS_EVENTS`, `CHAOS_EVENT_EMOJI`, `orderSegmentsForSpin` (the swap reorder).
-- RoomPage spin-drive effect holds a `CHAOS_ANNOUNCE_MS = 1500` announcement card before releasing the wheel and pushes the settle/reveal timers back by that pre-roll; `reverse` needs no extra client work (the server angle already goes backwards, Framer animates to the smaller number); `jackpot` adds the flourish + extra confetti.
+- RoomPage spin-drive effect holds a `CHAOS_ANNOUNCE_MS = 1500` announcement card (skewed `<HobaWord/>` + event) before releasing the wheel, and pushes the settle/reveal timers back by that pre-roll. `reverse` needs no extra client work (the server angle already goes backwards; Framer animates to the smaller number).
 
-### Defaults
+### Deferred (spec §5.4, not yet built)
 
-`spin_policy` default: `anyone` (Classic-flavoured, not a turn race). `spin_count` is always 1 for Chaos — the mode picker shows no best-of-N selector, so Double-spin never collides with a series. (Double-spin and Phantom-segment from spec §5.4 are deferred to a follow-up slice.)
+- **`nudge ±1`** — wheel settles, then creeps one sector forward/back, changing the result. Needs a two-phase wheel animation (settle → pause → nudge); tracked in `docs/TODO.md`.
+- **Double-spin** and **Phantom-segment** — also deferred.
 
 ---
 

@@ -6,13 +6,12 @@
  * announcement-card orchestration lives in the RoomPage spin-drive effect.
  */
 
-/** The five events Chaos can roll (server `CHAOS_EVENTS`). */
+/** The events Chaos can roll (server `CHAOS_EVENTS`). One fires every spin. */
 export const CHAOS_EVENTS = [
   "speed_run",
   "slow_burn",
   "reverse",
   "swap",
-  "jackpot",
 ] as const;
 
 export const CHAOS_EVENT_EMOJI: Record<string, string> = {
@@ -20,7 +19,6 @@ export const CHAOS_EVENT_EMOJI: Record<string, string> = {
   slow_burn: "🐢",
   reverse: "🔄",
   swap: "🔀",
-  jackpot: "💰",
 };
 
 /**

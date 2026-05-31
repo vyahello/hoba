@@ -211,7 +211,7 @@ async def _emit_settled(
                         "current_turn_user_id": room.current_turn_user_id,
                     }
 
-            # Best-of-N (Classic, spin_count > 1): recompute the round from
+            # Best-of-N (Classic + Chaos, spin_count > 1): recompute the round from
             # the committed Spin rows rather than incrementing shared
             # counters. _emit_settled runs as overlapping background tasks,
             # so an increment-based count races: a late stale patch (e.g.
@@ -220,7 +220,7 @@ async def _emit_settled(
             # Counting committed spins is order-independent — every settle
             # after the Nth spin commits converges to the same result.
             if (
-                room.game_mode == "classic"
+                room.game_mode in ("classic", "chaos")
                 and room.spin_count > 1
                 and question is not None
             ):

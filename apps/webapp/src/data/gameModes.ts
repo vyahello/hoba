@@ -53,3 +53,5 @@ export const SPIN_COUNTS = [1, 3, 5, 7] as const;
 export const DEFAULT_SPIN_COUNT = 1;
 /** Punishment: matches needed to win. Default 3. */
 export const DEFAULT_PUNISHMENT_SPIN_COUNT = 3;
+/** Chaos: best-of-N spins, most-frequent wins. Default 3 (odd → fewer ties). */
+export const DEFAULT_CHAOS_SPIN_COUNT = 3;

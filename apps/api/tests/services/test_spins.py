@@ -290,12 +290,13 @@ async def test_trigger_spin_punishment_is_normal_spin(
 async def test_trigger_spin_chaos_reverse_flips_angle_backward(
     db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Force the chaos engine to roll "reverse" (band [0.10, 0.15)). The
-    # service must re-target the final angle below the start so the wheel
-    # animates counter-clockwise, while still landing a valid sector.
+    # Force the chaos engine to roll "reverse" (idx 2 of 4 → roll in
+    # [0.5, 0.75)). The service must re-target the final angle below the
+    # start so the wheel animates counter-clockwise, still landing a valid
+    # sector.
     from hoba_api.modes.registry import engine_for
 
-    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.11)
+    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.6)
     host_id = await _make_user(db, tg_id=600)
     room = await create_room(
         db, host_id=host_id, question_text="Q?", segments=_drafts(4),

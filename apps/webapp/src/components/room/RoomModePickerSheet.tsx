@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ds/Button";
 import { Sheet } from "@/components/ds/Sheet";
 import {
+  DEFAULT_CHAOS_SPIN_COUNT,
   DEFAULT_GAME_MODE,
   DEFAULT_PUNISHMENT_DECK,
   DEFAULT_PUNISHMENT_SPIN_COUNT,
@@ -40,6 +41,7 @@ export function RoomModePickerSheet({
   const [deck, setDeck] = useState<PunishmentDeck>(DEFAULT_PUNISHMENT_DECK);
   const [spinCount, setSpinCount] = useState<number>(DEFAULT_SPIN_COUNT);
   const [punishSpinCount, setPunishSpinCount] = useState<number>(DEFAULT_PUNISHMENT_SPIN_COUNT);
+  const [chaosSpinCount, setChaosSpinCount] = useState<number>(DEFAULT_CHAOS_SPIN_COUNT);
 
   // Reset to Classic + defaults each time the sheet re-opens.
   useEffect(() => {
@@ -48,6 +50,7 @@ export function RoomModePickerSheet({
       setDeck(DEFAULT_PUNISHMENT_DECK);
       setSpinCount(DEFAULT_SPIN_COUNT);
       setPunishSpinCount(DEFAULT_PUNISHMENT_SPIN_COUNT);
+      setChaosSpinCount(DEFAULT_CHAOS_SPIN_COUNT);
     }
   }, [open]);
 
@@ -200,6 +203,39 @@ export function RoomModePickerSheet({
         </div>
       ) : null}
 
+      {selected === "chaos" ? (
+        <div className="mt-3">
+          <p className="text-sm font-medium text-ink-light-2 dark:text-ink-dark-2 mb-2">
+            {t("room:spin_count.label")}
+          </p>
+          <div className="flex gap-2">
+            {SPIN_COUNTS.map((n) => {
+              const active = n === chaosSpinCount;
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  disabled={loading}
+                  aria-pressed={active}
+                  onClick={() => {
+                    if (loading) return;
+                    haptics.selection();
+                    setChaosSpinCount(n);
+                  }}
+                  className={`ds-tactile grow min-h-[44px] px-3 py-2 rounded-md text-sm font-semibold ${
+                    active
+                      ? "bg-brand-primary text-white"
+                      : "bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1"
+                  } disabled:opacity-60`}
+                >
+                  {n}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
       <div className="mt-5">
         <Button
           variant="accent"
@@ -214,7 +250,9 @@ export function RoomModePickerSheet({
                 ? spinCount
                 : selected === "punishment"
                   ? punishSpinCount
-                  : undefined,
+                  : selected === "chaos"
+                    ? chaosSpinCount
+                    : undefined,
             );
           }}
         >

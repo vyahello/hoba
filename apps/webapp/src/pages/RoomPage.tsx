@@ -134,9 +134,6 @@ export function RoomPage(): JSX.Element {
   // flow can branch on it (classic celebrates; elimination just flags
   // what's out and saves the celebration for the final survivor).
   const isElimination = snapshot?.room.game_mode === "elimination";
-  // Chaos event rolled for the current spin (server-authoritative, arrives in
-  // spin:started.mode_effects). Null on every non-chaos / no-event spin.
-  const chaosEvent = currentSpin?.mode_effects?.chaos_event ?? null;
   const activeQuestion = snapshot?.active_question ?? null;
   const remaining = remainingCount(activeQuestion);
   const roundOver = isElimination && isRoundOver(activeQuestion);
@@ -266,7 +263,6 @@ export function RoomPage(): JSX.Element {
     const revealAt = window.setTimeout(() => {
       audio.play("hoba_pop");
       if (!isElimination) fireConfetti();
-      if (event === "jackpot") fireConfetti(); // double burst for the jackpot
       setRevealed(true);
     }, preroll + currentSpin.duration_ms + (isElimination ? ELIM_REVEAL_DELAY_MS : REVEAL_DELAY_MS));
 
@@ -943,13 +939,11 @@ export function RoomPage(): JSX.Element {
               aria-live="assertive"
               role="status"
             >
-              <span className="text-6xl leading-none" aria-hidden>
+              <HobaWord sizeClass="text-5xl sm:text-6xl" />
+              <span className="text-5xl leading-none mt-1" aria-hidden>
                 {CHAOS_EVENT_EMOJI[chaosAnnounce] ?? "🎲"}
               </span>
-              <p className="font-display font-extrabold text-3xl text-brand-pink">
-                {t("room:chaos.banner")}
-              </p>
-              <p className="font-display font-bold text-xl text-ink-light-1 dark:text-ink-dark-1">
+              <p className="font-display font-extrabold text-2xl text-brand-pink">
                 {t(`room:chaos.events.${chaosAnnounce}.title`)}
               </p>
               <p className="text-sm text-ink-light-2 dark:text-ink-dark-2">
@@ -1008,16 +1002,6 @@ export function RoomPage(): JSX.Element {
                 aria-live="polite"
                 role="status"
               >
-                {chaosEvent === "jackpot" ? (
-                  <motion.p
-                    initial={{ scale: 0.4, opacity: 0, rotate: -8 }}
-                    animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                    transition={{ type: "spring", damping: 9, stiffness: 240 }}
-                    className="mb-2 font-display font-extrabold text-3xl text-brand-pink"
-                  >
-                    💰 {t("room:chaos.events.jackpot.win")}
-                  </motion.p>
-                ) : null}
                 <HobaWord />
                 <ResultBanner
                   segmentLabel={winningSegment.label}

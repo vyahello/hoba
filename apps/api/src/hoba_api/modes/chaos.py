@@ -1,10 +1,10 @@
-"""Chaos mode (spec §5.4) — a random event fires before some spins.
+"""Chaos mode (spec §5.4) — a random event fires on EVERY spin.
 
-About a quarter of spins draw one of five events; the rest behave exactly
-like Classic. The event is decided **server-side** (rule 2) and rides out in
+Chaos is "full chaos": every spin draws one of the events below (never a
+plain spin). The event is decided **server-side** (rule 2) and rides out in
 `SpinDecision.effects` as `chaos_event`, which the spin service folds into
-`spin:started.mode_effects`. The client shows a ~1.5 s announcement card,
-then releases the wheel.
+`spin:started.mode_effects`. The client shows a ~1.5 s announcement card
+(skewed "Hoba!" + the event), then releases the wheel.
 
 Engines are pure / DB-free; the only impurity here is the RNG, injected so
 the engine is deterministic under test. The `reverse` angle flip itself is
@@ -18,13 +18,11 @@ from collections.abc import Callable
 from hoba_api.models.segment import Segment
 from hoba_api.modes.base import ModeEffects, SpinContext, SpinDecision
 
-CHAOS_PROBABILITY = 0.25
 SPEED_RUN_MULTIPLIER = 0.5
 SLOW_BURN_MULTIPLIER = 1.5
 
-# Ordered. An event is chosen by partitioning the [0, CHAOS_PROBABILITY) band
-# into equal slices, so the per-event chance is CHAOS_PROBABILITY / 5 = 5%.
-CHAOS_EVENTS: tuple[str, ...] = ("speed_run", "slow_burn", "reverse", "swap", "jackpot")
+# Every spin picks one of these uniformly.
+CHAOS_EVENTS: tuple[str, ...] = ("speed_run", "slow_burn", "reverse", "swap")
 
 
 def _default_rng() -> float:
@@ -35,27 +33,14 @@ def _default_rng() -> float:
 class ChaosEngine:
     mode_id = "chaos"
 
-    def __init__(
-        self,
-        rng: Callable[[], float] | None = None,
-        probability: float | None = None,
-    ) -> None:
+    def __init__(self, rng: Callable[[], float] | None = None) -> None:
         self._rng = rng if rng is not None else _default_rng
-        self._probability = (
-            probability if probability is not None else CHAOS_PROBABILITY
-        )
 
     def get_visible_segments(self, ctx: SpinContext) -> list[Segment]:
         return ctx.segments
 
     def on_spin_request(self, ctx: SpinContext) -> SpinDecision:
-        roll = self._rng()
-        if roll >= self._probability:
-            return SpinDecision(segments=ctx.segments)
-        idx = min(
-            int(roll / self._probability * len(CHAOS_EVENTS)),
-            len(CHAOS_EVENTS) - 1,
-        )
+        idx = min(int(self._rng() * len(CHAOS_EVENTS)), len(CHAOS_EVENTS) - 1)
         event = CHAOS_EVENTS[idx]
         if event == "speed_run":
             return SpinDecision(
@@ -75,12 +60,7 @@ class ChaosEngine:
                 segments=ctx.segments,
                 effects={"chaos_event": "reverse"},
             )
-        if event == "swap":
-            return self._swap(ctx)
-        return SpinDecision(
-            segments=ctx.segments,
-            effects={"chaos_event": "jackpot"},
-        )
+        return self._swap(ctx)
 
     def _swap(self, ctx: SpinContext) -> SpinDecision:
         """Trade two random segments' positions for this spin only.

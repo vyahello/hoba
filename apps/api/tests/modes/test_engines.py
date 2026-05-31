@@ -6,7 +6,7 @@ from collections.abc import Callable, Iterable
 from hoba_api.models.room import Room
 from hoba_api.models.segment import Segment
 from hoba_api.modes.base import SpinContext
-from hoba_api.modes.chaos import ChaosEngine
+from hoba_api.modes.chaos import CHAOS_EVENTS, ChaosEngine
 from hoba_api.modes.classic import ClassicEngine
 from hoba_api.modes.elimination import EliminationEngine
 
@@ -88,19 +88,12 @@ def test_elimination_settled_marks_winner_and_round_over() -> None:
     assert eff3.round_over is False
 
 
-def test_chaos_no_event_when_roll_above_probability() -> None:
-    segs = [_seg(1, 0), _seg(2, 1), _seg(3, 2)]
-    e = ChaosEngine(rng=_seq_rng([0.5]))
-    d = e.on_spin_request(_ctx(segs))
-    assert d.segments == segs
-    assert d.duration_multiplier == 1.0
-    assert d.effects == {}
-    assert e.is_round_over(_ctx(segs)) is False
+# Chaos fires an event on EVERY spin (idx = int(roll * 4) over 4 events).
 
 
 def test_chaos_speed_run() -> None:
     segs = [_seg(1, 0), _seg(2, 1)]
-    d = ChaosEngine(rng=_seq_rng([0.0])).on_spin_request(_ctx(segs))
+    d = ChaosEngine(rng=_seq_rng([0.1])).on_spin_request(_ctx(segs))  # idx 0
     assert d.effects == {"chaos_event": "speed_run"}
     assert d.duration_multiplier == 0.5
     assert d.segments == segs
@@ -108,14 +101,14 @@ def test_chaos_speed_run() -> None:
 
 def test_chaos_slow_burn() -> None:
     segs = [_seg(1, 0), _seg(2, 1)]
-    d = ChaosEngine(rng=_seq_rng([0.06])).on_spin_request(_ctx(segs))
+    d = ChaosEngine(rng=_seq_rng([0.3])).on_spin_request(_ctx(segs))  # idx 1
     assert d.effects == {"chaos_event": "slow_burn", "dramatic": True}
     assert d.duration_multiplier == 1.5
 
 
 def test_chaos_reverse_keeps_order_and_duration() -> None:
     segs = [_seg(1, 0), _seg(2, 1)]
-    d = ChaosEngine(rng=_seq_rng([0.11])).on_spin_request(_ctx(segs))
+    d = ChaosEngine(rng=_seq_rng([0.6])).on_spin_request(_ctx(segs))  # idx 2
     assert d.effects == {"chaos_event": "reverse"}
     assert d.duration_multiplier == 1.0
     assert d.segments == segs
@@ -123,29 +116,16 @@ def test_chaos_reverse_keeps_order_and_duration() -> None:
 
 def test_chaos_swap_reorders_and_emits_segment_order() -> None:
     segs = [_seg(1, 0), _seg(2, 1), _seg(3, 2)]
-    # roll -> swap; i = floor(0.0*3)=0; j = floor(0.99*2)=1, j>=i -> j=2.
-    d = ChaosEngine(rng=_seq_rng([0.16, 0.0, 0.99])).on_spin_request(_ctx(segs))
+    # roll 0.8 -> idx 3 = swap; i = floor(0.0*3)=0; j = floor(0.99*2)=1, j>=i -> j=2.
+    d = ChaosEngine(rng=_seq_rng([0.8, 0.0, 0.99])).on_spin_request(_ctx(segs))
     assert d.effects["chaos_event"] == "swap"
     assert [s.id for s in d.segments] == [3, 2, 1]
     assert d.effects["segment_order"] == [3, 2, 1]
 
 
-def test_chaos_jackpot() -> None:
+def test_chaos_always_fires_an_event() -> None:
+    # No "plain spin" outcome — every roll across [0,1) yields an event.
     segs = [_seg(1, 0), _seg(2, 1)]
-    d = ChaosEngine(rng=_seq_rng([0.21])).on_spin_request(_ctx(segs))
-    assert d.effects == {"chaos_event": "jackpot"}
-    assert d.duration_multiplier == 1.0
-
-
-def test_chaos_probability_override_forces_event() -> None:
-    # probability=1.0 → every roll fires (the VPS verification knob). The
-    # band is re-partitioned over the new probability, so roll 0.5 → idx 2.
-    segs = [_seg(1, 0), _seg(2, 1)]
-    d = ChaosEngine(rng=_seq_rng([0.5]), probability=1.0).on_spin_request(_ctx(segs))
-    assert d.effects == {"chaos_event": "reverse"}
-
-
-def test_chaos_probability_zero_never_fires() -> None:
-    segs = [_seg(1, 0), _seg(2, 1)]
-    d = ChaosEngine(rng=_seq_rng([0.0]), probability=0.0).on_spin_request(_ctx(segs))
-    assert d.effects == {}
+    for roll in (0.0, 0.24, 0.25, 0.49, 0.5, 0.74, 0.75, 0.999):
+        d = ChaosEngine(rng=_seq_rng([roll, 0.0, 0.99])).on_spin_request(_ctx(segs))
+        assert d.effects.get("chaos_event") in CHAOS_EVENTS

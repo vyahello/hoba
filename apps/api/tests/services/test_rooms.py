@@ -261,7 +261,7 @@ def test_derive_spin_policy_default_for_punishment() -> None:
 
 
 def test_derive_spin_policy_default_for_chaos() -> None:
-    assert _derive_spin_policy(None, "chaos") == "anyone"
+    assert _derive_spin_policy(None, "chaos") == "turn_based"
 
 
 def test_derive_spin_policy_default_for_rigged() -> None:
