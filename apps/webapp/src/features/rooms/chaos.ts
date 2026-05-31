@@ -8,17 +8,21 @@
 
 /** The events Chaos can roll (server `CHAOS_EVENTS`). One fires every spin. */
 export const CHAOS_EVENTS = [
-  "speed_run",
+  "multi_spin",
   "slow_burn",
   "reverse",
   "swap",
+  "nudge_fwd",
+  "nudge_back",
 ] as const;
 
 export const CHAOS_EVENT_EMOJI: Record<string, string> = {
-  speed_run: "⚡️",
+  multi_spin: "⚡️",
   slow_burn: "🐢",
   reverse: "🔄",
   swap: "🔀",
+  nudge_fwd: "⏩",
+  nudge_back: "⏪",
 };
 
 /**

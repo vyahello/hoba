@@ -88,44 +88,56 @@ def test_elimination_settled_marks_winner_and_round_over() -> None:
     assert eff3.round_over is False
 
 
-# Chaos fires an event on EVERY spin (idx = int(roll * 4) over 4 events).
+# Chaos fires an event on EVERY spin (idx = int(roll * 6) over 6 events:
+# multi_spin, slow_burn, reverse, swap, nudge_fwd, nudge_back).
 
 
-def test_chaos_speed_run() -> None:
+def test_chaos_multi_spin_reps_in_range() -> None:
     segs = [_seg(1, 0), _seg(2, 1)]
-    d = ChaosEngine(rng=_seq_rng([0.1])).on_spin_request(_ctx(segs))  # idx 0
-    assert d.effects == {"chaos_event": "speed_run"}
-    assert d.duration_multiplier == 0.5
-    assert d.segments == segs
+    # roll 0.05 -> idx 0 = multi_spin; second rng picks reps 2..5.
+    d = ChaosEngine(rng=_seq_rng([0.05, 0.0])).on_spin_request(_ctx(segs))
+    assert d.effects["chaos_event"] == "multi_spin"
+    assert d.effects["spin_reps"] == 2
+    d2 = ChaosEngine(rng=_seq_rng([0.05, 0.999])).on_spin_request(_ctx(segs))
+    assert d2.effects["spin_reps"] == 5
 
 
-def test_chaos_slow_burn() -> None:
+def test_chaos_slow_burn_is_very_slow() -> None:
     segs = [_seg(1, 0), _seg(2, 1)]
-    d = ChaosEngine(rng=_seq_rng([0.3])).on_spin_request(_ctx(segs))  # idx 1
+    d = ChaosEngine(rng=_seq_rng([0.2])).on_spin_request(_ctx(segs))  # idx 1
     assert d.effects == {"chaos_event": "slow_burn", "dramatic": True}
-    assert d.duration_multiplier == 1.5
+    assert d.duration_multiplier == 3.0
 
 
 def test_chaos_reverse_keeps_order_and_duration() -> None:
     segs = [_seg(1, 0), _seg(2, 1)]
-    d = ChaosEngine(rng=_seq_rng([0.6])).on_spin_request(_ctx(segs))  # idx 2
+    d = ChaosEngine(rng=_seq_rng([0.4])).on_spin_request(_ctx(segs))  # idx 2
     assert d.effects == {"chaos_event": "reverse"}
     assert d.duration_multiplier == 1.0
     assert d.segments == segs
 
 
-def test_chaos_swap_reorders_and_emits_segment_order() -> None:
+def test_chaos_swap_reorders_and_emits_pair() -> None:
     segs = [_seg(1, 0), _seg(2, 1), _seg(3, 2)]
-    # roll 0.8 -> idx 3 = swap; i = floor(0.0*3)=0; j = floor(0.99*2)=1, j>=i -> j=2.
-    d = ChaosEngine(rng=_seq_rng([0.8, 0.0, 0.99])).on_spin_request(_ctx(segs))
+    # roll 0.55 -> idx 3 = swap; i = floor(0.0*3)=0; j = floor(0.99*2)=1, j>=i -> j=2.
+    d = ChaosEngine(rng=_seq_rng([0.55, 0.0, 0.99])).on_spin_request(_ctx(segs))
     assert d.effects["chaos_event"] == "swap"
     assert [s.id for s in d.segments] == [3, 2, 1]
     assert d.effects["segment_order"] == [3, 2, 1]
+    assert d.effects["swap_pair"] == [1, 3]
+
+
+def test_chaos_nudge_events() -> None:
+    segs = [_seg(1, 0), _seg(2, 1)]
+    fwd = ChaosEngine(rng=_seq_rng([0.7])).on_spin_request(_ctx(segs))  # idx 4
+    assert fwd.effects == {"chaos_event": "nudge_fwd"}
+    back = ChaosEngine(rng=_seq_rng([0.9])).on_spin_request(_ctx(segs))  # idx 5
+    assert back.effects == {"chaos_event": "nudge_back"}
 
 
 def test_chaos_always_fires_an_event() -> None:
     # No "plain spin" outcome — every roll across [0,1) yields an event.
     segs = [_seg(1, 0), _seg(2, 1)]
-    for roll in (0.0, 0.24, 0.25, 0.49, 0.5, 0.74, 0.75, 0.999):
+    for roll in (0.0, 0.16, 0.34, 0.5, 0.66, 0.84, 0.999):
         d = ChaosEngine(rng=_seq_rng([roll, 0.0, 0.99])).on_spin_request(_ctx(segs))
         assert d.effects.get("chaos_event") in CHAOS_EVENTS

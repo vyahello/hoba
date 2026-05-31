@@ -63,13 +63,13 @@
   },
   "chaos": {
     "events": {
-      "speed_run": {
-        "title": "Speed run",
-        "desc": "The wheel spins twice as fast."
+      "multi_spin": {
+        "title": "Multi-spin",
+        "desc": "A burst of quick spins — the last one counts."
       },
       "slow_burn": {
-        "title": "Slow burn",
-        "desc": "A long, dramatic spin."
+        "title": "Slow scroll",
+        "desc": "An agonisingly slow, creeping crawl."
       },
       "reverse": {
         "title": "Reverse!",
@@ -77,7 +77,15 @@
       },
       "swap": {
         "title": "Segment swap",
-        "desc": "Two segments traded places."
+        "desc": "Two segments trade places — watch them switch!"
+      },
+      "nudge_fwd": {
+        "title": "Nudge forward",
+        "desc": "It stops… thinks… then creeps one forward."
+      },
+      "nudge_back": {
+        "title": "Nudge back",
+        "desc": "It stops… thinks… then creeps one back."
       }
     }
   },

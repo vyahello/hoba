@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useAnimate } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -52,7 +52,8 @@ import {
   winnerUserId,
 } from "@/features/rooms/punishment";
 import { computeTurnState } from "@/features/rooms/turnState";
-import { Wheel } from "@/features/wheel/Wheel";
+import { Wheel, type WheelHandle } from "@/features/wheel/Wheel";
+import { freshSeed } from "@/features/wheel/seededRandom";
 import {
   type SegmentDef,
   type SpinResult,
@@ -79,8 +80,14 @@ import { WHEEL_PALETTE } from "../../tailwind.config";
 const REVEAL_DELAY_MS = 400;
 const ELIM_REVEAL_DELAY_MS = 400;
 // Chaos (§5.4): how long the pre-spin event announcement card holds before
-// the wheel is released. Spec calls for a ~1.5 s beat.
+// the wheel is released. ~1.5 s beat.
 const CHAOS_ANNOUNCE_MS = 1500;
+// multi_spin: each short fast spin, and the final (result-bearing) spin.
+const MULTI_SPIN_STEP_MS = 620;
+const MULTI_SPIN_FINAL_MS = 2200;
+// nudge_*: the "thinking" shake, then the one-sector creep to the new result.
+const NUDGE_SHAKE_MS = 750;
+const NUDGE_CREEP_MS = 900;
 
 export function RoomPage(): JSX.Element {
   const { code = "" } = useParams<{ code: string }>();
@@ -114,6 +121,10 @@ export function RoomPage(): JSX.Element {
   // Chaos (§5.4): the rolled event for the in-flight spin while its 1.5 s
   // pre-roll announcement card is showing, then null once the wheel releases.
   const [chaosAnnounce, setChaosAnnounce] = useState<string | null>(null);
+  // Chaos multi-phase choreography (multi_spin reps, nudge creep): a local
+  // SpinResult that overrides the server one while the sequence plays.
+  const [phaseSpin, setPhaseSpin] = useState<SpinResult | null>(null);
+  const wheelRef = useRef<WheelHandle>(null);
 
   // Shatter thunk: when a segment is eliminated, briefly compress the wheel
   // (scale 1 → 0.97 → 1, ~300 ms) so players feel the winner "pop off".
@@ -226,52 +237,105 @@ export function RoomPage(): JSX.Element {
   const bonOver = bonRoundOver(snapshot);
   const bestOfNReset = useRoomStore((s) => s.bestOfNReset);
 
-  // Each spin is a single full animation, then settle + reveal. In Chaos,
-  // a rolled event gets a CHAOS_ANNOUNCE_MS announcement card first; the
-  // wheel and all downstream timers are pushed back by that pre-roll.
+  // Spin choreography. Most spins are one animation → settle → reveal. Chaos
+  // adds a ~1.5 s announcement card first, and two events are multi-phase:
+  //   • multi_spin — `spin_reps` short fast spins, the last lands the result.
+  //   • nudge_*    — settle on one segment, "think" (shake), then creep ±1.
+  // The sequence runs as an async chain guarded by a `cancelled` flag so a
+  // new spin (or unmount) cleanly aborts mid-flight.
   useEffect(() => {
     if (currentSpin === null) {
       setWheelState("idle");
       setRevealed(false);
       setChaosAnnounce(null);
+      setPhaseSpin(null);
       return undefined;
     }
-    const event = currentSpin.mode_effects?.chaos_event ?? null;
-    const preroll = event !== null ? CHAOS_ANNOUNCE_MS : 0;
+    const fx = currentSpin.mode_effects;
+    const event = fx?.chaos_event ?? null;
+    const finalAngle = currentSpin.final_angle_deg;
+    const baseDur = currentSpin.duration_ms;
+
+    let cancelled = false;
+    const timers: number[] = [];
+    const sleep = (ms: number): Promise<void> =>
+      new Promise((resolve) => {
+        timers.push(window.setTimeout(resolve, ms));
+      });
+
     setRevealed(false);
-    if (event !== null) {
-      setChaosAnnounce(event);
-      setWheelState("idle"); // hold while the card is up
-    } else {
-      setWheelState("spinning");
-    }
+    setPhaseSpin(null);
 
-    const startAt = window.setTimeout(() => {
+    async function run(): Promise<void> {
       if (event !== null) {
+        setChaosAnnounce(event);
+        setWheelState("idle"); // hold while the card is up
+        await sleep(CHAOS_ANNOUNCE_MS);
+        if (cancelled) return;
         setChaosAnnounce(null);
-        setWheelState("spinning");
       }
-    }, preroll);
+      setWheelState("spinning");
 
-    const settleAt = window.setTimeout(() => {
+      if (event === "multi_spin") {
+        const reps = Math.max(2, Math.min(5, fx?.spin_reps ?? 3));
+        let angle = wheelRef.current?.getCurrentRotation() ?? 0;
+        for (let k = 0; k < reps - 1; k++) {
+          angle += 360 * 2 + Math.random() * 360;
+          setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: angle, durationMs: MULTI_SPIN_STEP_MS, seed: freshSeed() });
+          await sleep(MULTI_SPIN_STEP_MS);
+          if (cancelled) return;
+        }
+        // The last spin lands the recorded result; push it past `angle` so it
+        // still travels forward (same landing sector — adding 360s is free).
+        let target = finalAngle;
+        while (target <= angle + 360) target += 360;
+        setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: target, durationMs: MULTI_SPIN_FINAL_MS, seed: freshSeed() });
+        await sleep(MULTI_SPIN_FINAL_MS);
+        if (cancelled) return;
+      } else if (event === "nudge_fwd" || event === "nudge_back") {
+        const pre = fx?.nudge_from_angle ?? finalAngle;
+        setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: pre, durationMs: baseDur, seed: freshSeed() });
+        await sleep(baseDur);
+        if (cancelled) return;
+        // "Thinking" wobble — does it stay, or creep forward/back?
+        if (wheelScope.current !== null) {
+          await animateWheel(
+            wheelScope.current,
+            { rotate: [0, -5, 5, -4, 4, -2, 2, 0] },
+            { duration: NUDGE_SHAKE_MS / 1000, ease: "easeInOut" },
+          );
+        } else {
+          await sleep(NUDGE_SHAKE_MS);
+        }
+        if (cancelled) return;
+        setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: finalAngle, durationMs: NUDGE_CREEP_MS, seed: freshSeed() });
+        await sleep(NUDGE_CREEP_MS);
+        if (cancelled) return;
+      } else {
+        // normal / slow_burn / reverse / swap — one server-driven spin
+        // (phaseSpin stays null → the Wheel animates the server result).
+        await sleep(baseDur);
+        if (cancelled) return;
+      }
+
       haptics.heavy();
       haptics.success();
       audio.play("result_chime");
       setWheelState("settled");
-    }, preroll + currentSpin.duration_ms);
 
-    const revealAt = window.setTimeout(() => {
+      await sleep(isElimination ? ELIM_REVEAL_DELAY_MS : REVEAL_DELAY_MS);
+      if (cancelled) return;
       audio.play("hoba_pop");
       if (!isElimination) fireConfetti();
       setRevealed(true);
-    }, preroll + currentSpin.duration_ms + (isElimination ? ELIM_REVEAL_DELAY_MS : REVEAL_DELAY_MS));
+    }
+    void run();
 
     return () => {
-      window.clearTimeout(startAt);
-      window.clearTimeout(settleAt);
-      window.clearTimeout(revealAt);
+      cancelled = true;
+      for (const tmr of timers) window.clearTimeout(tmr);
     };
-  }, [currentSpin?.spin_id, currentSpin, isElimination]);
+  }, [currentSpin?.spin_id, currentSpin, isElimination, animateWheel, wheelScope]);
 
   // The result auto-dismisses for every mode — no manual close. The
   // elimination "what's out" flash is quick; the classic celebration
@@ -607,9 +671,10 @@ export function RoomPage(): JSX.Element {
         ) : (
           <motion.div ref={wheelScope}>
             <Wheel
+              ref={wheelRef}
               segments={segments}
               state={wheelState}
-              spin={wheelSpin}
+              spin={phaseSpin ?? wheelSpin}
               ariaLabel={snapshot.active_question?.text ?? t("room:header.wheel_aria")}
               // Only attach the hub-tap handler when this user is actually
               // allowed to spin (host_only policy) — otherwise the hub
@@ -940,9 +1005,30 @@ export function RoomPage(): JSX.Element {
               role="status"
             >
               <HobaWord sizeClass="text-5xl sm:text-6xl" />
-              <span className="text-5xl leading-none mt-1" aria-hidden>
-                {CHAOS_EVENT_EMOJI[chaosAnnounce] ?? "🎲"}
-              </span>
+              {chaosAnnounce === "swap" ? (
+                // Show the two sectors actually trading places so it's clear
+                // WHICH swapped (the on-wheel swap alone reads as invisible).
+                <div className="relative h-20 w-64 mt-1" aria-hidden>
+                  <motion.span
+                    className="absolute top-6 left-0 max-w-[45%] truncate text-base font-bold px-3 py-1 rounded-full bg-surface-light-2 dark:bg-surface-dark-2"
+                    animate={{ x: [0, 0, 150, 150], y: [0, -24, -24, 0] }}
+                    transition={{ duration: 1.1, times: [0, 0.25, 0.75, 1], ease: "easeInOut", repeat: Infinity, repeatType: "reverse" }}
+                  >
+                    {segLabel(currentSpin?.mode_effects?.swap_pair?.[0] ?? -1) || "🔀"}
+                  </motion.span>
+                  <motion.span
+                    className="absolute top-6 right-0 max-w-[45%] truncate text-base font-bold px-3 py-1 rounded-full bg-surface-light-2 dark:bg-surface-dark-2"
+                    animate={{ x: [0, 0, -150, -150], y: [0, 24, 24, 0] }}
+                    transition={{ duration: 1.1, times: [0, 0.25, 0.75, 1], ease: "easeInOut", repeat: Infinity, repeatType: "reverse" }}
+                  >
+                    {segLabel(currentSpin?.mode_effects?.swap_pair?.[1] ?? -1) || "🔀"}
+                  </motion.span>
+                </div>
+              ) : (
+                <span className="text-5xl leading-none mt-1" aria-hidden>
+                  {CHAOS_EVENT_EMOJI[chaosAnnounce] ?? "🎲"}
+                </span>
+              )}
               <p className="font-display font-extrabold text-2xl text-brand-pink">
                 {t(`room:chaos.events.${chaosAnnounce}.title`)}
               </p>

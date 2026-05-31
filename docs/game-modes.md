@@ -136,14 +136,15 @@ Room columns: `punishment_predictions` (`{uid: seg_id}` = the bets), `spin_count
 
 "Full chaos": **every** spin draws one of the events below — there is no plain spin. The event is announced on a ~1.5 s card (skewed "Hoba!" + the event) before the wheel fires. The roll is **server-authoritative** (`ChaosEngine.on_spin_request`, seeded RNG injected for tests) and never carries state between spins.
 
-### The four events (25% each)
+### The six events (≈⅙ each)
 
 | Event | Effect | Where it's applied |
 |---|---|---|
-| `speed_run` ⚡️ | spin runs at ×0.5 duration | `duration_multiplier` on `SpinDecision` |
-| `slow_burn` 🐢 | spin runs at ×1.5 duration (+ `dramatic`) | `duration_multiplier` |
+| `multi_spin` ⚡️ | a burst of `spin_reps` (2–5) short fast spins; the **last** lands the recorded result | engine picks `spin_reps`; the client plays the quick spins (random angles) then the server final |
+| `slow_burn` 🐢 | a genuinely slow crawl (×3 duration) | `duration_multiplier = 3.0` |
 | `reverse` 🔄 | wheel travels counter-clockwise to the same sector | spin service re-targets `final_angle_deg` below the start (engines never compute angles) |
-| `swap` 🔀 | two segments trade positions for this spin | engine reorders `SpinDecision.segments` + emits `segment_order` (the client renders that order or it lands on the wrong sector) |
+| `swap` 🔀 | two segments trade positions; the announcement card shows the two **crossing** so it's visible | engine reorders `SpinDecision.segments` + emits `segment_order` (client renders that order) + `swap_pair` (the two ids for the card) |
+| `nudge_fwd` ⏩ / `nudge_back` ⏪ | wheel settles, "thinks" (shake), then creeps **±1 sector** — changing the result | spin service records the nudged segment + the nudged `final_angle_deg`, and carries the pre-nudge stop in `nudge_from_angle`; the client plays settle → shake → creep |
 
 ### Attempts (best-of-N)
 
@@ -160,12 +161,11 @@ The event is **folded into `spin:started.mode_effects`** (no separate `chaos:eve
 ### Client
 
 - `apps/webapp/src/features/rooms/chaos.ts` — `CHAOS_EVENTS`, `CHAOS_EVENT_EMOJI`, `orderSegmentsForSpin` (the swap reorder).
-- RoomPage spin-drive effect holds a `CHAOS_ANNOUNCE_MS = 1500` announcement card (skewed `<HobaWord/>` + event) before releasing the wheel, and pushes the settle/reveal timers back by that pre-roll. `reverse` needs no extra client work (the server angle already goes backwards; Framer animates to the smaller number).
+- The RoomPage spin-drive effect is an **async choreography** (guarded by a `cancelled` flag): a `CHAOS_ANNOUNCE_MS = 1500` announcement card (skewed `<HobaWord/>` + event; for `swap`, the two `swap_pair` labels visibly cross) → the wheel phases → settle → reveal. `multi_spin` feeds `spin_reps` sequential `SpinResult`s to `<Wheel>` (via a `phaseSpin` override + `wheelRef.getCurrentRotation()`); `nudge_*` does spin → container shake (`useAnimate` on the wheel scope) → one-sector creep. `reverse`/`slow_burn` need no extra client work (the server angle/duration already encode them). Tunable constants: `MULTI_SPIN_STEP_MS`, `MULTI_SPIN_FINAL_MS`, `NUDGE_SHAKE_MS`, `NUDGE_CREEP_MS`.
 
 ### Deferred (spec §5.4, not yet built)
 
-- **`nudge ±1`** — wheel settles, then creeps one sector forward/back, changing the result. Needs a two-phase wheel animation (settle → pause → nudge); tracked in `docs/TODO.md`.
-- **Double-spin** and **Phantom-segment** — also deferred.
+- **Double-spin** (two fully-counted results) and **Phantom-segment** (ephemeral non-DB 13th segment) — tracked in `docs/TODO.md`.
 
 ---
 

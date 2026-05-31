@@ -290,13 +290,13 @@ async def test_trigger_spin_punishment_is_normal_spin(
 async def test_trigger_spin_chaos_reverse_flips_angle_backward(
     db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Force the chaos engine to roll "reverse" (idx 2 of 4 → roll in
-    # [0.5, 0.75)). The service must re-target the final angle below the
+    # Force the chaos engine to roll "reverse" (idx 2 of 6 → roll in
+    # [0.333, 0.5)). The service must re-target the final angle below the
     # start so the wheel animates counter-clockwise, still landing a valid
     # sector.
     from hoba_api.modes.registry import engine_for
 
-    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.6)
+    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.4)
     host_id = await _make_user(db, tg_id=600)
     room = await create_room(
         db, host_id=host_id, question_text="Q?", segments=_drafts(4),
@@ -308,6 +308,33 @@ async def test_trigger_spin_chaos_reverse_flips_angle_backward(
     assert spin.mode_state_snapshot["mode_effects"] == {"chaos_event": "reverse"}
     # Started at 0, so a CCW spin of ≥5 turns lands well below zero.
     assert spin.final_angle_deg <= -5 * 360
+    assert 0 <= segment_under_pointer(spin.final_angle_deg, 4) < 4
+
+
+async def test_trigger_spin_chaos_nudge_changes_result_and_records_pre_angle(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Force "nudge_fwd" (idx 4 of 6 → roll in [0.666, 0.833)). The recorded
+    # result must be one sector forward of the natural landing, and the
+    # pre-nudge stop angle must be carried for the client choreography.
+    from hoba_api.modes.registry import engine_for
+
+    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.7)
+    host_id = await _make_user(db, tg_id=601)
+    room = await create_room(
+        db, host_id=host_id, question_text="Q?", segments=_drafts(4),
+        spin_policy="anyone", game_mode="chaos",
+    )
+    await db.commit()
+    spin = await trigger_spin(db, room=room, user_id=host_id)
+    await db.commit()
+    effects = spin.mode_state_snapshot["mode_effects"]
+    assert effects["chaos_event"] == "nudge_fwd"
+    pre_angle = effects["nudge_from_angle"]
+    sector = 360.0 / 4
+    # Final angle is one sector below the pre-nudge stop (forward = pointer
+    # advances one segment), and lands on a valid sector.
+    assert abs(spin.final_angle_deg - (pre_angle - sector)) < 1e-6
     assert 0 <= segment_under_pointer(spin.final_angle_deg, 4) < 4
 
 

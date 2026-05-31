@@ -110,17 +110,36 @@ async def trigger_spin(
     )
     duration_ms = round(result.duration_ms * decision.duration_multiplier)
 
-    # Chaos "reverse": land on the same sector but travel counter-clockwise at
-    # least MIN_FULL_ROTATIONS turns. compute_spin only ever goes forward, so
-    # we re-target the final angle below the starting angle (Framer animates to
-    # the smaller number = CCW). The result segment is unchanged.
-    if decision.effects.get("chaos_event") == "reverse":
+    # Chaos events that rewrite the geometry/result live here — engines name
+    # the event but never compute angles. `effects` is a mutable copy so we
+    # can hand the client the extra angles it needs (e.g. the pre-nudge stop).
+    effects: dict[str, object] = dict(decision.effects)
+    chaos_event = effects.get("chaos_event")
+    winning_index = result.result_segment_index
+    sector_deg = 360.0 / len(spin_segments)
+
+    if chaos_event == "reverse":
+        # Same sector, but travel counter-clockwise ≥ MIN_FULL_ROTATIONS turns.
+        # compute_spin only goes forward, so re-target the final angle below
+        # the start (Framer animates to the smaller number = CCW).
         final_mod = result.final_angle_deg % 360.0
         ceiling = starting_angle_deg - MIN_FULL_ROTATIONS * 360.0
         turns = math.floor((ceiling - final_mod) / 360.0)
         result = replace(result, final_angle_deg=final_mod + turns * 360.0)
+    elif chaos_event in ("nudge_fwd", "nudge_back"):
+        # Settle on the computed segment, then creep ±1 sector to an adjacent
+        # one (changing the result). The recorded angle is the *nudged* final
+        # (so chaining stays correct); the client gets the pre-nudge stop in
+        # `nudge_from_angle` to play the settle → shake → nudge choreography.
+        pre_angle = result.final_angle_deg
+        direction = 1 if chaos_event == "nudge_fwd" else -1
+        winning_index = (winning_index + direction) % len(spin_segments)
+        # +sector of rotation moves the pointer one segment back, so to land
+        # `direction` segments forward we rotate by -direction * sector.
+        result = replace(result, final_angle_deg=pre_angle - direction * sector_deg)
+        effects["nudge_from_angle"] = pre_angle
 
-    winning_segment = spin_segments[result.result_segment_index]
+    winning_segment = spin_segments[winning_index]
     started_at = datetime.now(UTC)
     spin = Spin(
         question_id=question.id,
@@ -131,7 +150,7 @@ async def trigger_spin(
         seed=seed,
         mode_state_snapshot={
             "living_segment_ids": [s.id for s in spin_segments],
-            "mode_effects": decision.effects,
+            "mode_effects": effects,
         },
         started_at=started_at,
         settled_at=started_at + timedelta(milliseconds=duration_ms),

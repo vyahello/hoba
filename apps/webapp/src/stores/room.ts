@@ -24,10 +24,16 @@ const REACTION_TTL_MS = 2200;
 
 /** Chaos mode (§5.4) per-spin effects, folded into `spin:started`. */
 export interface SpinModeEffects {
-  /** One of: speed_run | slow_burn | reverse | swap | jackpot. */
+  /** One of: multi_spin | slow_burn | reverse | swap | nudge_fwd | nudge_back. */
   chaos_event?: string;
   /** Swap event only: segment ids in the order to render this spin. */
   segment_order?: number[];
+  /** Swap event only: the two segment ids that traded places. */
+  swap_pair?: number[];
+  /** multi_spin only: how many short fast spins to fire (last one counts). */
+  spin_reps?: number;
+  /** nudge_* only: the pre-nudge stop angle (wheel settles here, then creeps). */
+  nudge_from_angle?: number;
   dramatic?: boolean;
 }
 

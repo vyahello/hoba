@@ -8,9 +8,10 @@
 
 ### Slice 6 — Chaos mode (2026-05-31) — committed, pending owner deploy
 
-Implemented Chaos (spec §5.4) as the fourth `GameModeEngine`, then **reworked it the same day** into "full chaos" after the owner deployed the first cut. Final delivered design:
+Implemented Chaos (spec §5.4) as the fourth `GameModeEngine`, then **reworked it twice the same day** after the owner deployed and iterated on the feel. Final delivered design:
 
-- **An event fires on EVERY spin** (no 25%/no-plain-spin) — one of four, each 25%: **speed_run** (×0.5), **slow_burn** (×1.5 + dramatic), **reverse** (CCW to the same sector), **swap** (two segments trade places). **Jackpot was removed.**
+- **An event fires on EVERY spin** (no 25%/no-plain-spin) — one of **six**, ≈⅙ each: **multi_spin** (2–5 short fast spins, last counts), **slow_burn** (×3, a genuinely slow crawl), **reverse** (CCW), **swap** (two segments trade places, shown crossing on the announcement card), **nudge_fwd / nudge_back** (settle → "thinking" shake → creep ±1 sector, changing the result). The first cut's **speed_run** became **multi_spin** and **jackpot** was removed.
+- **Client choreography:** the RoomPage spin-drive effect is an async, cancellable sequence. `multi_spin` feeds sequential `SpinResult`s to `<Wheel>` via a `phaseSpin` override + `wheelRef`; `nudge_*` does spin → container shake (`useAnimate`) → one-sector creep; `swap` animates the two `swap_pair` labels crossing in the card. Server records the nudged result + `nudge_from_angle`; tunable constants (`MULTI_SPIN_*`, `NUDGE_*`, `SLOW_BURN_MULTIPLIER`) flagged for on-device tuning in `docs/TODO.md`.
 - **Host picks attempts N ∈ {1,3,5,7}** in the mode picker (like Punishment) → **best-of-N**, most-frequent segment wins. Reuses the Classic best-of-N machinery via a one-line gate change (`game_mode in (classic, chaos)` in `_emit_settled`) + `isBestOfN` gate + `DEFAULT_CHAOS_SPIN_COUNT = 3`.
 - **Spin policy:** default `turn_based`; settings sheet offers host_only + turn_based only ("anyone" hidden for Chaos). `MODE_DEFAULT_SPIN_POLICY["chaos"]` = `turn_based`.
 - **Announcement card** leads with the skewed `<HobaWord/>` + event emoji/title, held `CHAOS_ANNOUNCE_MS = 1500` before the wheel releases (settle/reveal timers offset by the pre-roll).
@@ -19,7 +20,7 @@ Server-authoritative roll in `modes/chaos.py` (`ChaosEngine`, injected RNG for d
 
 The intermediate first cut (commit `9c700cb`: 25% probability, 5 events incl. jackpot, env-configurable `CHAOS_PROBABILITY`, default policy `anyone`) was superseded within the day — probability config removed, jackpot removed, policy → turn_based, attempts added.
 
-Gates green (Opus 4.8, inline — no subagent fan-out): **213 backend** (coverage 86%) / **103 frontend**, ruff + mypy --strict + tsc + eslint + i18n parity + `pnpm build` all clean. Doc `docs/game-modes.md` Chaos section rewritten. Deferred to `docs/TODO.md`: **nudge ±1** (two-phase wheel animation), Double-spin, Phantom-segment.
+Gates green (Opus 4.8, inline — no subagent fan-out): **215 backend** (coverage 86%) / **103 frontend**, ruff + mypy --strict + tsc + eslint + i18n parity + `pnpm build` all clean. Doc `docs/game-modes.md` Chaos section rewritten. Deferred to `docs/TODO.md`: Double-spin, Phantom-segment, and on-device tuning of the choreography constants.
 
 ### Slice 5 — Punishment v3/v4: turn-based personal-bet race (2026-05-30) — committed, pending owner deploy
 

@@ -18,11 +18,21 @@ from collections.abc import Callable
 from hoba_api.models.segment import Segment
 from hoba_api.modes.base import ModeEffects, SpinContext, SpinDecision
 
-SPEED_RUN_MULTIPLIER = 0.5
-SLOW_BURN_MULTIPLIER = 1.5
+# slow_burn is meant to feel *genuinely* slow — a long, suspenseful crawl.
+SLOW_BURN_MULTIPLIER = 3.0
+# multi_spin fires this many short fast spins in a row (the last one counts).
+MULTI_SPIN_MIN = 2
+MULTI_SPIN_MAX = 5
 
 # Every spin picks one of these uniformly.
-CHAOS_EVENTS: tuple[str, ...] = ("speed_run", "slow_burn", "reverse", "swap")
+CHAOS_EVENTS: tuple[str, ...] = (
+    "multi_spin",
+    "slow_burn",
+    "reverse",
+    "swap",
+    "nudge_fwd",
+    "nudge_back",
+)
 
 
 def _default_rng() -> float:
@@ -42,11 +52,14 @@ class ChaosEngine:
     def on_spin_request(self, ctx: SpinContext) -> SpinDecision:
         idx = min(int(self._rng() * len(CHAOS_EVENTS)), len(CHAOS_EVENTS) - 1)
         event = CHAOS_EVENTS[idx]
-        if event == "speed_run":
+        if event == "multi_spin":
+            reps = MULTI_SPIN_MIN + int(
+                self._rng() * (MULTI_SPIN_MAX - MULTI_SPIN_MIN + 1),
+            )
+            reps = min(reps, MULTI_SPIN_MAX)
             return SpinDecision(
                 segments=ctx.segments,
-                duration_multiplier=SPEED_RUN_MULTIPLIER,
-                effects={"chaos_event": "speed_run"},
+                effects={"chaos_event": "multi_spin", "spin_reps": reps},
             )
         if event == "slow_burn":
             return SpinDecision(
@@ -59,6 +72,13 @@ class ChaosEngine:
             return SpinDecision(
                 segments=ctx.segments,
                 effects={"chaos_event": "reverse"},
+            )
+        if event in ("nudge_fwd", "nudge_back"):
+            # The service settles on one segment, then nudges ±1 (changing the
+            # result). It computes the angles; the engine only names the event.
+            return SpinDecision(
+                segments=ctx.segments,
+                effects={"chaos_event": event},
             )
         return self._swap(ctx)
 
@@ -75,10 +95,15 @@ class ChaosEngine:
         j = min(int(self._rng() * (n - 1)), n - 2)
         if j >= i:
             j += 1
+        swapped_ids = [segs[i].id, segs[j].id]
         segs[i], segs[j] = segs[j], segs[i]
         return SpinDecision(
             segments=segs,
-            effects={"chaos_event": "swap", "segment_order": [s.id for s in segs]},
+            effects={
+                "chaos_event": "swap",
+                "segment_order": [s.id for s in segs],
+                "swap_pair": swapped_ids,
+            },
         )
 
     def on_spin_settled(self, ctx: SpinContext, winner: Segment) -> ModeEffects:
