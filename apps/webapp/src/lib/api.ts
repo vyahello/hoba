@@ -266,6 +266,7 @@ export interface RoomPatchPayload {
   spin_policy?: SpinPolicy;
   suggestion_policy?: SuggestionPolicy;
   is_locked?: boolean;
+  is_anonymous?: boolean;
   game_mode?: GameMode;
   punishment_deck?: PunishmentDeck;
   spin_count?: number;
@@ -342,6 +343,12 @@ export const api = {
 
   closeRoom: (code: string): Promise<RoomState> =>
     request(`/rooms/${encodeURIComponent(code)}/close`, { method: "POST" }),
+
+  /** Host kicks a participant (spec §F11). */
+  kickRoom: (code: string, userId: number): Promise<RoomState> =>
+    request(`/rooms/${encodeURIComponent(code)}/kick`, {
+      method: "POST", body: { user_id: userId },
+    }),
 
   listSpins: (code: string, limit = 50): Promise<ServerSpin[]> =>
     request(`/rooms/${encodeURIComponent(code)}/spins?limit=${limit}`),

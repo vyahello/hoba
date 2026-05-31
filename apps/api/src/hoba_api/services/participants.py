@@ -60,6 +60,32 @@ async def join_room(
     return participant
 
 
+async def kick_participant(
+    session: AsyncSession, room: Room, *, host_id: int, target_user_id: int,
+) -> Participant:
+    """Host kicks a guest — sets `kicked_at` so re-join is blocked.
+
+    Errors: `not_host`, `cannot_kick_self`, `not_in_room`.
+    """
+    if room.host_id != host_id:
+        raise RoomServiceError("not_host")
+    if target_user_id == host_id:
+        raise RoomServiceError("cannot_kick_self")
+    participant = (
+        await session.execute(
+            select(Participant).where(
+                Participant.room_id == room.id,
+                Participant.user_id == target_user_id,
+            ),
+        )
+    ).scalar_one_or_none()
+    if participant is None:
+        raise RoomServiceError("not_in_room")
+    participant.kicked_at = datetime.now(UTC)
+    await session.flush()
+    return participant
+
+
 async def refresh_presence(
     session: AsyncSession, room_id: int, user_id: int,
 ) -> None:

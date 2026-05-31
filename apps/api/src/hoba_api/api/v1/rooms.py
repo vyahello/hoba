@@ -14,6 +14,7 @@ from hoba_api.models.question import Question
 from hoba_api.realtime.server import NAMESPACE, sio
 from hoba_api.redis_client import rate_limit_take
 from hoba_api.schemas.room import (
+    KickIn,
     RigUpdateIn,
     RoomCreateIn,
     RoomState,
@@ -21,6 +22,7 @@ from hoba_api.schemas.room import (
     SpinOut,
 )
 from hoba_api.schemas.template import RoomFromTemplateIn
+from hoba_api.services.participants import kick_participant
 from hoba_api.services.rigged import reveal_rig, set_rig_weights
 from hoba_api.services.room_state import build_room_state
 from hoba_api.services.rooms import (
@@ -57,6 +59,8 @@ def _service_error_to_http(error: RoomServiceError) -> HTTPException:
         "kicked": status.HTTP_403_FORBIDDEN,
         "room_full": status.HTTP_409_CONFLICT,
         "template_not_found": status.HTTP_404_NOT_FOUND,
+        "cannot_kick_self": status.HTTP_400_BAD_REQUEST,
+        "not_in_room": status.HTTP_404_NOT_FOUND,
     }.get(error.code, status.HTTP_400_BAD_REQUEST)
     return HTTPException(status_code=status_code, detail=error.code)
 
@@ -257,6 +261,36 @@ async def close_room_endpoint(
     except RoomServiceError as exc:
         raise _service_error_to_http(exc) from exc
     await db.commit()
+    # Tell connected guests the room is gone so they can leave gracefully.
+    await sio.emit("room:closed", {}, room=room.code, namespace=NAMESPACE)
+    return await build_room_state(db, room, current_user_id=user.id)
+
+
+@router.post("/{code}/kick", response_model=RoomState)
+async def kick_room_endpoint(
+    code: str,
+    payload: KickIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> RoomState:
+    """Host kicks a participant (spec §F11). Re-join is blocked by `kicked_at`."""
+    room = await get_room_by_code(db, code)
+    if room is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="room_not_found",
+        )
+    try:
+        await kick_participant(
+            db, room, host_id=user.id, target_user_id=payload.user_id,
+        )
+    except RoomServiceError as exc:
+        raise _service_error_to_http(exc) from exc
+    await db.commit()
+    # The kicked client leaves + goes home; everyone else drops them from the
+    # roster. The kicked user_id rides along so each client can tell which.
+    await sio.emit(
+        "room:kicked", {"user_id": payload.user_id}, room=room.code, namespace=NAMESPACE,
+    )
     return await build_room_state(db, room, current_user_id=user.id)
 
 

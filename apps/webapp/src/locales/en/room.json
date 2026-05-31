@@ -118,7 +118,25 @@
       "host_only": "Only me (host)",
       "turn_based": "Take turns"
     },
+    "lock": {
+      "label": "Lock room",
+      "hint": "No one new can join"
+    },
+    "anonymous": {
+      "label": "Anonymous mode",
+      "hint": "Hide everyone's real name"
+    },
+    "players": "Players",
+    "kick": "Kick",
+    "change_mode": "Change game mode",
+    "close_room": "Close room",
     "save_failed": "Couldn't save. Try again."
+  },
+  "moderation": {
+    "kicked": "The host removed you from the room.",
+    "closed": "The host closed the room.",
+    "close_confirm": "Close this room for everyone?",
+    "kick_confirm": "Kick {name} from the room?"
   },
   "reactions": {
     "aria_label": "React {emoji}"

@@ -158,6 +158,13 @@ class RoomUpdateIn(BaseModel):
     spin_policy: SpinPolicy | None = None
     suggestion_policy: SuggestionPolicy | None = None
     is_locked: bool | None = None
+    is_anonymous: bool | None = None
     game_mode: GameMode | None = None
     punishment_deck: PunishmentDeck | None = None
     spin_count: int | None = None
+
+
+class KickIn(BaseModel):
+    """Host kicks a participant by internal user id (spec §F11)."""
+
+    user_id: int

@@ -177,6 +177,25 @@ async def get_room_by_code(session: AsyncSession, code: str) -> Room | None:
     ).scalar_one_or_none()
 
 
+def _reset_round_state(room: Room) -> None:
+    """Clear per-round / per-game progress (used on a mid-room mode change).
+
+    The turn cursor is deliberately left alone — the turn order among the
+    same present players is still valid, and the betting/start flow re-seeds
+    it for the race modes (mirrors `test_update_room_game_mode_does_not_touch_cursor`).
+    """
+    room.bon_attempts = 0
+    room.bon_tally = None
+    room.bon_winner_segment_id = None
+    room.bon_round_start_spin_id = None
+    room.punishment_predictions = None
+    room.punishment_match_counts = None
+    room.punishment_winner_user_id = None
+    room.punishment_last_outcome = None
+    room.punishment_done_counts = None
+    room.punishment_cards = None
+
+
 async def update_room(
     session: AsyncSession,
     room: Room,
@@ -193,15 +212,26 @@ async def update_room(
         "spin_policy",
         "suggestion_policy",
         "is_locked",
+        "is_anonymous",
         "game_mode",
         "punishment_deck",
         "spin_count",
     }
     new_spin_policy = patch.get("spin_policy") if "spin_policy" in patch else None
+    old_game_mode = room.game_mode
     for key, value in patch.items():
         if key not in allowed:
             continue
         setattr(room, key, value)
+
+    # Mid-room mode change (spec §F11): start the new mode from a clean slate
+    # so stale bet/round state from the previous mode can't corrupt it.
+    if "game_mode" in patch and room.game_mode != old_game_mode:
+        room.punishment_unique_bets = room.game_mode in ("punishment", "chaos")
+        room.punishment_deck = (
+            (room.punishment_deck or "mild") if room.game_mode == "punishment" else None
+        )
+        _reset_round_state(room)
 
     # Changing the attempts target resets any in-progress best-of-N round.
     if "spin_count" in patch:

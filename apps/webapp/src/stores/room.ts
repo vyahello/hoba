@@ -81,6 +81,12 @@ interface RoomStore {
   spinSettled: SpinSettledEvent | null;
   /** Last error code received from the server (e.g. `not_allowed_to_spin`). */
   lastError: string | null;
+  /**
+   * Set when the room ends from under this client — `"kicked"` (host removed
+   * me) or `"closed"` (host closed the room). RoomPage watches this and
+   * navigates home with a toast, then calls `clearEnded()`.
+   */
+  endedReason: "kicked" | "closed" | null;
   reactions: FlyingReaction[];
 
   joinRoom(code: string): void;
@@ -110,6 +116,8 @@ interface RoomStore {
   rejectPunishment(): void;
   /** Emit bon:reset (host) to start a new best-of-N round. */
   bestOfNReset(): void;
+  /** Acknowledge an `endedReason` after RoomPage has navigated away. */
+  clearEnded(): void;
 }
 
 // --- Pure reducers (exported for unit testing) ---------------------------
@@ -285,6 +293,28 @@ function wireListeners(s: Socket): void {
     /* state flows through the paired room:updated patch */
   });
 
+  // Host kicked someone. If it's me, the room is over for me; otherwise drop
+  // the kicked player from the roster (the server also blocks their re-join).
+  s.on("room:kicked", (payload: { user_id: number }) => {
+    const snap = getState().snapshot;
+    if (snap === null) return;
+    if (payload.user_id === snap.me_user_id) {
+      setState({ endedReason: "kicked" });
+      return;
+    }
+    setState({
+      snapshot: {
+        ...snap,
+        participants: snap.participants.filter((p) => p.user_id !== payload.user_id),
+      },
+    });
+  });
+
+  // Host closed the room — it's over for everyone.
+  s.on("room:closed", () => {
+    setState({ endedReason: "closed" });
+  });
+
   s.on(
     "reaction:received",
     (payload: { emoji: string; user_id: number; at: string }) => {
@@ -317,6 +347,7 @@ export const useRoomStore = create<RoomStore>((_set, get) => ({
   currentSpin: null,
   spinSettled: null,
   lastError: null,
+  endedReason: null,
   reactions: [],
 
   joinRoom(code: string): void {
@@ -338,8 +369,13 @@ export const useRoomStore = create<RoomStore>((_set, get) => ({
       snapshot: null,
       currentSpin: null,
       spinSettled: null,
+      endedReason: null,
       reactions: [],
     });
+  },
+
+  clearEnded(): void {
+    useRoomStore.setState({ endedReason: null });
   },
 
   triggerSpin(force = false): void {

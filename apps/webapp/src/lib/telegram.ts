@@ -105,6 +105,28 @@ export function disableClosingConfirmation(): void {
   }
 }
 
+/**
+ * Native Telegram confirm dialog for destructive actions (close room, kick).
+ * Falls back to `window.confirm` outside Telegram (dev/browser).
+ */
+export function confirmPopup(message: string): Promise<boolean> {
+  const wa = WebApp as unknown as {
+    showConfirm?: (message: string, callback: (confirmed: boolean) => void) => void;
+  };
+  if (typeof wa.showConfirm === "function") {
+    return new Promise((resolve) => {
+      wa.showConfirm!(message, (confirmed) => {
+        resolve(confirmed);
+      });
+    });
+  }
+  return Promise.resolve(
+    typeof window !== "undefined" && typeof window.confirm === "function"
+      ? window.confirm(message)
+      : true,
+  );
+}
+
 /** Subscribe to Telegram's `themeChanged` event; returns an unsubscriber. */
 export function onThemeChanged(handler: () => void): () => void {
   try {

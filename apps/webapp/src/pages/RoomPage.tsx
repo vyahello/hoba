@@ -17,6 +17,7 @@ import { GameModeBadge } from "@/components/room/GameModeBadge";
 import { FlyingReactions } from "@/components/room/FlyingReactions";
 import { ReactionsBar } from "@/components/room/ReactionsBar";
 import { RigEditorSheet } from "@/components/room/RigEditorSheet";
+import { RoomModePickerSheet } from "@/components/room/RoomModePickerSheet";
 import { RoomSettingsSheet } from "@/components/room/RoomSettingsSheet";
 import {
   eliminatedSegments,
@@ -61,11 +62,12 @@ import {
   type SpinResult,
   type WheelState,
 } from "@/features/wheel/types";
-import { api } from "@/lib/api";
+import { type GameMode, type PunishmentDeck, api } from "@/lib/api";
 import { haptics } from "@/lib/haptics";
 import { safeNavigateBack } from "@/lib/navigation";
 import {
   buildRoomInviteLink,
+  confirmPopup,
   disableClosingConfirmation,
   enableClosingConfirmation,
   openTelegramLink,
@@ -106,8 +108,22 @@ export function RoomPage(): JSX.Element {
   const leaveRoom = useRoomStore((s) => s.leaveRoom);
   const triggerSpin = useRoomStore((s) => s.triggerSpin);
   const resetRound = useRoomStore((s) => s.resetRound);
+  const endedReason = useRoomStore((s) => s.endedReason);
+  const clearEnded = useRoomStore((s) => s.clearEnded);
 
   const upperCode = code.toUpperCase();
+
+  // The room ended from under us (host kicked me, or closed the room). Toast
+  // the reason once, then go home. clearEnded prevents a re-fire.
+  useEffect(() => {
+    if (endedReason === null) return;
+    toast({
+      title: endedReason === "kicked" ? t("room:moderation.kicked") : t("room:moderation.closed"),
+      intent: "info",
+    });
+    clearEnded();
+    navigate("/", { replace: true });
+  }, [endedReason, clearEnded, navigate, t]);
 
   useEffect(() => {
     joinRoom(upperCode);
@@ -121,6 +137,7 @@ export function RoomPage(): JSX.Element {
   const [wheelState, setWheelState] = useState<WheelState>("idle");
   const [revealed, setRevealed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [modePickerOpen, setModePickerOpen] = useState(false);
   const [rigOpen, setRigOpen] = useState(false);
   const [rigRevealShown, setRigRevealShown] = useState(false);
   const [savingWheel, setSavingWheel] = useState(false);
@@ -579,6 +596,49 @@ export function RoomPage(): JSX.Element {
     }
   }
 
+  async function handleApplyMode(
+    mode: GameMode, deck?: PunishmentDeck, spinCount?: number,
+  ): Promise<void> {
+    if (snapshot === null) return;
+    setModePickerOpen(false);
+    try {
+      const updated = await api.patchRoom(snapshot.room.code, {
+        game_mode: mode,
+        ...(deck !== undefined ? { punishment_deck: deck } : {}),
+        ...(spinCount !== undefined ? { spin_count: spinCount } : {}),
+      });
+      useRoomStore.getState().setSnapshot(updated);
+      haptics.success();
+    } catch {
+      toast({ title: t("room:settings.save_failed"), intent: "error" });
+    }
+  }
+
+  async function handleCloseRoom(): Promise<void> {
+    if (snapshot === null) return;
+    const ok = await confirmPopup(t("room:moderation.close_confirm"));
+    if (!ok) return;
+    try {
+      await api.closeRoom(snapshot.room.code);
+      navigate("/", { replace: true });
+    } catch {
+      toast({ title: t("room:settings.save_failed"), intent: "error" });
+    }
+  }
+
+  async function handleKick(userId: number, name: string): Promise<void> {
+    if (snapshot === null) return;
+    const ok = await confirmPopup(t("room:moderation.kick_confirm", { name }));
+    if (!ok) return;
+    try {
+      const updated = await api.kickRoom(snapshot.room.code, userId);
+      useRoomStore.getState().setSnapshot(updated);
+      haptics.warning();
+    } catch {
+      toast({ title: t("room:settings.save_failed"), intent: "error" });
+    }
+  }
+
   if (snapshot === null) {
     return (
       <>
@@ -663,7 +723,7 @@ export function RoomPage(): JSX.Element {
                 }}
               />
             ) : null}
-            {callerIsHost && !isRace && hasOtherPlayers ? (
+            {callerIsHost ? (
               <IconButton
                 aria-label={t("room:settings.open_aria")}
                 variant="tonal"
@@ -1143,16 +1203,40 @@ export function RoomPage(): JSX.Element {
 
         <FlyingReactions />
 
-        {/* Bet-race modes (Punishment, Chaos) are turn_based-only — no
-            spin_policy to configure. Otherwise the gear only matters once a
-            guest is present (solo, the host just spins). */}
-        {callerIsHost && !isRace && hasOtherPlayers ? (
+        {/* Host moderation hub: lock, anonymous, mode change, close — always
+            available to the host. The spin-policy chooser only applies to
+            non-race modes once a guest is present (solo, the host just spins;
+            Punishment/Chaos are turn_based-only). */}
+        {callerIsHost ? (
           <RoomSettingsSheet
             open={settingsOpen}
             onClose={() => {
               setSettingsOpen(false);
             }}
             snapshot={snapshot}
+            showSpinPolicy={!isRace && hasOtherPlayers}
+            onChangeMode={() => {
+              setModePickerOpen(true);
+            }}
+            onCloseRoom={() => {
+              void handleCloseRoom();
+            }}
+            onKick={(userId, name) => {
+              void handleKick(userId, name);
+            }}
+          />
+        ) : null}
+
+        {callerIsHost ? (
+          <RoomModePickerSheet
+            open={modePickerOpen}
+            loading={false}
+            onClose={() => {
+              setModePickerOpen(false);
+            }}
+            onCreate={(mode, deck, spinCount) => {
+              void handleApplyMode(mode, deck, spinCount);
+            }}
           />
         ) : null}
 
