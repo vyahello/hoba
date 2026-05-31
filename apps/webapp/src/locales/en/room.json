@@ -178,7 +178,7 @@
     }
   },
   "spin_count": {
-    "label": "Spins"
+    "label": "Matches to win"
   },
   "best_of_n": {
     "attempt": "Attempt {k}/{n}",
