@@ -2,24 +2,28 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { Button } from "@/components/ds/Button";
 import { Card } from "@/components/ds/Card";
 import { EmptyState } from "@/components/ds/EmptyState";
 import { IconButton } from "@/components/ds/IconButton";
 import { QuickWheelCard } from "@/components/ds/QuickWheelCard";
-import { QUICK_WHEELS } from "@/data/quickWheels";
-import { type SavedWheel, api } from "@/lib/api";
+import { Skeleton } from "@/components/ds/Skeleton";
+import { type SavedWheel, type Template, api } from "@/lib/api";
+import { useCustomWheel } from "@/stores/spinHistory";
 
 /**
  * Home (F2) — the screen 80% of opens land on. "Tap me, I'm fun", not
- * "configure me". A new user must reach a spin within 10s; the 6 Quick
- * Wheels are the path.
- *
- * Phase 4 ships the layout + tap → toast (Phase 5 wires real solo spin).
+ * "configure me". A new user must reach a spin within 10s; the built-in
+ * templates (server-localized, the "expanded Quick Wheels") are the path.
  */
 export function HomePage(): JSX.Element {
-  const { t } = useTranslation(["home", "common"]);
+  const { t, i18n } = useTranslation(["home", "common"]);
   const navigate = useNavigate();
+  const setCustomWheel = useCustomWheel((s) => s.set);
   const [wheels, setWheels] = useState<SavedWheel[] | null>(null);
+  const [templates, setTemplates] = useState<Template[] | null>(null);
+  const [templatesFailed, setTemplatesFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     void api
@@ -29,6 +33,42 @@ export function HomePage(): JSX.Element {
         setWheels([]);
       });
   }, []);
+
+  const locale = i18n.language;
+  useEffect(() => {
+    let cancelled = false;
+    setTemplatesFailed(false);
+    setTemplates(null);
+    void api
+      .listTemplates(locale)
+      .then((list) => {
+        if (!cancelled) setTemplates(list);
+      })
+      .catch(() => {
+        if (!cancelled) setTemplatesFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [locale, reloadKey]);
+
+  function spinTemplate(template: Template): void {
+    // We already hold the localized segments — load straight into the solo
+    // spin store so the wheel renders instantly (no second round-trip).
+    setCustomWheel({
+      id: `template:${template.key}`,
+      source: "template",
+      templateKey: template.key,
+      questionText: template.title,
+      segments: template.segments.map((s) => ({
+        id: s.key,
+        label: s.label,
+        emoji: s.emoji ?? undefined,
+        colorSeed: s.color_seed,
+      })),
+    });
+    navigate("/spin/custom");
+  }
 
   return (
     <>
@@ -50,17 +90,42 @@ export function HomePage(): JSX.Element {
           <h2 className="font-display font-bold text-xl mb-3 text-ink-light-1 dark:text-ink-dark-1">
             {t("home:quick_decide")}
           </h2>
-          <div className="grid grid-cols-2 gap-3">
-            {QUICK_WHEELS.map((wheel) => (
-              <QuickWheelCard
-                key={wheel.id}
-                wheel={wheel}
-                onTap={() => {
-                  navigate(`/spin/${wheel.id}`);
+          {templatesFailed ? (
+            <Card padding="lg" className="flex flex-col items-center gap-3 text-center">
+              <p className="text-sm text-ink-light-2 dark:text-ink-dark-2">
+                {t("home:templates.load_failed")}
+              </p>
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => {
+                  setReloadKey((k) => k + 1);
                 }}
-              />
-            ))}
-          </div>
+              >
+                {t("home:templates.retry")}
+              </Button>
+            </Card>
+          ) : templates === null ? (
+            <div className="grid grid-cols-2 gap-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="aspect-[5/4] w-full rounded-lg" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {templates.map((template) => (
+                <QuickWheelCard
+                  key={template.key}
+                  title={template.title}
+                  emoji={template.emoji}
+                  gradient={template.gradient}
+                  onTap={() => {
+                    spinTemplate(template);
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
         <section>

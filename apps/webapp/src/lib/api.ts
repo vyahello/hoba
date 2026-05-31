@@ -220,6 +220,32 @@ export interface WheelUsePayload {
   spin_count?: number;
 }
 
+// --- Built-in templates (F2 / Phase 9) -----------------------------------
+
+export interface TemplateSegment {
+  key: string;
+  label: string;
+  emoji: string | null;
+  color_seed: number;
+}
+
+export interface Template {
+  key: string;
+  category: string;
+  emoji: string;
+  gradient: [string, string];
+  title: string;
+  segments: TemplateSegment[];
+}
+
+export interface RoomFromTemplatePayload {
+  template_key: string;
+  locale?: string;
+  game_mode?: GameMode;
+  punishment_deck?: PunishmentDeck;
+  spin_count?: number;
+}
+
 export interface RoomPatchPayload {
   title?: string;
   spin_policy?: SpinPolicy;
@@ -238,6 +264,14 @@ export const api = {
 
   getRoom: (code: string): Promise<RoomState> =>
     request(`/rooms/${encodeURIComponent(code)}`),
+
+  /** Built-in template catalog, localized to `locale` (F2 / Phase 9). */
+  listTemplates: (locale: string): Promise<Template[]> =>
+    request(`/templates?locale=${encodeURIComponent(locale)}`),
+
+  /** Instantiate a built-in template as a room (caller becomes host). */
+  createRoomFromTemplate: (payload: RoomFromTemplatePayload): Promise<RoomState> =>
+    request("/rooms/from-template", { method: "POST", body: payload }),
 
   patchRoom: (code: string, patch: RoomPatchPayload): Promise<RoomState> =>
     request(`/rooms/${encodeURIComponent(code)}`, { method: "PATCH", body: patch }),

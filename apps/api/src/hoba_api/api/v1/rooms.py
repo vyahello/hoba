@@ -20,6 +20,7 @@ from hoba_api.schemas.room import (
     RoomUpdateIn,
     SpinOut,
 )
+from hoba_api.schemas.template import RoomFromTemplateIn
 from hoba_api.services.rigged import reveal_rig, set_rig_weights
 from hoba_api.services.room_state import build_room_state
 from hoba_api.services.rooms import (
@@ -31,6 +32,7 @@ from hoba_api.services.rooms import (
     update_room,
 )
 from hoba_api.services.spins import list_room_spins
+from hoba_api.services.templates import create_room_from_template
 
 # Per spec §14: room creations / user / window. Enforced at the REST
 # boundary so a spamming caller is turned away before the full
@@ -54,6 +56,7 @@ def _service_error_to_http(error: RoomServiceError) -> HTTPException:
         "room_locked": status.HTTP_403_FORBIDDEN,
         "kicked": status.HTTP_403_FORBIDDEN,
         "room_full": status.HTTP_409_CONFLICT,
+        "template_not_found": status.HTTP_404_NOT_FOUND,
     }.get(error.code, status.HTTP_400_BAD_REQUEST)
     return HTTPException(status_code=status_code, detail=error.code)
 
@@ -92,6 +95,39 @@ async def create_room_endpoint(
             title=payload.title,
             spin_policy=payload.spin_policy,
             suggestion_policy=payload.suggestion_policy,
+            game_mode=payload.game_mode,
+            punishment_deck=payload.punishment_deck,
+            spin_count=payload.spin_count,
+        )
+    except RoomServiceError as exc:
+        raise _service_error_to_http(exc) from exc
+    await db.commit()
+    await db.refresh(room)
+    return await build_room_state(db, room, current_user_id=user.id)
+
+
+@router.post(
+    "/from-template", response_model=RoomState, status_code=status.HTTP_201_CREATED,
+)
+async def create_room_from_template_endpoint(
+    payload: RoomFromTemplateIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> RoomState:
+    if not await rate_limit_take(
+        _room_create_rate_limit_key(user.id),
+        max_in_window=ROOM_CREATE_RATE_LIMIT_MAX,
+        window_seconds=ROOM_CREATE_RATE_LIMIT_WINDOW_SECONDS,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="rate_limited",
+        )
+    try:
+        room = await create_room_from_template(
+            db,
+            host_id=user.id,
+            template_key=payload.template_key,
+            locale=payload.locale,
             game_mode=payload.game_mode,
             punishment_deck=payload.punishment_deck,
             spin_count=payload.spin_count,

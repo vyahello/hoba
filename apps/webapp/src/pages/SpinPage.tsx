@@ -51,7 +51,7 @@ function buildQuickWheelDef(
 export function SpinPage(): JSX.Element {
   const { wheelId = "" } = useParams<{ wheelId: string }>();
   const navigate = useNavigate();
-  const { t } = useTranslation(["home", "common", "brand", "room"]);
+  const { t, i18n } = useTranslation(["home", "common", "brand", "room"]);
   const customWheel = useCustomWheel((s) => s.current);
   const addToHistory = useSpinHistory((s) => s.add);
 
@@ -193,18 +193,29 @@ export function SpinPage(): JSX.Element {
     if (wheel === undefined || inviteLoading) return;
     setInviteLoading(true);
     try {
-      const state = await api.createRoom({
-        question_text: wheel.questionText,
-        segments: wheel.segments.map((s) => ({
-          label: s.label,
-          emoji: s.emoji ?? null,
-          color_seed: s.colorSeed,
-          weight: s.weight ?? 1,
-        })),
-        game_mode: mode,
-        ...(deck !== undefined ? { punishment_deck: deck } : {}),
-        ...(spinCount !== undefined ? { spin_count: spinCount } : {}),
-      });
+      // Template wheels re-resolve canonically server-side (the client only
+      // ever held a localized view); custom/quick wheels send their segments.
+      const state =
+        wheel.source === "template" && wheel.templateKey !== undefined
+          ? await api.createRoomFromTemplate({
+              template_key: wheel.templateKey,
+              locale: i18n.language,
+              game_mode: mode,
+              ...(deck !== undefined ? { punishment_deck: deck } : {}),
+              ...(spinCount !== undefined ? { spin_count: spinCount } : {}),
+            })
+          : await api.createRoom({
+              question_text: wheel.questionText,
+              segments: wheel.segments.map((s) => ({
+                label: s.label,
+                emoji: s.emoji ?? null,
+                color_seed: s.colorSeed,
+                weight: s.weight ?? 1,
+              })),
+              game_mode: mode,
+              ...(deck !== undefined ? { punishment_deck: deck } : {}),
+              ...(spinCount !== undefined ? { spin_count: spinCount } : {}),
+            });
       navigate(`/room/${state.room.code}`);
     } catch (exc) {
       const code = exc instanceof ApiError ? exc.code : "create_failed";

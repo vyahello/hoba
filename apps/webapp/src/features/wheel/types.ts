@@ -19,8 +19,14 @@ export interface SegmentDef {
 
 export interface WheelDef {
   id: string;
-  /** 'quick' = built-in F2 preset; 'custom' = user-built via CreatePage. */
-  source: "quick" | "custom" | "saved";
+  /**
+   * 'quick' = built-in F2 preset; 'custom' = user-built via CreatePage;
+   * 'template' = server-resolved built-in template (carries `templateKey`
+   * so "Create room" can re-resolve canonically via /rooms/from-template).
+   */
+  source: "quick" | "custom" | "saved" | "template";
+  /** Set when `source === "template"` — the catalog key. */
+  templateKey?: string;
   questionText: string;
   segments: SegmentDef[];
 }

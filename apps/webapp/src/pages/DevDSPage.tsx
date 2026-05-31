@@ -387,7 +387,9 @@ export function DevDSPage(): JSX.Element {
             {QUICK_WHEELS.map((wheel) => (
               <QuickWheelCard
                 key={wheel.id}
-                wheel={wheel}
+                title={wheel.titleKey}
+                emoji={wheel.emoji}
+                gradient={wheel.gradient}
                 onTap={() => {
                   toast({ title: wheel.id });
                 }}

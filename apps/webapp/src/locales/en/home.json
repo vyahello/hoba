@@ -5,6 +5,10 @@
   },
   "quick_decide": "Quick decide",
   "tap_to_spin": "Tap to spin",
+  "templates": {
+    "load_failed": "Couldn't load the wheels.",
+    "retry": "Retry"
+  },
   "quick_wheels": {
     "eat": "Where to eat?",
     "pays": "Who pays?",
