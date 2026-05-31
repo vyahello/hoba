@@ -709,6 +709,13 @@ export function RoomPage(): JSX.Element {
                   ? currentSpin.mode_effects?.pointer_deg ?? 0
                   : 0
               }
+              // Bet-race modes have no per-spin result overlay, so flash the
+              // landed wedge to show which option came up.
+              highlightSegmentId={
+                isRace && currentSpin !== null
+                  ? String(currentSpin.result_segment_id)
+                  : undefined
+              }
               ariaLabel={snapshot.active_question?.text ?? t("room:header.wheel_aria")}
               // Only attach the hub-tap handler when this user is actually
               // allowed to spin (host_only policy) — otherwise the hub

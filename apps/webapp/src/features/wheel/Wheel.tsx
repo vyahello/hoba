@@ -125,6 +125,12 @@ export interface WheelProps {
   pointerDeg?: number;
   /** Hide the pointer entirely (Chaos `blind_pointer` while spinning). */
   pointerHidden?: boolean;
+  /**
+   * Segment id to flash-highlight once the wheel settles — the visual "this
+   * one landed!" cue for modes without a per-spin result overlay (Chaos,
+   * Punishment). Undefined = no highlight.
+   */
+  highlightSegmentId?: string;
 }
 
 export interface WheelHandle {
@@ -132,7 +138,17 @@ export interface WheelHandle {
 }
 
 export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
-  { segments, state, spin, onSpinClick, ariaLabel, className, pointerDeg = 0, pointerHidden = false },
+  {
+    segments,
+    state,
+    spin,
+    onSpinClick,
+    ariaLabel,
+    className,
+    pointerDeg = 0,
+    pointerHidden = false,
+    highlightSegmentId,
+  },
   ref,
 ) {
   const { t } = useTranslation("common");
@@ -197,6 +213,10 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
   }, [state, spin, rotation, segments.length]);
 
   const segmentCount = segments.length;
+  const highlightIndex =
+    highlightSegmentId !== undefined
+      ? segments.findIndex((s) => s.id === highlightSegmentId)
+      : -1;
   const canSpin = isHubInteractive({
     state,
     segmentCount,
@@ -274,6 +294,28 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
             fill="url(#hoba-inner-grad)"
             pointerEvents="none"
           />
+          {/* Landed-segment highlight: a pulsing flash on the winning wedge
+              once the wheel settles — the "this one!" cue for modes without a
+              per-spin result overlay (Chaos, Punishment). Rotates with the
+              wheel so it sits on the actual landed sector. */}
+          {state === "settled" && highlightIndex >= 0 ? (
+            <motion.path
+              key={`hl-${highlightIndex}`}
+              d={arcPath(
+                CX, CY, SEGMENT_R,
+                highlightIndex * (360 / segmentCount),
+                highlightIndex * (360 / segmentCount) + 360 / segmentCount,
+              )}
+              fill="#FFFFFF"
+              stroke="#FFFFFF"
+              strokeWidth={3}
+              strokeLinejoin="round"
+              pointerEvents="none"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0.8, 0.25, 0.8, 0.25, 0.55, 0.35] }}
+              transition={{ duration: 1.8, ease: "easeInOut" }}
+            />
+          ) : null}
         </motion.g>
 
         {/* Pointer. Normally fixed at the top (pointerDeg 0); Chaos
