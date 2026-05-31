@@ -4,7 +4,23 @@
 
 ---
 
-## Stage D — in progress (Chaos + Punishment turn-based race + Elimination + foundation)
+## STAGE D COMPLETE — 2026-05-31
+
+**Phase 7 delivered: all four non-Rigged game modes on prod**, built on the `GameModeEngine` abstraction (`apps/api/src/hoba_api/modes/`: base `Protocol`, `ClassicEngine`, `EliminationEngine`, `PunishmentEngine`, `ChaosEngine`, registry — unknown modes fall back to Classic). Closed-out items:
+
+- **Foundation** — `turn_based` spin policy + per-mode default policy derivation (Slice 1).
+- **Mode picker UI** — bottom-sheet picker, `GameModeBadge`, `data/gameModes.ts` source of truth (Slice 2).
+- **Elimination** — winning segment shatters off, last survivor wins, `eliminated_at` + `round:reset` (Slice 3).
+- **Punishment** — turn-based personal-bet race: lock a unique bet, spin in turn (host first), hit your own bet = match, first to host-picked N wins; a miss deals a dare resolved by a random other player's Yes/No (or Refuse −1). Per-player + room-wide done counters (Slices 4→5; v2 prediction-wager superseded by the v3/v4 race).
+- **Chaos** — reworked (4× on real device 2026-05-31) into a **Punishment-style bet race + a chaos event on EVERY spin**. Reuses Punishment's whole flow via `isBetRace = punishment|chaos` (shared service `services/punishment.py`, columns, betting/turn/standings/winner UI); the only fork is `resolve_turn`'s miss branch (chaos miss = no-op). **Eight events** (≈⅛, server-authoritative in `modes/chaos.py`, never two in a row): multi_spin (2–5 fast spins), slow_burn (trimmed turns + flat-tail ease), reverse (CCW), swap (two segments shown crossing), nudge_fwd/nudge_back (settle→shake→creep ±1, generic "nudge" card), blind_pointer (pointer vanishes, reappears on a random option), roaming_pointer (wheel still, pointer roams the options then settles). No per-spin confetti — a hit shows "Хоба! {option}", the landed wedge flashes, winner page only on the winning hit; the viewer's own pick is highlighted. `turn_based` only. Detail in Slice 6 below + `docs/game-modes.md`.
+
+**Verification:** automated gates green throughout — **223 backend (86%) / 106 frontend**, ruff + mypy --strict + tsc + eslint + i18n + `pnpm build` clean. Chaos + Punishment iterated on real device by the owner across 2026-05-31. **Carry-overs into Stage E (`docs/TODO.md`):** Chaos animation-constant tuning (feedback-driven), deferred events Double-spin + Phantom-segment. **Next: Stage E — Rigged Mode 🎭 (spec §5.5).**
+
+Key engineering lessons recorded (memory): for SVG rotation about an arbitrary point use the `transform="rotate(a cx cy)"` attribute driven by a motion value's `.on("change")` subscription — **not** CSS `style.rotate`+`transform-origin` (own-axis bug) and **not** `useMotionTemplate` on the attribute (doesn't update per frame); and Framer `animate()`/`useAnimate` controls aren't awaitable in this version — pace sequences with your own timers.
+
+---
+
+## Stage D — slice history
 
 ### Slice 6 — Chaos mode (2026-05-31) — committed, pending owner deploy
 

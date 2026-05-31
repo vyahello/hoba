@@ -95,17 +95,17 @@ No code work in this stage — only telemetry review and a `docs/validation-note
 
 ---
 
-### Stage D — Phase 7: Classic + Elimination + Punishment + Chaos modes
+### Stage D — Phase 7: Classic + Elimination + Punishment + Chaos modes — ✅ STAGE D COMPLETE (2026-05-31)
 
-Per spec §5 + §15 Phase 7. Implement `GameModeEngine` interface (the *first* legitimate use of the 3-use-sites threshold from CLAUDE.md rule 6 — Classic already exists, Elimination/Punishment/Chaos make 4 implementers). Mode picker at room creation, mode badge in room header, mode-specific UI:
+Per spec §5 + §15 Phase 7. Implemented the `GameModeEngine` interface (`apps/api/src/hoba_api/modes/`) + mode picker + mode badge + per-mode UI. Delivered:
 
-- **Elimination** — losing segment shatters animation, segment list shrinks, `room:state` mutates `active_question.segments`.
-- **Punishment** — server-owned punishment deck (3 categories × 30 cards × EN/UK), card-draw broadcast post-spin, `result:settled` payload extended with `punishment_card`.
-- **Chaos** — pre-spin "chaos event" announcement (reverse-engineered list of 8 events from spec, e.g. "swap two segments", "duplicate the winning one", "blindfold mode"), broadcast as `chaos:event` before `spin:started`.
+- **Elimination** — winning segment shatters off, list shrinks, `eliminated_at` + `round:reset`. *(as planned)*
+- **Punishment** — turn-based personal-bet race (lock a unique bet → spin in turn → hit = match → first to N wins; miss = a dealt dare, resolved by a random approver's Yes/No or Refuse −1). **Scope shifted** from the original "deck card on every spin" to a personal-bet race during execution (v2 prediction-wager → v3/v4 race); the server-owned deck (3×30×EN/UK) survives as the dare source.
+- **Chaos** — **scope shifted significantly**: instead of a `chaos:event` broadcast before `spin:started`, the event is **folded into `spin:started.mode_effects`**, and Chaos became a **Punishment-style bet race + a chaos event on every spin** (8 events: multi_spin, slow_burn, reverse, swap, nudge ↔, blind_pointer, roaming_pointer). Reuses Punishment's flow via `isBetRace`. turn_based only. Double-spin + Phantom-segment deferred (`docs/TODO.md`).
 
-WS protocol grows but stays in `/rooms`. `docs/game-modes.md` is the source of truth for each mode's exact rules. Build the punishment-deck seed migration.
+WS protocol grew but stayed in `/rooms` (events ride `mode_effects`, no new top-level event). `docs/game-modes.md` is the source of truth for each mode. Punishment-deck content lives in `modes/punishment_decks.py`.
 
-**End-of-stage gate:** four modes playable end-to-end on two devices, mode badge visible, mode-specific sounds and haptics fire, `docs/game-modes.md` matches behavior, mode-engine has unit tests.
+**End-of-stage gate (met):** four modes playable end-to-end, mode badge visible, mode-specific sounds/haptics, `docs/game-modes.md` matches behavior, mode engines unit-tested (223 backend / 106 frontend green). Chaos + Punishment iterated on real device 2026-05-31. **Carry-overs → Stage E:** Chaos animation-constant tuning (feedback-driven), deferred Chaos events. Full close-out in `docs/changelog.md` (STAGE D COMPLETE).
 
 ---
 
