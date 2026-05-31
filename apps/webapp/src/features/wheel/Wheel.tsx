@@ -1,4 +1,4 @@
-import { animate, motion, useMotionValue } from "framer-motion";
+import { animate, motion, useMotionTemplate, useMotionValue } from "framer-motion";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -157,13 +157,20 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
   const { t } = useTranslation("common");
   const rotation = useMotionValue(0);
   const pointerRotation = useMotionValue(0);
+  // Rotate the pointer about the WHEEL CENTRE via the SVG `transform`
+  // attribute (explicit user-space origin). A CSS-style `rotate` +
+  // transform-origin spins it on its own axis on SVG, which is the
+  // "pointer spins in place" bug.
+  const pointerTransform = useMotionTemplate`rotate(${pointerRotation} ${CX} ${CY})`;
   const tickWatchActive = useRef(false);
 
   // Keep the pointer at the prop angle (top by default; the random reveal
   // angle for Chaos `blind_pointer`). `roamPointer` animates this same value.
+  // Keyed on `spin?.seed` too so every new spin/phase resets it — otherwise a
+  // roam leaves it stuck at the result angle on later spins.
   useEffect(() => {
     pointerRotation.set(pointerDeg);
-  }, [pointerDeg, pointerRotation]);
+  }, [pointerDeg, pointerRotation, spin?.seed]);
 
   useImperativeHandle(
     ref,
@@ -350,9 +357,7 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
           // wheel group) so it can be both set instantly (blind_pointer) and
           // animated through a path (roaming_pointer). transformOrigin = wheel
           // centre so it swings around the rim.
-          <motion.g
-            style={{ rotate: pointerRotation, transformOrigin: `${CX}px ${CY}px` }}
-          >
+          <motion.g transform={pointerTransform}>
             <path
               d={`M ${CX} ${POINTER_TIP_Y + 32} L ${CX + 16} ${POINTER_TIP_Y} L ${CX - 16} ${POINTER_TIP_Y} Z`}
               fill="#5B3DF5"
