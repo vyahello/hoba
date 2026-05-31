@@ -4,6 +4,26 @@
 
 ---
 
+## STAGE F COMPLETE — 2026-05-31
+
+**Phases 9 + 10 delivered: the wheel library + public discovery.** Three slices, each gated + committed separately.
+
+### Slice 1 — Saved Wheels (Phase 9) — commit `17c812c`
+
+Per-user wheel library. New `Wheel` model (`wheels` table, Alembic **0015**, named FK `fk_wheels_owner_id_users`), owning its options as `Segment` rows with `parent_type="wheel"` (the Segment model is polymorphic — no new options table). `services/wheels.py` (CRUD + ownership guards + `use_wheel` → `create_room` + bump `use_count`); REST `/wheels` (`GET` list · `POST` create → 201 · `PATCH/{id}` · `DELETE/{id}` → 204 · `POST/{id}/use` → RoomState). Frontend: Create page "Save to my wheels"/"Save changes" + edit-via-`location.state.editWheel`; rewritten Library page (list / Use→mode-picker→room / Edit / two-tap Delete); Home "My wheels" preview + "See all"; host 💾 "Save this wheel" in Room. `request()` gained a 204 guard. 7 service tests.
+
+### Slice 2 — Templates (Phase 9) — commit `e1b8f4c`
+
+Owner decisions: **server-side** (per spec) + **templates = expanded Quick Wheels**. Static catalog of **8 localized built-ins** (`hoba_api/templates/catalog.py`: the 6 curated presets ported EN+UK verbatim + new `drink` 🍹 + `game` 🎲), each carrying both locales' title/segments + emoji + gradient + category. `GET /api/v1/templates?locale=` resolves to one locale; `POST /api/v1/rooms/from-template {template_key, locale, game_mode, …}` re-resolves canonically server-side → `create_room` (rate-limited like room creation). Home's "Quick decide" grid now fetches templates (6-tile skeleton while loading, **fail-loud** error card + Retry per rule 7, refetches on language change); solo spin stays instant by loading the already-localized segments into the custom-wheel store; "Create room" from a template routes through `from-template`. `QuickWheelCard` refactored to primitive display props (serves both server templates + the DS showcase). 8 service tests. `quickWheels.ts` retained for the DevDS showcase + `/spin/:id` fallback.
+
+### Slice 3 — Public + Trending + Moderation (Phase 10) — commit `3394183`
+
+`wheels` gained social columns (`like_count`, `report_count`, `is_hidden`, `category`, `published_at`) + two per-`(wheel, user)` unique join tables `wheel_likes` / `wheel_reports` (Alembic **0016**, named FKs, `op.add_column` — SQLite-safe per § 9b). **Profanity filter** (`moderation/profanity.py`): EN + UK + transliterated-RU deny-list with NFKC + zero-width strip + leet-fold + de-spacing (catches `f u c k`, `sh1t`, `Сука`), applied to title + all labels on publish. New service ops in `services/wheels.py`: `publish_wheel` (owner, profanity-gated), `unpublish_wheel`, `toggle_like`, `report_wheel` (idempotent/user, auto-hide at **`REPORT_HIDE_THRESHOLD=3`** distinct reporters), `list_trending`, `search_trending`, `get_public_wheel`; `use_wheel` relaxed to allow any visible **public** wheel (non-owner becomes host). Endpoints: `POST /wheels/{id}/publish` (3/user/day) · `/unpublish` · `POST /wheels/{id}/like` · `GET /api/v1/trending?category=&limit=&offset=` · `GET /trending/search?q=` · `POST /api/v1/moderation/report`. **Trending signal** (documented in `docs/architecture.md`): `like_count*3 + use_count` desc, `published_at` then `id` tiebreak, hidden/private excluded at the query level. Frontend: new `/trending` page (debounced search, category chips, ❤️ optimistic like-toggle, Use→room, two-tap Report), Home Trending strip (hidden when empty) + "See all", Library per-wheel Make-public/Make-private toggle + 🌐 badge. 13 service tests.
+
+**Verification:** automated gates green — **260 backend (85%) / 106 frontend**, ruff + mypy --strict + tsc + eslint + i18n + `pnpm build` clean; alembic head **0016** (single head). **End-of-stage gate met:** F10 flows work EN+UK, profanity filter rejects a curated list, trending paginates + sorts by a documented signal. **Carry-overs into Stage G (`docs/TODO.md`):** no category picker in the make-public UI (backend accepts it) → user wheels publish uncategorized; no admin un-hide/review UI (spec defers the manual queue); plus the still-open Chaos/Rigged polish items from Stage D/E. **Pending owner real-device verify** (deploy runs migration 0016). **Next: Stage G — host-moderation toolkit + hardening + launch.**
+
+---
+
 ## Post-Stage-E fixes — 2026-05-31
 
 - **Rigged reveal is now a separate full-screen page** (`fixed inset-0`, opaque) instead of an `absolute` overlay inside `<main>` that left the header showing and blended with the room. Reveal text changed to "Хоба! / воно було підкручене 🎭" (skewed HobaWord + sentence).

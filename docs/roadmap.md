@@ -122,14 +122,14 @@ The legendary feature, per spec §5.5. Delivered with two slices (secret weighti
 
 ---
 
-### Stage F — Phase 9 + Phase 10: Library, Saved wheels, Templates, Public + Trending + Moderation
+### Stage F — Phase 9 + Phase 10: Library, Saved wheels, Templates, Public + Trending + Moderation — ✅ STAGE F COMPLETE (2026-05-31)
 
-Two phases bundled because the data model + UI work overlaps heavily.
+Two phases bundled because the data model + UI work overlaps heavily. Shipped in three slices (`17c812c` saved wheels, `e1b8f4c` templates, `3394183` public/trending/moderation).
 
-- Phase 9: built-in template carousel on Home, Saved Wheels CRUD (per-user library), save-from-active-room flow.
-- Phase 10: make-public flow, profanity filter, Trending tab (categories, search, like, report), auto-hide on 3 reports, admin moderation endpoint.
+- Phase 9: ✅ 8 server-side localized built-in templates (the "expanded Quick Wheels") + `GET /templates` + `POST /rooms/from-template`; Saved Wheels CRUD (per-user `wheels` table, Alembic 0015); save-from-Create + host save-from-Room.
+- Phase 10: ✅ make-public/unpublish (profanity-gated, 3/user/day), profanity filter (EN/UK/translit-RU), Trending (categories, search, like, report), auto-hide on 3 distinct reports (Alembic 0016). Admin moderation queue UI deferred to Stage G (carry-over) — report→auto-hide is live.
 
-**End-of-stage gate:** every F10 flow in spec works in EN + UK; profanity filter rejects a curated test list; trending list paginates and sorts by an explicit signal we document in `docs/architecture.md`.
+**End-of-stage gate (met):** F10 flows work EN + UK; profanity filter rejects a curated test list (`tests/services/test_wheel_social.py`); trending paginates + sorts by an explicit signal documented in `docs/architecture.md` (`like_count*3 + use_count`). 260 backend (85%) / 106 frontend green. **Carry-overs → Stage G:** category picker in make-public UI, admin un-hide/review UI. Full close-out in `docs/changelog.md` (STAGE F COMPLETE).
 
 ---
 
