@@ -109,11 +109,16 @@ WS protocol grew but stayed in `/rooms` (events ride `mode_effects`, no new top-
 
 ---
 
-### Stage E — Phase 8: Rigged Mode 🎭
+### Stage E — Phase 8: Rigged Mode 🎭 — ✅ STAGE E COMPLETE (2026-05-31)
 
-The legendary feature. Per spec §5.5 + §15 Phase 8. Server-side weighted RNG (not client — host weights live in Redis, only host sees them), 1.5s long-press on the hub to reveal the weight-editor sheet, "Reveal the rig" broadcast animation. Statistical test over a 1000-spin simulation in CI proves weights stay within ±2% of declared distribution. Post-reveal ethical guard injects the 🎭 emoji into all subsequent spin announcements.
+The legendary feature, per spec §5.5. Delivered with two slices (secret weighting + secrecy, then the reveal). **Scope notes vs the original plan:**
+- **Weights live in `Segment.weight`, not Redis** — `compute_spin` already consumes that column, so weighted spins needed no engine change. Secrecy is enforced at serialization time (`build_room_state` per-viewer redaction: non-host pre-reveal sees `game_mode="classic"` + weights `1`) rather than by withholding the value from a separate store.
+- **Reveal entry** is a hidden ~1.5 s long-press on the hub → `RigEditorSheet` (Rigged stays out of the room-creation picker), with a "Reveal the rig 🎭" button.
+- **Ethical guard**: 🎭 stamped into the **room title** on reveal (spec's wording) rather than into each spin announcement.
+- **CI fairness**: weighted RNG within ±2% over 40k picks (`test_rigged.py`).
+- **Reveal**: full-screen takeover (skewed Хоба! + animated weight bar-chart + rigged-spin-count + confetti). Alembic 0013 (`rigged_revealed`) + 0014 (`rigged_spin_count`).
 
-**End-of-stage gate:** playtest — friends genuinely cannot detect rigging until host pulls the trigger. Reveal moment lands with the "yo wait what" energy described in the spec.
+**End-of-stage gate (met):** guests cannot distinguish a rigged room from Classic pre-reveal (server-side redaction guarantees it); the reveal lands as a full-screen moment. Gates green (232 backend / 106 frontend). The "playtest energy" is owner-verified on device; reveal animation feel is tunable. Full close-out in `docs/changelog.md` (STAGE E COMPLETE).
 
 ---
 

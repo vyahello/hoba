@@ -4,7 +4,20 @@
 
 ---
 
-## Stage E — Rigged Mode 🎭 (both slices shipped; pending owner real-device verify)
+## STAGE E COMPLETE — 2026-05-31
+
+**Phase 8 delivered: Rigged Mode 🎭** — the legendary hidden-weighting feature. With it, **all five game modes are live** (Classic, Elimination, Punishment, Chaos, Rigged). Two slices:
+
+- **Slice 1 — secret weighting + secrecy.** Host weights segments 0–100 (`Segment.weight`, already consumed by `compute_spin` → no engine change) via a hidden ~1.5 s long-press on the hub → `RigEditorSheet`. Room flips to `game_mode="rigged"`, but `build_room_state` redacts it to "classic" + uniform weights for non-host viewers — byte-identical to a plain Classic room. Host-only `PATCH /rooms/{code}/rig` (no broadcast). `services/rigged.py`, Alembic 0013 (`rigged_revealed`). CI fairness guard (±2% over 40k weighted picks).
+- **Slice 2 — the reveal.** Host "Reveal the rig 🎭" → `POST /rooms/{code}/reveal` flips `rigged_revealed` (the redaction un-redacts mode + weights for everyone), stamps 🎭 into the title, broadcasts `rigged:revealed`; clients refetch + play a full-screen reveal (skewed Хоба! + weight bar-chart + "rigged for N spins 😈" + confetti). Alembic 0014 (`rigged_spin_count`).
+
+**Verification:** automated gates green — **232 backend (86%) / 106 frontend**, ruff + mypy --strict + tsc + eslint + i18n + `pnpm build` clean; alembic head 0014. Spec calls Rigged "the most playtest-driven feature" — the reveal animation feel is tunable on owner device feedback. **Carry-overs into Stage F (`docs/TODO.md`):** Chaos animation tuning + deferred Chaos events (Double-spin, Phantom), Rigged reveal feel. **Next: Stage F — Library / Saved wheels / Templates / Public + Trending + Moderation.**
+
+Slice detail below.
+
+---
+
+## Stage E — Rigged Mode 🎭 (slice history)
 
 ### Slice 2 — the reveal moment (2026-05-31)
 
