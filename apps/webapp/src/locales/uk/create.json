@@ -3,6 +3,7 @@
   "question_label": "Питання",
   "question_placeholder": "Що замовляємо?",
   "segments_label": "Варіанти",
+  "emoji_label": "Емодзі",
   "segment_placeholder": "Варіант {index}",
   "add_segment": "Додати варіант",
   "remove_segment": "Прибрати",

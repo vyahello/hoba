@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { splitEmoji } from "@/features/wheel/emoji";
+import { isSingleEmoji, splitEmoji } from "@/features/wheel/emoji";
 
 describe("splitEmoji", () => {
   it("lifts a leading emoji out of the label", () => {
@@ -27,5 +27,27 @@ describe("splitEmoji", () => {
 
   it("trims surrounding whitespace", () => {
     expect(splitEmoji("  🎮  PS5  ")).toEqual({ emoji: "🎮", label: "PS5" });
+  });
+
+  it("lifts a flag (regional-indicator pair)", () => {
+    expect(splitEmoji("Мілан 🇮🇹")).toEqual({ emoji: "🇮🇹", label: "Мілан" });
+  });
+
+  it("lifts a ZWJ emoji like Face in Clouds", () => {
+    expect(splitEmoji("😶‍🌫️ Fog")).toEqual({ emoji: "😶‍🌫️", label: "Fog" });
+  });
+});
+
+describe("isSingleEmoji", () => {
+  it("accepts a plain emoji, a flag, and a ZWJ emoji", () => {
+    expect(isSingleEmoji("🍕")).toBe(true);
+    expect(isSingleEmoji("🇺🇦")).toBe(true);
+    expect(isSingleEmoji("😶‍🌫️")).toBe(true);
+  });
+
+  it("rejects text and empties", () => {
+    expect(isSingleEmoji("pizza")).toBe(false);
+    expect(isSingleEmoji("")).toBe(false);
+    expect(isSingleEmoji("🍕 x")).toBe(false);
   });
 });

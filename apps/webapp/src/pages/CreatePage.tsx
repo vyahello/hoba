@@ -16,6 +16,8 @@ const MIN_SEGMENTS = 2;
 const MAX_SEGMENTS = 12;
 const QUESTION_LIMIT = 80;
 const SEGMENT_LIMIT = 60;
+// Generous enough for ZWJ sequences + flags (multiple UTF-16 units = one glyph).
+const EMOJI_LIMIT = 16;
 
 interface DraftSegment {
   id: string;
@@ -78,6 +80,13 @@ export function CreatePage(): JSX.Element {
 
   function updateSegment(id: string, label: string): void {
     setSegments((prev) => prev.map((s) => (s.id === id ? { ...s, label } : s)));
+  }
+
+  function updateSegmentEmoji(id: string, emoji: string): void {
+    const trimmed = emoji.trim();
+    setSegments((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, emoji: trimmed === "" ? undefined : trimmed } : s)),
+    );
   }
 
   /** Cleaned, non-empty segments with stable colours + promoted emoji.
@@ -178,6 +187,17 @@ export function CreatePage(): JSX.Element {
           <div className="flex flex-col gap-2">
             {segments.map((segment, index) => (
               <div key={segment.id} className="flex items-end gap-2">
+                <Input
+                  label={t("create:emoji_label")}
+                  placeholder="🙂"
+                  value={segment.emoji ?? ""}
+                  maxLength={EMOJI_LIMIT}
+                  inputMode="text"
+                  onChange={(e) => {
+                    updateSegmentEmoji(segment.id, e.target.value);
+                  }}
+                  className="w-16 shrink-0 text-center text-xl"
+                />
                 <Input
                   label={t("create:segment_placeholder", { index: index + 1 })}
                   placeholder={t("create:segment_placeholder", { index: index + 1 })}

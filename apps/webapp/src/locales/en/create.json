@@ -3,6 +3,7 @@
   "question_label": "Question",
   "question_placeholder": "What should we order?",
   "segments_label": "Options",
+  "emoji_label": "Emoji",
   "segment_placeholder": "Option {index}",
   "add_segment": "Add option",
   "remove_segment": "Remove",
