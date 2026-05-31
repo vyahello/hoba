@@ -7,7 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from hoba_api.anon import generate_nickname
 from hoba_api.auth.initdata import TelegramUser
-from hoba_api.services.participants import join_room, kick_participant
+from hoba_api.services.participants import (
+    approve_participant,
+    join_room,
+    kick_participant,
+)
 from hoba_api.services.room_state import build_room_state
 from hoba_api.services.rooms import (
     RoomServiceError,
@@ -144,6 +148,64 @@ async def test_non_anonymous_shows_real_names(db: AsyncSession) -> None:
 
 
 # --- mid-room mode change -------------------------------------------------
+
+
+async def test_join_approval_flow(db: AsyncSession) -> None:
+    host = await _user(db, 1020)
+    guest = await _user(db, 1021)
+    code = await _room(db, host)
+    room = await get_room_by_code(db, code)
+    assert room is not None
+    await update_room(db, room, user_id=host, patch={"requires_approval": True})
+    await db.flush()
+
+    # Guest joins → pending (not approved).
+    p = await join_room(db, room, guest)
+    await db.commit()
+    assert p.approved is False
+
+    fresh = await get_room_by_code(db, code)
+    assert fresh is not None
+    # Host's snapshot: pending guest is OUT of the roster, IN pending list.
+    host_state = await build_room_state(db, fresh, current_user_id=host)
+    assert guest not in [pp.user_id for pp in host_state.participants]
+    assert guest in [pp.user_id for pp in host_state.pending_participants]
+    # Guest's own snapshot: me_pending true, sees no pending list.
+    guest_state = await build_room_state(db, fresh, current_user_id=guest)
+    assert guest_state.me_pending is True
+    assert guest_state.pending_participants == []
+
+    # Approve → now a normal participant.
+    await approve_participant(db, fresh, host_id=host, target_user_id=guest)
+    await db.commit()
+    after = await build_room_state(db, fresh, current_user_id=host)
+    assert guest in [pp.user_id for pp in after.participants]
+    assert after.pending_participants == []
+
+
+async def test_approve_requires_host(db: AsyncSession) -> None:
+    host = await _user(db, 1022)
+    guest = await _user(db, 1023)
+    code = await _room(db, host)
+    room = await get_room_by_code(db, code)
+    assert room is not None
+    await update_room(db, room, user_id=host, patch={"requires_approval": True})
+    await join_room(db, room, guest)
+    await db.commit()
+    with pytest.raises(RoomServiceError) as exc:
+        await approve_participant(db, room, host_id=guest, target_user_id=guest)
+    assert exc.value.code == "not_host"
+
+
+async def test_join_without_approval_is_immediate(db: AsyncSession) -> None:
+    host = await _user(db, 1024)
+    guest = await _user(db, 1025)
+    code = await _room(db, host)
+    room = await get_room_by_code(db, code)
+    assert room is not None
+    p = await join_room(db, room, guest)  # requires_approval defaults False
+    await db.commit()
+    assert p.approved is True
 
 
 async def test_mode_change_resets_round_state(db: AsyncSession) -> None:

@@ -220,6 +220,7 @@ async def update_room(
         "suggestion_policy",
         "is_locked",
         "is_anonymous",
+        "requires_approval",
         "game_mode",
         "punishment_deck",
         "spin_count",

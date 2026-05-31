@@ -47,7 +47,9 @@ export function RoomSettingsSheet({
   const { t } = useTranslation(["room", "common"]);
   const setSnapshot = useRoomStore((s) => s.setSnapshot);
   const [savingPolicy, setSavingPolicy] = useState<SpinPolicy | null>(null);
-  const [savingField, setSavingField] = useState<"is_locked" | "is_anonymous" | null>(null);
+  const [savingField, setSavingField] = useState<
+    "is_locked" | "is_anonymous" | "requires_approval" | null
+  >(null);
 
   function errorToast(exc: unknown): void {
     const code = exc instanceof ApiError ? exc.code : "save_failed";
@@ -72,7 +74,7 @@ export function RoomSettingsSheet({
   }
 
   async function applyToggle(
-    field: "is_locked" | "is_anonymous", value: boolean,
+    field: "is_locked" | "is_anonymous" | "requires_approval", value: boolean,
   ): Promise<void> {
     if (savingField !== null) return;
     setSavingField(field);
@@ -133,6 +135,15 @@ export function RoomSettingsSheet({
             saving={savingField === "is_anonymous"}
             onToggle={() => {
               void applyToggle("is_anonymous", !snapshot.room.is_anonymous);
+            }}
+          />
+          <ToggleRow
+            label={t("room:settings.approval.label")}
+            hint={t("room:settings.approval.hint")}
+            on={snapshot.room.requires_approval ?? false}
+            saving={savingField === "requires_approval"}
+            onToggle={() => {
+              void applyToggle("requires_approval", !(snapshot.room.requires_approval ?? false));
             }}
           />
         </section>

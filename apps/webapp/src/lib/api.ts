@@ -129,6 +129,8 @@ export interface ServerRoom {
   suggestion_policy: SuggestionPolicy;
   is_locked: boolean;
   is_anonymous: boolean;
+  /** Optional on the client type for fixture compatibility; server always sends it. */
+  requires_approval?: boolean;
   current_turn_user_id: number | null;
   punishment_deck: PunishmentDeck | null;
   punishment_done_count: number;
@@ -158,6 +160,14 @@ export interface ServerRoom {
 export interface RoomState {
   room: ServerRoom;
   participants: ServerParticipant[];
+  /**
+   * Join-approval: pending guests (host-only; empty for everyone else).
+   * Optional on the client type so older fixtures stay valid; the server
+   * always sends it. Consumers default with `?? []`.
+   */
+  pending_participants?: ServerParticipant[];
+  /** True when the current viewer is a guest awaiting host approval. */
+  me_pending?: boolean;
   active_question: ServerQuestion | null;
   last_spin: ServerSpin | null;
   /**
@@ -267,6 +277,7 @@ export interface RoomPatchPayload {
   suggestion_policy?: SuggestionPolicy;
   is_locked?: boolean;
   is_anonymous?: boolean;
+  requires_approval?: boolean;
   game_mode?: GameMode;
   punishment_deck?: PunishmentDeck;
   spin_count?: number;
@@ -347,6 +358,12 @@ export const api = {
   /** Host kicks a participant (spec §F11). */
   kickRoom: (code: string, userId: number): Promise<RoomState> =>
     request(`/rooms/${encodeURIComponent(code)}/kick`, {
+      method: "POST", body: { user_id: userId },
+    }),
+
+  /** Host approves a pending join request (spec §F11). */
+  approveRoom: (code: string, userId: number): Promise<RoomState> =>
+    request(`/rooms/${encodeURIComponent(code)}/approve`, {
       method: "POST", body: { user_id: userId },
     }),
 

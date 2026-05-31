@@ -52,10 +52,39 @@ async def join_room(
         raise RoomServiceError("room_full")
 
     participant = Participant(
-        room_id=room.id, user_id=user_id, role="guest",
+        room_id=room.id,
+        user_id=user_id,
+        role="guest",
+        # In a `requires_approval` room a fresh guest is pending until the
+        # host approves. The host (re-)entering is always approved.
+        approved=(not room.requires_approval) or user_id == room.host_id,
     )
     participant.last_seen_at = now
     session.add(participant)
+    await session.flush()
+    return participant
+
+
+async def approve_participant(
+    session: AsyncSession, room: Room, *, host_id: int, target_user_id: int,
+) -> Participant:
+    """Host approves a pending join request (spec §F11 extension).
+
+    Errors: `not_host`, `not_in_room`.
+    """
+    if room.host_id != host_id:
+        raise RoomServiceError("not_host")
+    participant = (
+        await session.execute(
+            select(Participant).where(
+                Participant.room_id == room.id,
+                Participant.user_id == target_user_id,
+            ),
+        )
+    ).scalar_one_or_none()
+    if participant is None:
+        raise RoomServiceError("not_in_room")
+    participant.approved = True
     await session.flush()
     return participant
 

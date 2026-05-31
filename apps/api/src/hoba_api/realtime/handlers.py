@@ -373,10 +373,11 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                 )
                 return
             try:
-                await join_room(session, room, user_id)
+                participant = await join_room(session, room, user_id)
             except RoomServiceError as exc:
                 await sio.emit("error", {"code": exc.code}, to=sid, namespace=NAMESPACE)
                 return
+            pending = not participant.approved
             await session.commit()
             await session.refresh(room)
             state = (
@@ -393,14 +394,16 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
         await presence_set(room_id, user_id)
 
         await sio.emit("room:state", state, to=sid, namespace=NAMESPACE)
+        # Pending (approval-gated) joins notify the host to review rather than
+        # announcing a new player; the host client refetches the pending list.
         await sio.emit(
-            "room:participant_joined",
+            "room:join_request" if pending else "room:participant_joined",
             {"user_id": user_id},
             room=room_code,
             namespace=NAMESPACE,
             skip_sid=sid,
         )
-        log.info("ws.room.join", user_id=user_id, code=room_code)
+        log.info("ws.room.join", user_id=user_id, code=room_code, pending=pending)
 
     @sio.on("room:leave", namespace=NAMESPACE)
     async def on_room_leave(sid: str) -> None:

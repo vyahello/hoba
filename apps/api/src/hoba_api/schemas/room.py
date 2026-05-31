@@ -96,6 +96,7 @@ class RoomOut(BaseModel):
     suggestion_policy: SuggestionPolicy
     is_locked: bool
     is_anonymous: bool
+    requires_approval: bool
     current_turn_user_id: int | None
     punishment_deck: PunishmentDeck | None
     punishment_done_count: int
@@ -125,6 +126,11 @@ class RoomState(BaseModel):
 
     room: RoomOut
     participants: list[ParticipantOut]
+    # Join-approval (spec §F11): unapproved guests, sent only to the host
+    # (empty for everyone else). `me_pending` tells a pending guest they're
+    # waiting on the host.
+    pending_participants: list[ParticipantOut] = Field(default_factory=list)
+    me_pending: bool = False
     active_question: QuestionOut | None
     last_spin: SpinOut | None
     # Internal user_id of the request/connection — lets the client decide
@@ -159,6 +165,7 @@ class RoomUpdateIn(BaseModel):
     suggestion_policy: SuggestionPolicy | None = None
     is_locked: bool | None = None
     is_anonymous: bool | None = None
+    requires_approval: bool | None = None
     game_mode: GameMode | None = None
     punishment_deck: PunishmentDeck | None = None
     spin_count: int | None = None

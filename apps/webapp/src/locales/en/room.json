@@ -126,6 +126,10 @@
       "label": "Anonymous mode",
       "hint": "Hide everyone's real name"
     },
+    "approval": {
+      "label": "Approve new players",
+      "hint": "You confirm each person before they join"
+    },
     "players": "Players",
     "kick": "Kick",
     "change_mode": "Change game mode",
@@ -137,6 +141,13 @@
     "closed": "The host closed the room.",
     "close_confirm": "Close this room for everyone?",
     "kick_confirm": "Kick {name} from the room?"
+  },
+  "approval": {
+    "waiting_title": "Waiting to be let in",
+    "waiting_body": "The host needs to approve you before you can join. Hang tight!",
+    "requests": "Join requests ({count})",
+    "approve": "Approve",
+    "deny": "Deny"
   },
   "reactions": {
     "aria_label": "React {emoji}"

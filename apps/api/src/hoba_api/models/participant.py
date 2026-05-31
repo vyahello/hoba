@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -46,6 +47,12 @@ class Participant(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False,
     )
     kicked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Join-approval (spec §F11 extension): in a `requires_approval` room a
+    # guest starts unapproved (pending) until the host approves; existing +
+    # host participants are always approved.
+    approved: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="1", nullable=False,
+    )
 
     room: Mapped[Room] = relationship(back_populates="participants")
     user: Mapped[User] = relationship(lazy="joined")

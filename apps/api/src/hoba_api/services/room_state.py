@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hoba_api.anon import generate_nickname
+from hoba_api.models.participant import Participant
 from hoba_api.models.room import Room
 from hoba_api.models.user import User
 from hoba_api.schemas.room import (
@@ -75,33 +76,35 @@ async def build_room_state(
     # Anonymous mode (spec §14): replace every real name with a deterministic
     # adjective+animal nickname, localized to THIS viewer's language so each
     # client reads names in its own locale. Falls back to EN if the viewer
-    # row is somehow missing.
+    # row is somehow missing. `Participant.display_name` is never populated at
+    # write time otherwise, so derive from the eager-loaded `User`.
+    viewer_lang = "en"
     if room.is_anonymous:
         viewer = await session.get(User, current_user_id)
         viewer_lang = viewer.language_code if viewer is not None else "en"
-        participant_out = [
-            ParticipantOut.model_validate(p).model_copy(
-                update={
-                    "display_name": generate_nickname(room.id, p.user_id, viewer_lang),
-                },
-            )
-            for p in participants
-        ]
-    else:
-        # `Participant.display_name` is never populated at write time, so
-        # derive the name from the eager-loaded `User` (relationship is
-        # lazy="joined"). Prefer an explicit participant display_name if
-        # one is ever set; otherwise fall back to the user's first_name.
-        participant_out = [
-            ParticipantOut.model_validate(p).model_copy(
-                update={"display_name": p.display_name or p.user.first_name},
-            )
-            for p in participants
-        ]
+
+    def _out(p: Participant) -> ParticipantOut:
+        name = (
+            generate_nickname(room.id, p.user_id, viewer_lang)
+            if room.is_anonymous
+            else (p.display_name or p.user.first_name)
+        )
+        return ParticipantOut.model_validate(p).model_copy(update={"display_name": name})
+
+    # Join-approval (spec §F11): pending (unapproved) guests are kept OUT of
+    # the live roster, surfaced to the HOST as `pending_participants`, and the
+    # pending guest themselves learns via `me_pending`.
+    participant_out = [_out(p) for p in participants if p.approved]
+    pending_out = [_out(p) for p in participants if not p.approved] if is_host else []
+    me_pending = any(
+        p.user_id == current_user_id and not p.approved for p in participants
+    )
 
     return RoomState(
         room=room_out,
         participants=participant_out,
+        pending_participants=pending_out,
+        me_pending=me_pending,
         active_question=question_out,
         last_spin=SpinOut.model_validate(last_spin) if last_spin is not None else None,
         me_user_id=current_user_id,

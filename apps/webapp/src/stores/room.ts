@@ -315,6 +315,24 @@ function wireListeners(s: Socket): void {
     setState({ endedReason: "closed" });
   });
 
+  // Join-approval: a guest is awaiting approval (host refetches the pending
+  // list), or one was approved (the approved guest + everyone refetch). The
+  // pending data isn't in a flat patch, so a refetch is cleanest.
+  const refetchRoom = (): void => {
+    const code = getState().joinedCode;
+    if (code === null) return;
+    void api
+      .getRoom(code)
+      .then((state) => {
+        getState().setSnapshot(state);
+      })
+      .catch(() => {
+        /* transient refetch failure is non-fatal */
+      });
+  };
+  s.on("room:join_request", refetchRoom);
+  s.on("room:approved", refetchRoom);
+
   s.on(
     "reaction:received",
     (payload: { emoji: string; user_id: number; at: string }) => {

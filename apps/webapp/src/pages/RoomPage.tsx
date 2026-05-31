@@ -639,6 +639,17 @@ export function RoomPage(): JSX.Element {
     }
   }
 
+  async function handleApprove(userId: number): Promise<void> {
+    if (snapshot === null) return;
+    try {
+      const updated = await api.approveRoom(snapshot.room.code, userId);
+      useRoomStore.getState().setSnapshot(updated);
+      haptics.success();
+    } catch {
+      toast({ title: t("room:settings.save_failed"), intent: "error" });
+    }
+  }
+
   if (snapshot === null) {
     return (
       <>
@@ -657,6 +668,36 @@ export function RoomPage(): JSX.Element {
         <main className="flex-1 p-4 flex flex-col gap-3">
           <Skeleton height={32} width="70%" />
           <Skeleton height={300} radius="md" />
+        </main>
+      </>
+    );
+  }
+
+  // Join-approval: a guest awaiting the host sees a calm waiting screen, not
+  // the room — they're not a real participant until approved.
+  if (snapshot.me_pending === true) {
+    return (
+      <>
+        <header className="ds-glass-header px-4 py-3 pt-safe flex items-center gap-3">
+          <IconButton
+            aria-label={t("common:actions.back")}
+            variant="ghost"
+            icon={<span aria-hidden>←</span>}
+            onClick={() => {
+              safeNavigateBack(navigate);
+            }}
+          />
+          <RoomCodePill code={snapshot.room.code} className="text-base px-4 py-2" />
+          <RealtimeIndicator active={connected} className="ml-auto" />
+        </header>
+        <main className="flex-1 px-6 flex flex-col items-center justify-center text-center gap-4">
+          <span className="text-6xl animate-pulse" aria-hidden>⏳</span>
+          <h1 className="font-display font-bold text-xl text-ink-light-1 dark:text-ink-dark-1">
+            {t("room:approval.waiting_title")}
+          </h1>
+          <p className="text-sm text-ink-light-2 dark:text-ink-dark-2 max-w-xs">
+            {t("room:approval.waiting_body")}
+          </p>
         </main>
       </>
     );
@@ -736,6 +777,46 @@ export function RoomPage(): JSX.Element {
             ) : null}
           </div>
         </div>
+        {/* Join-approval: host sees pending requests with inline Approve/Deny. */}
+        {callerIsHost && (snapshot.pending_participants ?? []).length > 0 ? (
+          <div className="flex flex-col gap-2 rounded-lg bg-brand-amber-3/15 p-3">
+            <span className="text-sm font-semibold text-brand-amber-3">
+              {t("room:approval.requests", {
+                count: (snapshot.pending_participants ?? []).length,
+              })}
+            </span>
+            {(snapshot.pending_participants ?? []).map((p) => {
+              const name = p.display_name ?? `#${p.user_id}`;
+              return (
+                <div key={p.user_id} className="flex items-center justify-between gap-2">
+                  <span className="truncate text-sm text-ink-light-1 dark:text-ink-dark-1">
+                    {name}
+                  </span>
+                  <div className="flex gap-2 shrink-0">
+                    <Button
+                      variant="accent"
+                      size="sm"
+                      onClick={() => {
+                        void handleApprove(p.user_id);
+                      }}
+                    >
+                      {t("room:approval.approve")}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        void handleKick(p.user_id, name);
+                      }}
+                    >
+                      {t("room:approval.deny")}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
         {/* Own line so a wide mode label can't squeeze the row above.
             Renders null for classic/rigged, so this line vanishes there. */}
         <GameModeBadge mode={snapshot.room.game_mode} />

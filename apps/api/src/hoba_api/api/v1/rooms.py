@@ -22,7 +22,7 @@ from hoba_api.schemas.room import (
     SpinOut,
 )
 from hoba_api.schemas.template import RoomFromTemplateIn
-from hoba_api.services.participants import kick_participant
+from hoba_api.services.participants import approve_participant, kick_participant
 from hoba_api.services.rigged import reveal_rig, set_rig_weights
 from hoba_api.services.room_state import build_room_state
 from hoba_api.services.rooms import (
@@ -290,6 +290,33 @@ async def kick_room_endpoint(
     # roster. The kicked user_id rides along so each client can tell which.
     await sio.emit(
         "room:kicked", {"user_id": payload.user_id}, room=room.code, namespace=NAMESPACE,
+    )
+    return await build_room_state(db, room, current_user_id=user.id)
+
+
+@router.post("/{code}/approve", response_model=RoomState)
+async def approve_room_endpoint(
+    code: str,
+    payload: KickIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> RoomState:
+    """Host approves a pending join request (spec §F11). Deny = use /kick."""
+    room = await get_room_by_code(db, code)
+    if room is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="room_not_found",
+        )
+    try:
+        await approve_participant(
+            db, room, host_id=user.id, target_user_id=payload.user_id,
+        )
+    except RoomServiceError as exc:
+        raise _service_error_to_http(exc) from exc
+    await db.commit()
+    # The approved guest refetches into the full room; others add them.
+    await sio.emit(
+        "room:approved", {"user_id": payload.user_id}, room=room.code, namespace=NAMESPACE,
     )
     return await build_room_state(db, room, current_user_id=user.id)
 

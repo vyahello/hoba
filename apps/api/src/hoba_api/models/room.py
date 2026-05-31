@@ -69,6 +69,11 @@ class Room(Base, TimestampMixin):
     )
     is_locked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_anonymous: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Join-approval (spec §F11 extension): when true, a guest's join lands in
+    # a pending state until the host approves (or denies = kick).
+    requires_approval: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="0", nullable=False,
+    )
     current_turn_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
