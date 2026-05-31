@@ -48,7 +48,7 @@ export const QUICK_WHEELS: readonly QuickWheel[] = [
       { key: "you", emoji: "🫵", colorSeed: 0 },
       { key: "me", emoji: "😎", colorSeed: 2 },
       { key: "split", emoji: "🤝", colorSeed: 4 },
-      { key: "guys", emoji: "👬", colorSeed: 6 },
+      { key: "guys", emoji: "✊", colorSeed: 6 },
       { key: "next_time", emoji: "🔜", colorSeed: 9 },
     ],
   },

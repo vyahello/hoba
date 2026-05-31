@@ -553,7 +553,7 @@ This is the screen 80% of opens land on. It must say "tap me, I'm fun" not "conf
 Layout (top to bottom):
 - Sticky glass header: app logo `Hoba!` (Latin, single asset across locales) + settings gear
 - Hero row: **"Швидко вирішити" / "Quick decide"** — 6 large pre-made wheel cards in a 2-column grid:
-  - 🍕 Where to eat? / Куди їсти?
+  - 🍕 Where to eat? / Що поїсти?
   - 💸 Who pays? / Хто платить?
   - 🎬 What to watch? / Що дивитись?
   - 😈 Truth or Dare / Правда чи дія
