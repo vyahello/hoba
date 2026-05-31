@@ -26,6 +26,28 @@ function ellipsize(s: string, max: number): string {
   return s.length <= max ? s : `${s.slice(0, max - 1)}…`;
 }
 
+/**
+ * Split a segment label into up to two lines so long multi-word labels
+ * (e.g. "Наступного разу") wrap instead of truncating to "Наступного…".
+ * Single long words (no spaces) still ellipsize.
+ */
+function wrapLabel(s: string, max: number): string[] {
+  if (s.length <= max) return [s];
+  const words = s.split(" ");
+  if (words.length === 1) return [ellipsize(s, max)];
+  let first = "";
+  let second = "";
+  for (const w of words) {
+    if (second === "" && (first === "" || `${first} ${w}`.length <= max)) {
+      first = first === "" ? w : `${first} ${w}`;
+    } else {
+      second = second === "" ? w : `${second} ${w}`;
+    }
+  }
+  if (second === "") return [ellipsize(first, max)];
+  return [ellipsize(first, max), ellipsize(second, max)];
+}
+
 function polarToCart(
   cx: number,
   cy: number,
@@ -65,7 +87,7 @@ function SegmentVisual({ segment, index, total }: SegmentVisualProps): JSX.Eleme
   const labelR = segment.emoji !== undefined ? SEGMENT_R * 0.7 : SEGMENT_R * 0.6;
   const labelPos = polarToCart(CX, CY, labelR, midDeg);
   const emojiPos = polarToCart(CX, CY, SEGMENT_R * 0.42, midDeg);
-  const label = ellipsize(segment.label, MAX_LABEL_CHARS);
+  const labelLines = wrapLabel(segment.label, MAX_LABEL_CHARS);
 
   return (
     <g>
@@ -103,7 +125,21 @@ function SegmentVisual({ segment, index, total }: SegmentVisualProps): JSX.Eleme
           userSelect: "none",
         }}
       >
-        {label}
+        {labelLines.map((line, i) => (
+          <tspan
+            key={line}
+            x={labelPos.x}
+            dy={
+              labelLines.length === 1
+                ? 0
+                : i === 0
+                  ? "-0.55em"
+                  : "1.1em"
+            }
+          >
+            {line}
+          </tspan>
+        ))}
       </text>
     </g>
   );
