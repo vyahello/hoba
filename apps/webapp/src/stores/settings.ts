@@ -26,7 +26,6 @@ import { safeStorage } from "@/lib/safeStorage";
 const KEY_SOUND = "hoba.sound";
 const KEY_HAPTICS = "hoba.haptics";
 const KEY_MUSIC = "hoba.music";
-const KEY_ANON = "hoba.anonymousDefault";
 
 function readBool(key: string, fallback: boolean): boolean {
   const raw = safeStorage.get(key);
@@ -42,11 +41,9 @@ interface SettingsState {
   sound: boolean;
   haptics: boolean;
   music: boolean;
-  anonymousDefault: boolean;
   setSound: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setMusic: (value: boolean) => void;
-  setAnonymousDefault: (value: boolean) => void;
   /** Switch UI language AND persist it server-side so server-rendered text
    *  (e.g. punishment cards) follows the user's choice, not the device. */
   setLanguage: (locale: Locale) => void;
@@ -58,7 +55,6 @@ interface SettingsState {
 const initialSound = readBool(KEY_SOUND, true);
 const initialHaptics = readBool(KEY_HAPTICS, true);
 const initialMusic = readBool(KEY_MUSIC, true);
-const initialAnon = readBool(KEY_ANON, false);
 
 // Apply the persisted gates immediately at module load.
 audio.setEnabled(initialSound);
@@ -76,7 +72,6 @@ export const useSettings = create<SettingsState>((set) => ({
   sound: initialSound,
   haptics: initialHaptics,
   music: initialMusic,
-  anonymousDefault: initialAnon,
 
   setSound: (value) => {
     audio.setEnabled(value);
@@ -97,12 +92,6 @@ export const useSettings = create<SettingsState>((set) => ({
     writeBool(KEY_MUSIC, value);
     persistRemote({ music_enabled: value });
     set({ music: value });
-  },
-
-  setAnonymousDefault: (value) => {
-    writeBool(KEY_ANON, value);
-    persistRemote({ is_anonymous_default: value });
-    set({ anonymousDefault: value });
   },
 
   setLanguage: (locale) => {
@@ -130,12 +119,10 @@ export const useSettings = create<SettingsState>((set) => ({
     writeBool(KEY_SOUND, me.sound_enabled);
     writeBool(KEY_HAPTICS, me.haptics_enabled);
     writeBool(KEY_MUSIC, me.music_enabled);
-    writeBool(KEY_ANON, me.is_anonymous_default);
     set({
       sound: me.sound_enabled,
       haptics: me.haptics_enabled,
       music: me.music_enabled,
-      anonymousDefault: me.is_anonymous_default,
     });
   },
 }));

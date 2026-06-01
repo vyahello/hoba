@@ -102,11 +102,7 @@ async def create_room_endpoint(
             game_mode=payload.game_mode,
             punishment_deck=payload.punishment_deck,
             spin_count=payload.spin_count,
-            is_anonymous=(
-                payload.is_anonymous
-                if payload.is_anonymous is not None
-                else user.is_anonymous_default
-            ),
+            is_anonymous=bool(payload.is_anonymous),
         )
     except RoomServiceError as exc:
         raise _service_error_to_http(exc) from exc
@@ -140,7 +136,6 @@ async def create_room_from_template_endpoint(
             game_mode=payload.game_mode,
             punishment_deck=payload.punishment_deck,
             spin_count=payload.spin_count,
-            is_anonymous=user.is_anonymous_default,
         )
     except RoomServiceError as exc:
         raise _service_error_to_http(exc) from exc

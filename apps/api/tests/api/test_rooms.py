@@ -67,29 +67,25 @@ def test_room_creation_cap_respects_configured_limit(
     assert r2.json()["detail"] == "rate_limited"
 
 
-def test_room_inherits_user_anonymous_default(
+def test_room_defaults_non_anonymous_and_requires_approval(
     client: TestClient, init_data: str,
 ) -> None:
     headers = {HEADER: init_data}
-    # Default off → room is not anonymous.
-    r = client.post("/api/v1/rooms", json=_payload(label_a="off"), headers=headers)
-    assert r.json()["room"]["is_anonymous"] is False
-
-    # Flip the user preference → next room is anonymous by default.
-    client.patch("/api/v1/me", json={"is_anonymous_default": True}, headers=headers)
-    r = client.post("/api/v1/rooms", json=_payload(label_a="on"), headers=headers)
-    assert r.json()["room"]["is_anonymous"] is True
+    r = client.post("/api/v1/rooms", json=_payload(), headers=headers)
+    room = r.json()["room"]
+    # Anonymity is a per-room host control now — never on by default.
+    assert room["is_anonymous"] is False
+    # New rooms require host approval for joiners by default.
+    assert room["requires_approval"] is True
 
 
-def test_explicit_is_anonymous_overrides_user_default(
+def test_explicit_is_anonymous_on_create(
     client: TestClient, init_data: str,
 ) -> None:
     headers = {HEADER: init_data}
-    client.patch("/api/v1/me", json={"is_anonymous_default": True}, headers=headers)
-    # Explicit false on the create payload wins over the True default.
-    payload = {**_payload(), "is_anonymous": False}
+    payload = {**_payload(), "is_anonymous": True}
     r = client.post("/api/v1/rooms", json=payload, headers=headers)
-    assert r.json()["room"]["is_anonymous"] is False
+    assert r.json()["room"]["is_anonymous"] is True
 
 
 EmittedSioCall = tuple[str, Any, dict[str, Any]]

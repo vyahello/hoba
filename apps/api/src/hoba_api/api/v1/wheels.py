@@ -195,7 +195,6 @@ async def use_wheel_endpoint(
         room = await use_wheel(
             db, wheel, user_id=user.id, game_mode=payload.game_mode,
             punishment_deck=payload.punishment_deck, spin_count=payload.spin_count,
-            is_anonymous=user.is_anonymous_default,
         )
     except RoomServiceError as exc:
         raise _error_to_http(exc) from exc

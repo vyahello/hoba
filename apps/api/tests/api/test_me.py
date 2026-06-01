@@ -64,17 +64,17 @@ def test_patch_me_updates_fields(client: TestClient, init_data: str) -> None:
     assert body["haptics_enabled"] is True
 
 
-def test_patch_me_ignores_unspecified_fields(client: TestClient, init_data: str) -> None:
-    client.patch(
+def test_patch_me_ignores_unknown_fields(client: TestClient, init_data: str) -> None:
+    r = client.patch(
         "/api/v1/me",
         headers={HEADER: init_data},
-        json={"is_anonymous_default": True},
+        json={"bogus_field": True},  # unknown → silently ignored, no clobber
     )
-    r = client.get("/api/v1/me", headers={HEADER: init_data})
-    body = r.json()
-    assert body["is_anonymous_default"] is True
+    assert r.status_code == 200
+    body = client.get("/api/v1/me", headers={HEADER: init_data}).json()
     assert body["language_code"] == "uk"
     assert body["sound_enabled"] is True
+    assert "is_anonymous_default" not in body  # setting removed
 
 
 def test_patch_me_rejects_unsupported_language(client: TestClient, init_data: str) -> None:

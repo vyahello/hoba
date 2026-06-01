@@ -32,7 +32,7 @@ describe("settings store", () => {
     patchMe.mockClear();
     getMe.mockClear();
     // Reset to defaults between tests.
-    useSettings.setState({ sound: true, haptics: true, music: true, anonymousDefault: false });
+    useSettings.setState({ sound: true, haptics: true, music: true });
   });
 
   it("applies + persists the sound toggle to audio and the server", () => {
@@ -55,12 +55,6 @@ describe("settings store", () => {
     expect(patchMe).toHaveBeenCalledWith({ language_code: "uk" });
   });
 
-  it("persists anonymous-default to the server with no client side effect", () => {
-    useSettings.getState().setAnonymousDefault(true);
-    expect(patchMe).toHaveBeenCalledWith({ is_anonymous_default: true });
-    expect(useSettings.getState().anonymousDefault).toBe(true);
-  });
-
   it("applies + persists the music toggle to the audio bed and the server", () => {
     useSettings.getState().setMusic(false);
     expect(audioSetMusicEnabled).toHaveBeenLastCalledWith(false);
@@ -68,13 +62,12 @@ describe("settings store", () => {
     expect(useSettings.getState().music).toBe(false);
   });
 
-  it("hydrate reconciles all four from the server (server wins)", async () => {
+  it("hydrate reconciles sound/haptics/music from the server (server wins)", async () => {
     getMe.mockResolvedValueOnce({
       language_code: "en",
       sound_enabled: false,
       haptics_enabled: false,
       music_enabled: false,
-      is_anonymous_default: true,
     });
     await useSettings.getState().hydrate();
     expect(audioSetEnabled).toHaveBeenLastCalledWith(false);
@@ -84,7 +77,6 @@ describe("settings store", () => {
       sound: false,
       haptics: false,
       music: false,
-      anonymousDefault: true,
     });
   });
 });

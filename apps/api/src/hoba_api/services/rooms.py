@@ -109,8 +109,13 @@ async def create_room(
     punishment_deck: str | None = None,
     spin_count: int = 1,
     is_anonymous: bool = False,
+    requires_approval: bool = True,
 ) -> Room:
-    """Create a room + its first question + segments, marking host as Participant."""
+    """Create a room + its first question + segments, marking host as Participant.
+
+    New rooms **require host approval for joiners by default** (the host can
+    turn it off in room settings); the host themselves auto-approves.
+    """
     if game_mode not in GAME_MODES:
         raise RoomServiceError("bad_game_mode")
     if punishment_deck is not None and punishment_deck not in ("mild", "spicy", "chaos"):
@@ -146,6 +151,7 @@ async def create_room(
         punishment_unique_bets=(game_mode in ("punishment", "chaos")),
         spin_count=spin_count,
         is_anonymous=is_anonymous,
+        requires_approval=requires_approval,
     )
     session.add(room)
     await session.flush()

@@ -211,6 +211,9 @@ async def _create_room(db: Any, host_id: int) -> str:
         title=None,
         spin_policy="host_only",
         suggestion_policy="off",
+        # Open room (rooms now require approval by default) — these handler
+        # tests exercise immediate join/spin, not the approval gate.
+        requires_approval=False,
     )
     await db.commit()
     return room.code

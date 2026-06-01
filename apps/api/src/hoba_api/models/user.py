@@ -32,6 +32,9 @@ class User(Base, TimestampMixin):
     music_enabled: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default="1", nullable=False,
     )
+    # Vestigial: the "Anonymous by default" setting was removed (anonymity is
+    # now a per-room host control). Column kept to avoid a SQLite drop-column
+    # rebuild; see docs/TODO.md to drop on the next Postgres consolidation.
     is_anonymous_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     last_active_at: Mapped[datetime] = mapped_column(

@@ -51,11 +51,9 @@ export function SettingsPage(): JSX.Element {
   const sound = useSettings((s) => s.sound);
   const hapticsOn = useSettings((s) => s.haptics);
   const music = useSettings((s) => s.music);
-  const anon = useSettings((s) => s.anonymousDefault);
   const setSound = useSettings((s) => s.setSound);
   const setHaptics = useSettings((s) => s.setHaptics);
   const setMusic = useSettings((s) => s.setMusic);
-  const setAnonymousDefault = useSettings((s) => s.setAnonymousDefault);
   const setLanguage = useSettings((s) => s.setLanguage);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -131,13 +129,6 @@ export function SettingsPage(): JSX.Element {
               on={music}
               onToggle={() => {
                 setMusic(!music);
-              }}
-            />
-            <ToggleRow
-              label={t("settings:anonymous")}
-              on={anon}
-              onToggle={() => {
-                setAnonymousDefault(!anon);
               }}
             />
           </Card>

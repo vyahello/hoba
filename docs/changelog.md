@@ -4,6 +4,12 @@
 
 ---
 
+## Post-launch — 2026-06-02 — Room defaults: approval ON, "anonymous by default" setting removed
+
+- **Join-approval ON by default** — `create_room` now sets `requires_approval=True` (host can still toggle it off per-room). Applies to all create paths (direct / from-template / use-wheel); the host auto-approves themselves, guests wait. Tests creating "open" rooms now pass `requires_approval=False` explicitly.
+- **Removed the "Anonymous by default" setting** — the main-Settings toggle, the `useSettings.anonymousDefault` store plumbing (field/setter/hydrate/localStorage key), the `Me.is_anonymous_default` type, the `settings.anonymous` i18n key (EN+UK), and the `is_anonymous_default` fields on `UserMe`/`UserMeUpdate`. Room creation no longer seeds `is_anonymous` from it — anonymity is now purely a per-room host control (defaults off; an explicit `is_anonymous` on create still honored). The `users.is_anonymous_default` **column is kept (vestigial)** to avoid a SQLite drop-column rebuild — `docs/TODO.md` tracks dropping it.
+- **No migration.** Backend 314 / frontend 121 green; ruff · mypy --strict · tsc · eslint · i18n · build all clean.
+
 ## Post-launch — 2026-06-01 — Fix: Chaos "miss" 500 + bot not showing in standings
 
 Device testing of the solo bot surfaced two issues, both traced on the prod DB (the lock-PATCH 500 had no log — structlog swallows HTTP tracebacks — so it was reproduced by running `build_room_state` against the live rooms in the container).

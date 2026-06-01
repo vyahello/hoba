@@ -153,8 +153,8 @@ class RoomCreateIn(BaseModel):
     game_mode: GameMode = "classic"
     punishment_deck: PunishmentDeck | None = Field(default=None)
     spin_count: int = Field(default=1)
-    # When None, the endpoint seeds it from the host's `is_anonymous_default`
-    # preference (Settings → Anonymous mode). Explicit value wins.
+    # Anonymity is a per-room host control (no "anonymous by default" setting).
+    # Defaults off; a client may still request an anonymous room at creation.
     is_anonymous: bool | None = Field(default=None)
 
 

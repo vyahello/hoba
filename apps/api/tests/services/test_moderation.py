@@ -203,7 +203,9 @@ async def test_join_without_approval_is_immediate(db: AsyncSession) -> None:
     code = await _room(db, host)
     room = await get_room_by_code(db, code)
     assert room is not None
-    p = await join_room(db, room, guest)  # requires_approval defaults False
+    room.requires_approval = False  # rooms now require approval by default
+    await db.flush()
+    p = await join_room(db, room, guest)
     await db.commit()
     assert p.approved is True
 
