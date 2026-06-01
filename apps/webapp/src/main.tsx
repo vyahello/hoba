@@ -5,6 +5,7 @@ import { RouterProvider } from "react-router-dom";
 import "@/i18n";
 import "@/index.css";
 
+import { audio } from "@/audio";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { expand, ready } from "@/lib/telegram";
 import { ThemeProvider } from "@/providers/ThemeProvider";
@@ -15,6 +16,8 @@ import { router } from "@/router";
 try {
   ready();
   expand();
+  // Bind the first-gesture Web Audio unlock now so iPhone playback works.
+  audio.installUnlock();
 } catch (error) {
   console.warn("Telegram WebApp init failed:", error);
 }
