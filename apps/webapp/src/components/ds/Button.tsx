@@ -1,5 +1,6 @@
 import { type ButtonHTMLAttributes, forwardRef, type ReactNode } from "react";
 
+import { audio } from "@/audio";
 import { cn } from "@/lib/cn";
 import { type HapticIntent, haptics } from "@/lib/haptics";
 
@@ -70,6 +71,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       const intent = haptic ?? DEFAULT_HAPTIC[variant];
       haptics[intent]?.();
     }
+    audio.play("ui_tap");
     onClick?.(event);
   };
 

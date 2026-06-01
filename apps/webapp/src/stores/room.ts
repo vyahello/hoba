@@ -13,6 +13,7 @@ import WebApp from "@twa-dev/sdk";
 import { type Socket, io } from "socket.io-client";
 import { create } from "zustand";
 
+import { audio } from "@/audio";
 import { reactionLaneFor } from "@/features/rooms/reactionLanes";
 import {
   api,
@@ -210,6 +211,7 @@ function wireListeners(s: Socket): void {
       const snap = getState().snapshot;
       if (snap === null) return;
       if (snap.participants.some((p) => p.user_id === payload.user_id)) return;
+      audio.play("join_ping");
       const now = new Date().toISOString();
       setState({
         snapshot: {

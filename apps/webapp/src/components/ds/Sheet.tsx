@@ -2,6 +2,7 @@ import { AnimatePresence, motion, type PanInfo } from "framer-motion";
 import { type ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
 
+import { audio } from "@/audio";
 import { cn } from "@/lib/cn";
 
 export interface SheetProps {
@@ -32,6 +33,7 @@ export function Sheet({
 }: SheetProps): JSX.Element | null {
   useEffect(() => {
     if (!open) return undefined;
+    audio.play("ui_swipe");
     const handler = (event: KeyboardEvent): void => {
       if (event.key === "Escape" && dismissable) onClose();
     };

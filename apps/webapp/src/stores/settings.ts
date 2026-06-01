@@ -24,6 +24,7 @@ import { safeStorage } from "@/lib/safeStorage";
 
 const KEY_SOUND = "hoba.sound";
 const KEY_HAPTICS = "hoba.haptics";
+const KEY_MUSIC = "hoba.music";
 const KEY_ANON = "hoba.anonymousDefault";
 
 function readBool(key: string, fallback: boolean): boolean {
@@ -39,9 +40,11 @@ function writeBool(key: string, value: boolean): void {
 interface SettingsState {
   sound: boolean;
   haptics: boolean;
+  music: boolean;
   anonymousDefault: boolean;
   setSound: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setMusic: (value: boolean) => void;
   setAnonymousDefault: (value: boolean) => void;
   /** Reconcile with the server's stored preferences (server wins). */
   hydrate: () => Promise<void>;
@@ -50,11 +53,13 @@ interface SettingsState {
 // Initial values from localStorage so gating is correct pre-network.
 const initialSound = readBool(KEY_SOUND, true);
 const initialHaptics = readBool(KEY_HAPTICS, true);
+const initialMusic = readBool(KEY_MUSIC, true);
 const initialAnon = readBool(KEY_ANON, false);
 
 // Apply the persisted gates immediately at module load.
 audio.setEnabled(initialSound);
 setHapticsEnabled(initialHaptics);
+audio.setMusicEnabled(initialMusic);
 
 /** Fire-and-forget PATCH /me; failures are non-fatal (local state holds). */
 function persistRemote(patch: Record<string, boolean>): void {
@@ -66,6 +71,7 @@ function persistRemote(patch: Record<string, boolean>): void {
 export const useSettings = create<SettingsState>((set) => ({
   sound: initialSound,
   haptics: initialHaptics,
+  music: initialMusic,
   anonymousDefault: initialAnon,
 
   setSound: (value) => {
@@ -82,6 +88,13 @@ export const useSettings = create<SettingsState>((set) => ({
     set({ haptics: value });
   },
 
+  setMusic: (value) => {
+    audio.setMusicEnabled(value);
+    writeBool(KEY_MUSIC, value);
+    persistRemote({ music_enabled: value });
+    set({ music: value });
+  },
+
   setAnonymousDefault: (value) => {
     writeBool(KEY_ANON, value);
     persistRemote({ is_anonymous_default: value });
@@ -92,12 +105,15 @@ export const useSettings = create<SettingsState>((set) => ({
     const me = await api.getMe();
     audio.setEnabled(me.sound_enabled);
     setHapticsEnabled(me.haptics_enabled);
+    audio.setMusicEnabled(me.music_enabled);
     writeBool(KEY_SOUND, me.sound_enabled);
     writeBool(KEY_HAPTICS, me.haptics_enabled);
+    writeBool(KEY_MUSIC, me.music_enabled);
     writeBool(KEY_ANON, me.is_anonymous_default);
     set({
       sound: me.sound_enabled,
       haptics: me.haptics_enabled,
+      music: me.music_enabled,
       anonymousDefault: me.is_anonymous_default,
     });
   },

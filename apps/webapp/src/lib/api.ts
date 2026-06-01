@@ -237,6 +237,7 @@ export interface Me {
   language_code: "en" | "uk";
   sound_enabled: boolean;
   haptics_enabled: boolean;
+  music_enabled: boolean;
   is_anonymous_default: boolean;
   is_admin: boolean;
 }

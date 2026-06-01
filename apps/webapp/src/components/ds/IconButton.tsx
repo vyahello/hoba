@@ -1,5 +1,6 @@
 import { type ButtonHTMLAttributes, forwardRef, type ReactNode } from "react";
 
+import { audio } from "@/audio";
 import { cn } from "@/lib/cn";
 import { type HapticIntent, haptics } from "@/lib/haptics";
 
@@ -49,6 +50,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
     const handleClick: IconButtonProps["onClick"] = (event) => {
       if (disabled === true) return;
       if (haptic !== false) haptics[haptic]?.();
+      audio.play("ui_tap");
       onClick?.(event);
     };
 

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useAnimate } from "framer-motion";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -303,6 +303,7 @@ export function RoomPage(): JSX.Element {
     async function run(): Promise<void> {
       if (event !== null) {
         setChaosAnnounce(event);
+        audio.play("chaos_event");
         setWheelState("idle"); // hold while the card is up
         await sleep(CHAOS_ANNOUNCE_MS);
         if (cancelled) return;
@@ -401,30 +402,42 @@ export function RoomPage(): JSX.Element {
     };
   }, [revealed, roundOver, isElimination]);
 
+  // Triumphant winner celebration: fanfare + confetti pop + visual burst.
+  // Shared by every "someone won" moment so they all feel like a payoff.
+  const celebrateWinner = useCallback((): void => {
+    audio.play("winner_fanfare");
+    audio.play("confetti_burst");
+    haptics.success();
+    fireConfetti();
+  }, []);
+
+  // Background music bed: play the loop while in the room, fade out on
+  // leave. Internally gated by the Music setting (no-op if disabled).
+  useEffect(() => {
+    audio.requestMusic();
+    return () => {
+      audio.releaseMusic();
+    };
+  }, []);
+
   // Crown the survivor: celebrate once when the round ends.
   useEffect(() => {
     if (!roundOver) return;
-    audio.play("hoba_pop");
-    haptics.success();
-    fireConfetti();
-  }, [roundOver]);
+    celebrateWinner();
+  }, [roundOver, celebrateWinner]);
 
   // Same celebration when a best-of-N round finalizes a winner.
   useEffect(() => {
     if (!bonOver) return;
-    audio.play("hoba_pop");
-    haptics.success();
-    fireConfetti();
-  }, [bonOver]);
+    celebrateWinner();
+  }, [bonOver, celebrateWinner]);
 
   // Chaos has no per-spin confetti, so the bet-race winner gets its own
   // celebration on the winner-hero page. (Punishment keeps its per-spin burst.)
   useEffect(() => {
     if (!(punishOver && isChaos)) return;
-    audio.play("hoba_pop");
-    haptics.success();
-    fireConfetti();
-  }, [punishOver, isChaos]);
+    celebrateWinner();
+  }, [punishOver, isChaos, celebrateWinner]);
 
   // Rigged Mode 🎭 reveal: when the host pulls the trigger, everyone's snapshot
   // un-redacts (rigged_revealed → true). Play the full-screen reveal once.
@@ -435,7 +448,8 @@ export function RoomPage(): JSX.Element {
       return undefined;
     }
     setRigRevealShown(true);
-    audio.play("hoba_pop");
+    audio.play("rigged_reveal");
+    audio.play("confetti_burst");
     haptics.success();
     fireConfetti();
     const timer = window.setTimeout(() => {

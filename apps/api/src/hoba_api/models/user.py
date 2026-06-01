@@ -29,6 +29,9 @@ class User(Base, TimestampMixin):
     language_code: Mapped[str] = mapped_column(String(2), default="en", nullable=False)
     sound_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     haptics_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    music_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="1", nullable=False,
+    )
     is_anonymous_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     last_active_at: Mapped[datetime] = mapped_column(

@@ -10,15 +10,20 @@
 
 import { Howl, Howler } from "howler";
 
-import { AUDIO_MANIFEST, type AudioName } from "./manifest";
+import { AUDIO_MANIFEST, type AudioName, MUSIC_SRC, MUSIC_VOLUME } from "./manifest";
 
 const DEFAULT_MASTER_VOLUME = 0.6;
+const MUSIC_FADE_MS = 800;
 
 class AudioManager {
   private howls = new Map<AudioName, Howl>();
   private enabled = true;
   private master = DEFAULT_MASTER_VOLUME;
   private unlockBound = false;
+  // Background music is a separate looping track with its own on/off.
+  private music?: Howl;
+  private musicEnabled = true;
+  private musicWanted = false; // a screen (active room) wants music playing
 
   setEnabled(value: boolean): void {
     this.enabled = value;
@@ -86,6 +91,61 @@ class AudioManager {
       this.howls.set(name, howl);
     }
     howl.play();
+  }
+
+  // --- background music ---------------------------------------------------
+
+  /** Turn the music track on/off (Settings → Music). Starts/stops if a
+   *  screen currently wants music. */
+  setMusicEnabled(value: boolean): void {
+    this.musicEnabled = value;
+    if (value) {
+      if (this.musicWanted) this.startMusic();
+    } else {
+      this.stopMusic();
+    }
+  }
+
+  /** A screen (e.g. an active room) asks for the bed to play. */
+  requestMusic(): void {
+    this.musicWanted = true;
+    if (this.musicEnabled) this.startMusic();
+  }
+
+  /** Leaving the screen — fade the bed out. */
+  releaseMusic(): void {
+    this.musicWanted = false;
+    this.stopMusic();
+  }
+
+  private startMusic(): void {
+    if (this.music === undefined) {
+      this.music = new Howl({
+        src: [MUSIC_SRC],
+        loop: true,
+        volume: 0,
+        html5: true, // stream the longer file; avoids decoding the whole clip
+        onloaderror: () => {
+          /* missing music file — silent */
+        },
+        onplayerror: () => {
+          /* gesture not yet received — retry on unlock */
+        },
+      });
+    }
+    const m = this.music;
+    if (!m.playing()) m.play();
+    m.fade(m.volume(), MUSIC_VOLUME, MUSIC_FADE_MS);
+  }
+
+  private stopMusic(): void {
+    const m = this.music;
+    if (m === undefined || !m.playing()) return;
+    m.fade(m.volume(), 0, MUSIC_FADE_MS);
+    m.once("fade", () => {
+      // Only pause if nothing re-requested music during the fade.
+      if (!this.musicWanted) m.pause();
+    });
   }
 }
 

@@ -50,9 +50,11 @@ export function SettingsPage(): JSX.Element {
   const currentLocale = (i18n.resolvedLanguage ?? "en") as Locale;
   const sound = useSettings((s) => s.sound);
   const hapticsOn = useSettings((s) => s.haptics);
+  const music = useSettings((s) => s.music);
   const anon = useSettings((s) => s.anonymousDefault);
   const setSound = useSettings((s) => s.setSound);
   const setHaptics = useSettings((s) => s.setHaptics);
+  const setMusic = useSettings((s) => s.setMusic);
   const setAnonymousDefault = useSettings((s) => s.setAnonymousDefault);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -121,6 +123,13 @@ export function SettingsPage(): JSX.Element {
               on={hapticsOn}
               onToggle={() => {
                 setHaptics(!hapticsOn);
+              }}
+            />
+            <ToggleRow
+              label={t("settings:music")}
+              on={music}
+              onToggle={() => {
+                setMusic(!music);
               }}
             />
             <ToggleRow

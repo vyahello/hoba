@@ -4,6 +4,17 @@
 
 ---
 
+## Post-launch — 2026-06-01 — Sound design overhaul + background music
+
+Earlier in the day the silent audio system got a first synthesized set (`d7cd860`). This pass makes it a real, cohesive sound design and wires every cue.
+
+- **12 cues, upgraded synthesis** (`scripts/generate_sounds.py`, now stereo + Schroeder plate reverb + detuned unison + layered transient/body/sub): punchier `wheel_tick`/`wheel_launch`, richer `result_chime`, plus two new cues — **`winner_fanfare`** (ascending arp → triumphant chord stab + sub thump + sparkle) and **`bg_music`** (seamless ~9.6 s lo-fi C–Am–F–G loop for the in-room bed).
+- **Every cue is now wired** (previously `confetti_burst`/`chaos_event`/`join_ping`/`rigged_reveal` were generated but never played): button + icon-button taps → `ui_tap`; sheet open → `ui_swipe`; new-participant join → `join_ping`; chaos-event announce → `chaos_event`; rigged reveal → `rigged_reveal`; **winner moments** (elimination survivor, best-of-N, Chaos bet-race) → `winner_fanfare` + `confetti_burst` (were a tiny `hoba_pop`).
+- **Background music** — `AudioManager` gains a looping, html5-streamed music track with fade in/out, gated by a new **Music** setting; `RoomPage` requests it on mount and releases on leave.
+- **Music setting end-to-end** — `users.music_enabled` column (Alembic **0019**, additive boolean, SQLite-safe) + `UserMe`/`UserMeUpdate`; the settings store (`music`) persists to `PATCH /me` + localStorage and drives `audio.setMusicEnabled`; new `settings.music` label (EN+UK); Settings toggle row.
+- **iOS** — the first-gesture Web Audio unlock from `d7cd860` carries the whole set; music uses `html5: true` so the longer file streams.
+- **Tests/gates** — settings store test extended (music apply/persist/hydrate); backend 308 / frontend 121 green; ruff · mypy --strict · tsc · eslint · i18n:check · build (all 12 mp3s bundle) clean. Deploy runs migration **0019**.
+
 ## Post-launch — 2026-06-01 — Admin moderation review UI
 
 Closed the only functional gap left after Stage G: reports auto-hid a wheel at 3 distinct reporters, but there was no way to *review* or *reverse* that — the queue lived only in the DB. Now there's an admin-gated review UI.

@@ -19,6 +19,7 @@ export const AUDIO_NAMES = [
   "chaos_event",
   "join_ping",
   "rigged_reveal",
+  "winner_fanfare",
 ] as const;
 
 export type AudioName = (typeof AUDIO_NAMES)[number];
@@ -30,14 +31,19 @@ interface AudioDef {
 }
 
 export const AUDIO_MANIFEST: Record<AudioName, AudioDef> = {
-  ui_tap: { src: "/sounds/ui_tap.mp3", volume: 0.6 },
+  ui_tap: { src: "/sounds/ui_tap.mp3", volume: 0.55 },
   ui_swipe: { src: "/sounds/ui_swipe.mp3", volume: 0.5 },
-  wheel_tick: { src: "/sounds/wheel_tick.mp3", volume: 0.4 },
-  wheel_launch: { src: "/sounds/wheel_launch.mp3", volume: 0.7 },
+  wheel_tick: { src: "/sounds/wheel_tick.mp3", volume: 0.55 },
+  wheel_launch: { src: "/sounds/wheel_launch.mp3", volume: 0.8 },
   result_chime: { src: "/sounds/result_chime.mp3", volume: 0.8 },
   hoba_pop: { src: "/sounds/hoba_pop.mp3", volume: 1.0 },
-  confetti_burst: { src: "/sounds/confetti_burst.mp3", volume: 0.6 },
+  confetti_burst: { src: "/sounds/confetti_burst.mp3", volume: 0.7 },
   chaos_event: { src: "/sounds/chaos_event.mp3", volume: 0.7 },
   join_ping: { src: "/sounds/join_ping.mp3", volume: 0.5 },
-  rigged_reveal: { src: "/sounds/rigged_reveal.mp3", volume: 0.8 },
+  rigged_reveal: { src: "/sounds/rigged_reveal.mp3", volume: 0.85 },
+  winner_fanfare: { src: "/sounds/winner_fanfare.mp3", volume: 0.95 },
 };
+
+/** Looping in-room background music — handled separately from one-shot SFX. */
+export const MUSIC_SRC = "/sounds/bg_music.mp3";
+export const MUSIC_VOLUME = 0.22;

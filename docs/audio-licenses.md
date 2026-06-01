@@ -37,6 +37,8 @@ royalty-free, license-clean sources and log them below:
 | `public/sounds/chaos_event.mp3`       | Eerie/playful sting (Phase 7)                       | 600–900 ms    | not creepy — Jackbox-ish               |
 | `public/sounds/join_ping.mp3`         | Soft join notification (Phase 6)                    | 200–400 ms    | warm, low-volume                       |
 | `public/sounds/rigged_reveal.mp3`     | Sting for the Rigged Mode reveal (Phase 8)          | 700–1000 ms   | distinct from others — table-flip vibe |
+| `public/sounds/winner_fanfare.mp3`    | Triumphant winner celebration (round/game/best-of)  | 1.5–2.5 s     | arp → chord stab + sub + sparkle       |
+| `public/sounds/bg_music.mp3`          | Looping in-room background bed                      | 9.6 s (loop)  | seamless C–Am–F–G lo-fi; Music toggle  |
 
 ## Licensing log
 
