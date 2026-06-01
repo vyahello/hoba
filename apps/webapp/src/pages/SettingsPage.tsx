@@ -7,6 +7,7 @@ import { StubPage } from "@/components/layout/StubPage";
 import { type Locale, SUPPORTED_LOCALES, setLocale } from "@/i18n";
 import { api } from "@/lib/api";
 import { haptics } from "@/lib/haptics";
+import { useSettings } from "@/stores/settings";
 
 interface ToggleRowProps {
   label: string;
@@ -47,9 +48,12 @@ export function SettingsPage(): JSX.Element {
   const { t, i18n } = useTranslation(["settings", "common", "brand", "admin"]);
   const navigate = useNavigate();
   const currentLocale = (i18n.resolvedLanguage ?? "en") as Locale;
-  const [sound, setSound] = useState(true);
-  const [hapticsOn, setHapticsOn] = useState(true);
-  const [anon, setAnon] = useState(false);
+  const sound = useSettings((s) => s.sound);
+  const hapticsOn = useSettings((s) => s.haptics);
+  const anon = useSettings((s) => s.anonymousDefault);
+  const setSound = useSettings((s) => s.setSound);
+  const setHaptics = useSettings((s) => s.setHaptics);
+  const setAnonymousDefault = useSettings((s) => s.setAnonymousDefault);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -109,21 +113,21 @@ export function SettingsPage(): JSX.Element {
               label={t("settings:sound")}
               on={sound}
               onToggle={() => {
-                setSound((v) => !v);
+                setSound(!sound);
               }}
             />
             <ToggleRow
               label={t("settings:haptics")}
               on={hapticsOn}
               onToggle={() => {
-                setHapticsOn((v) => !v);
+                setHaptics(!hapticsOn);
               }}
             />
             <ToggleRow
               label={t("settings:anonymous")}
               on={anon}
               onToggle={() => {
-                setAnon((v) => !v);
+                setAnonymousDefault(!anon);
               }}
             />
           </Card>

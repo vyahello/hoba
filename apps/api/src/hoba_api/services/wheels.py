@@ -133,6 +133,7 @@ async def use_wheel(
     game_mode: str = "classic",
     punishment_deck: str | None = None,
     spin_count: int = 1,
+    is_anonymous: bool = False,
 ) -> Room:
     """Instantiate the wheel as a fresh room (caller becomes host) + bump uses."""
     if not _can_use(wheel, user_id):
@@ -151,6 +152,7 @@ async def use_wheel(
         game_mode=game_mode,
         punishment_deck=punishment_deck,
         spin_count=spin_count,
+        is_anonymous=is_anonymous,
     )
     wheel.use_count += 1
     await session.flush()

@@ -235,6 +235,9 @@ export interface Me {
   tg_id: number;
   first_name: string;
   language_code: "en" | "uk";
+  sound_enabled: boolean;
+  haptics_enabled: boolean;
+  is_anonymous_default: boolean;
   is_admin: boolean;
 }
 

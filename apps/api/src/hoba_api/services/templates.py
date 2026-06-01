@@ -56,6 +56,7 @@ async def create_room_from_template(
     game_mode: str = "classic",
     punishment_deck: str | None = None,
     spin_count: int = 1,
+    is_anonymous: bool = False,
 ) -> Room:
     """Build a room from a built-in template (canonical, server-resolved)."""
     template = get_template(template_key)
@@ -79,4 +80,5 @@ async def create_room_from_template(
         game_mode=game_mode,
         punishment_deck=punishment_deck,
         spin_count=spin_count,
+        is_anonymous=is_anonymous,
     )

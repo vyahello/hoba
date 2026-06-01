@@ -151,6 +151,9 @@ class RoomCreateIn(BaseModel):
     game_mode: GameMode = "classic"
     punishment_deck: PunishmentDeck | None = Field(default=None)
     spin_count: int = Field(default=1)
+    # When None, the endpoint seeds it from the host's `is_anonymous_default`
+    # preference (Settings → Anonymous mode). Explicit value wins.
+    is_anonymous: bool | None = Field(default=None)
 
 
 class RigUpdateIn(BaseModel):

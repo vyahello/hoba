@@ -108,6 +108,7 @@ async def create_room(
     game_mode: str = "classic",
     punishment_deck: str | None = None,
     spin_count: int = 1,
+    is_anonymous: bool = False,
 ) -> Room:
     """Create a room + its first question + segments, marking host as Participant."""
     if game_mode not in GAME_MODES:
@@ -144,6 +145,7 @@ async def create_room(
         # per-room toggle.
         punishment_unique_bets=(game_mode in ("punishment", "chaos")),
         spin_count=spin_count,
+        is_anonymous=is_anonymous,
     )
     session.add(room)
     await session.flush()

@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ds/Toast";
 import { safeNavigateBack } from "@/lib/navigation";
 import { parseRoomDeepLink } from "@/lib/startParam";
 import { readStartParam, tg } from "@/lib/telegram";
+import { useSettings } from "@/stores/settings";
 
 /**
  * Root layout — owns Telegram BackButton binding and the document scroll
@@ -51,6 +52,15 @@ export function RootLayout(): JSX.Element {
       tg.BackButton?.offClick?.(handler);
     };
   }, [navigate]);
+
+  // Reconcile sound/vibration/anonymous preferences with the server once
+  // on boot (localStorage already applied the gates synchronously). Silent
+  // on failure — local state holds.
+  useEffect(() => {
+    void useSettings.getState().hydrate().catch(() => {
+      /* offline / non-Telegram */
+    });
+  }, []);
 
   return (
     <div className="min-h-[100dvh] flex flex-col">

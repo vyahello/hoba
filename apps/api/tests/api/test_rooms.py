@@ -67,6 +67,31 @@ def test_room_creation_cap_respects_configured_limit(
     assert r2.json()["detail"] == "rate_limited"
 
 
+def test_room_inherits_user_anonymous_default(
+    client: TestClient, init_data: str,
+) -> None:
+    headers = {HEADER: init_data}
+    # Default off → room is not anonymous.
+    r = client.post("/api/v1/rooms", json=_payload(label_a="off"), headers=headers)
+    assert r.json()["room"]["is_anonymous"] is False
+
+    # Flip the user preference → next room is anonymous by default.
+    client.patch("/api/v1/me", json={"is_anonymous_default": True}, headers=headers)
+    r = client.post("/api/v1/rooms", json=_payload(label_a="on"), headers=headers)
+    assert r.json()["room"]["is_anonymous"] is True
+
+
+def test_explicit_is_anonymous_overrides_user_default(
+    client: TestClient, init_data: str,
+) -> None:
+    headers = {HEADER: init_data}
+    client.patch("/api/v1/me", json={"is_anonymous_default": True}, headers=headers)
+    # Explicit false on the create payload wins over the True default.
+    payload = {**_payload(), "is_anonymous": False}
+    r = client.post("/api/v1/rooms", json=payload, headers=headers)
+    assert r.json()["room"]["is_anonymous"] is False
+
+
 EmittedSioCall = tuple[str, Any, dict[str, Any]]
 
 

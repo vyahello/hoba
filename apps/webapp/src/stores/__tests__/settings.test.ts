@@ -1,0 +1,63 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Mock the side-effect targets so we can assert the store wires them.
+// `vi.hoisted` so the fns exist when the hoisted `vi.mock` factories run.
+const { audioSetEnabled, setHapticsEnabled, patchMe, getMe } = vi.hoisted(() => ({
+  audioSetEnabled: vi.fn(),
+  setHapticsEnabled: vi.fn(),
+  patchMe: vi.fn(() => Promise.resolve({})),
+  getMe: vi.fn(),
+}));
+
+vi.mock("@/audio", () => ({ audio: { setEnabled: audioSetEnabled } }));
+vi.mock("@/lib/haptics", () => ({ setHapticsEnabled }));
+vi.mock("@/lib/api", () => ({ api: { patchMe, getMe } }));
+
+import { useSettings } from "../settings";
+
+describe("settings store", () => {
+  beforeEach(() => {
+    audioSetEnabled.mockClear();
+    setHapticsEnabled.mockClear();
+    patchMe.mockClear();
+    getMe.mockClear();
+    // Reset to defaults between tests.
+    useSettings.setState({ sound: true, haptics: true, anonymousDefault: false });
+  });
+
+  it("applies + persists the sound toggle to audio and the server", () => {
+    useSettings.getState().setSound(false);
+    expect(audioSetEnabled).toHaveBeenLastCalledWith(false);
+    expect(patchMe).toHaveBeenCalledWith({ sound_enabled: false });
+    expect(useSettings.getState().sound).toBe(false);
+  });
+
+  it("applies + persists the vibration toggle to haptics and the server", () => {
+    useSettings.getState().setHaptics(false);
+    expect(setHapticsEnabled).toHaveBeenLastCalledWith(false);
+    expect(patchMe).toHaveBeenCalledWith({ haptics_enabled: false });
+    expect(useSettings.getState().haptics).toBe(false);
+  });
+
+  it("persists anonymous-default to the server with no client side effect", () => {
+    useSettings.getState().setAnonymousDefault(true);
+    expect(patchMe).toHaveBeenCalledWith({ is_anonymous_default: true });
+    expect(useSettings.getState().anonymousDefault).toBe(true);
+  });
+
+  it("hydrate reconciles all three from the server (server wins)", async () => {
+    getMe.mockResolvedValueOnce({
+      sound_enabled: false,
+      haptics_enabled: false,
+      is_anonymous_default: true,
+    });
+    await useSettings.getState().hydrate();
+    expect(audioSetEnabled).toHaveBeenLastCalledWith(false);
+    expect(setHapticsEnabled).toHaveBeenLastCalledWith(false);
+    expect(useSettings.getState()).toMatchObject({
+      sound: false,
+      haptics: false,
+      anonymousDefault: true,
+    });
+  });
+});

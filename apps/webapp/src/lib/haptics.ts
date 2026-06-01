@@ -11,12 +11,31 @@ import { tg } from "@/lib/telegram";
 
 type ImpactStyle = "light" | "medium" | "heavy" | "rigid" | "soft";
 
+// Gated by the Settings → Vibration toggle. Default on; flipped via
+// `haptics.setEnabled` from the settings store (boot + on toggle).
+let enabled = true;
+
 function impact(style: ImpactStyle): void {
+  if (!enabled) return;
   try {
     tg.HapticFeedback?.impactOccurred?.(style);
   } catch {
     /* non-Telegram context */
   }
+}
+
+function notify(type: "success" | "warning" | "error"): void {
+  if (!enabled) return;
+  try {
+    tg.HapticFeedback?.notificationOccurred?.(type);
+  } catch {
+    /* noop */
+  }
+}
+
+/** Enable/disable all tactile feedback (Settings → Vibration). */
+export function setHapticsEnabled(value: boolean): void {
+  enabled = value;
 }
 
 export const haptics = {
@@ -26,6 +45,7 @@ export const haptics = {
   soft: (): void => impact("soft"),
 
   selection: (): void => {
+    if (!enabled) return;
     try {
       tg.HapticFeedback?.selectionChanged?.();
     } catch {
@@ -33,29 +53,9 @@ export const haptics = {
     }
   },
 
-  success: (): void => {
-    try {
-      tg.HapticFeedback?.notificationOccurred?.("success");
-    } catch {
-      /* noop */
-    }
-  },
-
-  warning: (): void => {
-    try {
-      tg.HapticFeedback?.notificationOccurred?.("warning");
-    } catch {
-      /* noop */
-    }
-  },
-
-  error: (): void => {
-    try {
-      tg.HapticFeedback?.notificationOccurred?.("error");
-    } catch {
-      /* noop */
-    }
-  },
+  success: (): void => notify("success"),
+  warning: (): void => notify("warning"),
+  error: (): void => notify("error"),
 };
 
 export type HapticIntent = keyof typeof haptics;
