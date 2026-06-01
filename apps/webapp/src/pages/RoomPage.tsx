@@ -17,6 +17,7 @@ import { GameModeBadge } from "@/components/room/GameModeBadge";
 import { FlyingReactions } from "@/components/room/FlyingReactions";
 import { ReactionsBar } from "@/components/room/ReactionsBar";
 import { RigEditorSheet } from "@/components/room/RigEditorSheet";
+import { InviteSheet } from "@/components/room/InviteSheet";
 import { RoomModePickerSheet } from "@/components/room/RoomModePickerSheet";
 import { RoomSettingsSheet } from "@/components/room/RoomSettingsSheet";
 import {
@@ -137,6 +138,7 @@ export function RoomPage(): JSX.Element {
   const [wheelState, setWheelState] = useState<WheelState>("idle");
   const [revealed, setRevealed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [modePickerOpen, setModePickerOpen] = useState(false);
   const [rigOpen, setRigOpen] = useState(false);
   const [rigRevealShown, setRigRevealShown] = useState(false);
@@ -762,21 +764,13 @@ export function RoomPage(): JSX.Element {
               its full brand size and the actions stay 48×48 tap targets. */}
           <div className="ml-auto flex items-center gap-2">
             <IconButton
-              aria-label={t("room:actions.share")}
+              aria-label={t("room:actions.invite")}
               variant="filled"
               size="md"
               icon={<span aria-hidden>📤</span>}
               onClick={() => {
-                void handleShare();
-              }}
-            />
-            <IconButton
-              aria-label={t("room:actions.copy_link")}
-              variant="tonal"
-              size="md"
-              icon={<span aria-hidden>🔗</span>}
-              onClick={() => {
-                void handleCopyLink();
+                haptics.selection();
+                setInviteOpen(true);
               }}
             />
             {callerIsHost ? (
@@ -1310,6 +1304,19 @@ export function RoomPage(): JSX.Element {
         </div>
 
         <FlyingReactions />
+
+        <InviteSheet
+          open={inviteOpen}
+          onClose={() => {
+            setInviteOpen(false);
+          }}
+          onShare={() => {
+            void handleShare();
+          }}
+          onCopy={() => {
+            void handleCopyLink();
+          }}
+        />
 
         {/* Host moderation hub: lock, anonymous, mode change, close — always
             available to the host. The spin-policy chooser only applies to

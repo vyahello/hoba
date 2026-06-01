@@ -4,14 +4,20 @@
     "wheel_aria": "Wheel"
   },
   "actions": {
-    "share": "Share",
-    "copy_link": "Copy link",
+    "invite": "Invite",
     "invite_friends": "+ Invite friends",
     "go_multiplayer": "Play together",
     "create_room": "Create room",
     "save_wheel": "Save this wheel",
     "saved": "Saved to your wheels",
     "save_failed": "Couldn't save. Try again."
+  },
+  "invite": {
+    "title": "Invite to the room",
+    "share": "Share via Telegram",
+    "share_hint": "Forward to a Telegram chat",
+    "copy": "Copy link",
+    "copy_hint": "Paste into any other messenger"
   },
   "share": {
     "message": "Join my Hoba! wheel · {code}",
