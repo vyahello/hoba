@@ -5,6 +5,7 @@
   },
   "actions": {
     "share": "Поділитись",
+    "copy_link": "Скопіювати посилання",
     "invite_friends": "+ Запросити друзів",
     "go_multiplayer": "Грати разом",
     "create_room": "Створити кімнату",

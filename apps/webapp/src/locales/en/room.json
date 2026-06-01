@@ -5,6 +5,7 @@
   },
   "actions": {
     "share": "Share",
+    "copy_link": "Copy link",
     "invite_friends": "+ Invite friends",
     "go_multiplayer": "Play together",
     "create_room": "Create room",

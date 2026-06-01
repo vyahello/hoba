@@ -573,6 +573,24 @@ export function RoomPage(): JSX.Element {
     }
   }
 
+  async function handleCopyLink(): Promise<void> {
+    if (snapshot === null) return;
+    const inviteLink = buildRoomInviteLink(snapshot.room.code);
+    haptics.medium();
+    // Plain clipboard copy so the link can be pasted into any messenger
+    // (Telegram's native share sheet only forwards within Telegram).
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      toast({
+        title: t("room:share.copied_title"),
+        description: t("room:share.copied_description"),
+        intent: "success",
+      });
+    } catch {
+      toast({ title: inviteLink, intent: "info" });
+    }
+  }
+
   async function handleSaveWheel(): Promise<void> {
     const question = snapshot?.active_question;
     if (question == null || savingWheel) return;
@@ -750,6 +768,15 @@ export function RoomPage(): JSX.Element {
               icon={<span aria-hidden>📤</span>}
               onClick={() => {
                 void handleShare();
+              }}
+            />
+            <IconButton
+              aria-label={t("room:actions.copy_link")}
+              variant="tonal"
+              size="md"
+              icon={<span aria-hidden>🔗</span>}
+              onClick={() => {
+                void handleCopyLink();
               }}
             />
             {callerIsHost ? (
