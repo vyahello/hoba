@@ -4,6 +4,14 @@
 
 ---
 
+## Post-launch — 2026-06-01 — Audio polish: gapless music + more click coverage
+
+Follow-up to the sound overhaul, from device feedback (looping gap, missing clicks, no music on Home):
+- **Gapless, livelier music** — `bg_music` re-composed as an upbeat 8-bar I–V–vi–IV loop @ 124 BPM (driving bass + bright pulse arpeggio + catchy lead hook + four-on-the-floor groove), and rendered with **circular tail-wrap** so end→start has no click. The Howl switched from `html5: true` (whose `<audio>` loop gapped/stalled in WebViews) to **Web Audio** (`html5: false`) for a sample-accurate gapless `loop`. Fixes "music restarts every ~10 s" and "music sometimes vanishes."
+- **Music is now app-wide** — requested once at the shell (`RootLayout`) and looping for the whole session (Home/Quick-Pick included), not scoped to the room. Started/revived on the first gesture + on `visibilitychange` (iOS suspends the context on backgrounding).
+- **More click coverage** — Quick-Wheel cards and every mode-picker chip (mode / punishment deck / win-count) now play `ui_tap` (they're custom buttons, so they didn't inherit the `Button` sound).
+- **Generator** gained a `pulse` (chiptune) waveform + an optional CLI cue filter (`python3 scripts/generate_sounds.py bg_music`). Gates: backend 308 / frontend 121 green; all linters/types/i18n/build clean.
+
 ## Post-launch — 2026-06-01 — Sound design overhaul + background music
 
 Earlier in the day the silent audio system got a first synthesized set (`d7cd860`). This pass makes it a real, cohesive sound design and wires every cue.

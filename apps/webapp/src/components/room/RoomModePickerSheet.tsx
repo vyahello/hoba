@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { audio } from "@/audio";
 import { Button } from "@/components/ds/Button";
 import { Sheet } from "@/components/ds/Sheet";
 import {
@@ -73,6 +74,7 @@ export function RoomModePickerSheet({
               onClick={() => {
                 if (loading || isSelected) return;
                 haptics.selection();
+                audio.play("ui_tap");
                 setSelected(meta.id);
               }}
               className={`ds-tactile w-full flex items-start gap-3 min-h-[56px] px-4 py-3 rounded-md text-left ${
@@ -121,6 +123,7 @@ export function RoomModePickerSheet({
                     onClick={() => {
                       if (loading) return;
                       haptics.selection();
+                      audio.play("ui_tap");
                       setDeck(d.id);
                     }}
                     className={`ds-tactile grow min-h-[44px] px-3 py-2 rounded-md text-sm font-semibold ${
@@ -153,6 +156,7 @@ export function RoomModePickerSheet({
                     onClick={() => {
                       if (loading) return;
                       haptics.selection();
+                      audio.play("ui_tap");
                       setPunishSpinCount(n);
                     }}
                     className={`ds-tactile grow min-h-[44px] px-3 py-2 rounded-md text-sm font-semibold ${
@@ -187,6 +191,7 @@ export function RoomModePickerSheet({
                   onClick={() => {
                     if (loading) return;
                     haptics.selection();
+                    audio.play("ui_tap");
                     setSpinCount(n);
                   }}
                   className={`ds-tactile grow min-h-[44px] px-3 py-2 rounded-md text-sm font-semibold ${
@@ -220,6 +225,7 @@ export function RoomModePickerSheet({
                   onClick={() => {
                     if (loading) return;
                     haptics.selection();
+                    audio.play("ui_tap");
                     setChaosSpinCount(n);
                   }}
                   className={`ds-tactile grow min-h-[44px] px-3 py-2 rounded-md text-sm font-semibold ${

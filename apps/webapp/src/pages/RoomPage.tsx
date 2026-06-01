@@ -411,15 +411,6 @@ export function RoomPage(): JSX.Element {
     fireConfetti();
   }, []);
 
-  // Background music bed: play the loop while in the room, fade out on
-  // leave. Internally gated by the Music setting (no-op if disabled).
-  useEffect(() => {
-    audio.requestMusic();
-    return () => {
-      audio.releaseMusic();
-    };
-  }, []);
-
   // Crown the survivor: celebrate once when the round ends.
   useEffect(() => {
     if (!roundOver) return;

@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 
+import { audio } from "@/audio";
 import { cn } from "@/lib/cn";
 import { haptics } from "@/lib/haptics";
 
@@ -26,6 +27,7 @@ export function QuickWheelCard({
       type="button"
       onClick={() => {
         haptics.medium();
+        audio.play("ui_tap");
         onTap();
       }}
       aria-label={title}

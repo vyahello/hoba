@@ -44,16 +44,23 @@ class AudioManager {
   installUnlock(): void {
     if (this.unlockBound || typeof document === "undefined") return;
     this.unlockBound = true;
-    const resume = (): void => {
+    const revive = (): void => {
       try {
         if (Howler.ctx && Howler.ctx.state !== "running") void Howler.ctx.resume();
       } catch {
         /* no Web Audio context (non-Telegram / unsupported) */
       }
+      // A gesture is also our chance to (re)start music that wants to play
+      // but was blocked by autoplay policy or paused on backgrounding.
+      if (this.musicWanted && this.musicEnabled) this.startMusic();
     };
     for (const event of ["touchend", "pointerdown", "click"] as const) {
-      document.addEventListener(event, resume, { passive: true });
+      document.addEventListener(event, revive, { passive: true });
     }
+    // Returning from background (iOS suspends the context) — revive then too.
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") revive();
+    });
   }
 
   setMasterVolume(value: number): void {
@@ -106,16 +113,11 @@ class AudioManager {
     }
   }
 
-  /** A screen (e.g. an active room) asks for the bed to play. */
+  /** Ask for the background bed to play (called once at app boot). It then
+   *  loops for the whole session; only the Music setting stops it. */
   requestMusic(): void {
     this.musicWanted = true;
     if (this.musicEnabled) this.startMusic();
-  }
-
-  /** Leaving the screen — fade the bed out. */
-  releaseMusic(): void {
-    this.musicWanted = false;
-    this.stopMusic();
   }
 
   private startMusic(): void {
@@ -124,16 +126,25 @@ class AudioManager {
         src: [MUSIC_SRC],
         loop: true,
         volume: 0,
-        html5: true, // stream the longer file; avoids decoding the whole clip
+        // Web Audio (NOT html5): the html5 <audio> loop has an audible gap
+        // at the loop point in WebViews — Web Audio's buffer loop is sample
+        // -accurate and gapless. The clip is small (~150 KB) so decoding it
+        // fully is cheap, and it no longer randomly stalls like html5 did.
+        html5: false,
         onloaderror: () => {
           /* missing music file — silent */
         },
         onplayerror: () => {
-          /* gesture not yet received — retry on unlock */
+          /* gesture not yet received — retried by installUnlock */
         },
       });
     }
     const m = this.music;
+    try {
+      if (Howler.ctx && Howler.ctx.state !== "running") void Howler.ctx.resume();
+    } catch {
+      /* no context */
+    }
     if (!m.playing()) m.play();
     m.fade(m.volume(), MUSIC_VOLUME, MUSIC_FADE_MS);
   }

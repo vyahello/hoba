@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
+import { audio } from "@/audio";
 import { AuroraBackground } from "@/components/ds/AuroraBackground";
 import { Toaster } from "@/components/ds/Toast";
 import { safeNavigateBack } from "@/lib/navigation";
@@ -53,13 +54,20 @@ export function RootLayout(): JSX.Element {
     };
   }, [navigate]);
 
-  // Reconcile sound/vibration/anonymous preferences with the server once
-  // on boot (localStorage already applied the gates synchronously). Silent
-  // on failure — local state holds.
+  // Reconcile sound/vibration/music/anonymous preferences with the server
+  // once on boot (localStorage already applied the gates synchronously).
+  // Silent on failure — local state holds.
   useEffect(() => {
     void useSettings.getState().hydrate().catch(() => {
       /* offline / non-Telegram */
     });
+  }, []);
+
+  // Background music plays app-wide for the whole session (Home, rooms,
+  // everywhere) — gated by the Music setting, started on the first gesture
+  // by the audio unlock. Requested once; it loops until Music is toggled off.
+  useEffect(() => {
+    audio.requestMusic();
   }, []);
 
   return (
