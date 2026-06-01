@@ -4,6 +4,13 @@
 
 ---
 
+## Post-launch — 2026-06-01 — Fix: language choice now drives server-rendered text
+
+Bug: punishment cards rendered in the **device** language, not the one picked in-app. Root cause — punishment decks are localized server-side from `host.language_code`, but the in-app language switch only changed client i18n + localStorage (`setLocale`); it never persisted to the server. English/Russian phones therefore got English cards even after choosing Ukrainian.
+- **Persist on pick** — Settings language buttons now go through a new `useSettings.setLanguage`, which calls `setLocale` *and* `PATCH /me { language_code }`. Server-rendered text (punishment decks, anonymous nicknames) follows the user's choice.
+- **Self-heal on boot** — `hydrate()` compares the on-device display locale (`getLocale()`) with the server's `language_code` and pushes the display choice up if they differ, fixing already-mismatched accounts without a re-tap.
+- No backend change (`PATCH /me` already accepted `language_code`). Frontend 122 green; all gates clean.
+
 ## Post-launch — 2026-06-01 — Audio polish: gapless music + more click coverage
 
 Follow-up to the sound overhaul, from device feedback (looping gap, missing clicks, no music on Home):

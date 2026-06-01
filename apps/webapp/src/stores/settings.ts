@@ -18,6 +18,7 @@
 import { create } from "zustand";
 
 import { audio } from "@/audio";
+import { getLocale, type Locale, setLocale } from "@/i18n";
 import { api } from "@/lib/api";
 import { setHapticsEnabled } from "@/lib/haptics";
 import { safeStorage } from "@/lib/safeStorage";
@@ -46,6 +47,9 @@ interface SettingsState {
   setHaptics: (value: boolean) => void;
   setMusic: (value: boolean) => void;
   setAnonymousDefault: (value: boolean) => void;
+  /** Switch UI language AND persist it server-side so server-rendered text
+   *  (e.g. punishment cards) follows the user's choice, not the device. */
+  setLanguage: (locale: Locale) => void;
   /** Reconcile with the server's stored preferences (server wins). */
   hydrate: () => Promise<void>;
 }
@@ -101,8 +105,25 @@ export const useSettings = create<SettingsState>((set) => ({
     set({ anonymousDefault: value });
   },
 
+  setLanguage: (locale) => {
+    setLocale(locale); // i18n + localStorage (display language)
+    // Server owns language_code for server-rendered text (punishment decks).
+    void api.patchMe({ language_code: locale }).catch(() => {
+      /* offline / non-Telegram: display still switched locally */
+    });
+  },
+
   hydrate: async () => {
     const me = await api.getMe();
+    // Self-heal a stale server language_code: the user's on-device display
+    // locale is their real choice, so push it up if the server disagrees
+    // (covers users who picked a language before it was ever persisted).
+    const display = getLocale();
+    if (display !== me.language_code) {
+      void api.patchMe({ language_code: display }).catch(() => {
+        /* offline */
+      });
+    }
     audio.setEnabled(me.sound_enabled);
     setHapticsEnabled(me.haptics_enabled);
     audio.setMusicEnabled(me.music_enabled);

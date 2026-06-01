@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { Card } from "@/components/ds/Card";
 import { StubPage } from "@/components/layout/StubPage";
-import { type Locale, SUPPORTED_LOCALES, setLocale } from "@/i18n";
+import { type Locale, SUPPORTED_LOCALES } from "@/i18n";
 import { api } from "@/lib/api";
 import { haptics } from "@/lib/haptics";
 import { useSettings } from "@/stores/settings";
@@ -56,6 +56,7 @@ export function SettingsPage(): JSX.Element {
   const setHaptics = useSettings((s) => s.setHaptics);
   const setMusic = useSettings((s) => s.setMusic);
   const setAnonymousDefault = useSettings((s) => s.setAnonymousDefault);
+  const setLanguage = useSettings((s) => s.setLanguage);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -88,7 +89,7 @@ export function SettingsPage(): JSX.Element {
                   type="button"
                   onClick={() => {
                     haptics.selection();
-                    setLocale(locale);
+                    setLanguage(locale);
                   }}
                   className={`ds-tactile flex-1 min-h-[48px] font-medium ${
                     locale === currentLocale

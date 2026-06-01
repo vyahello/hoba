@@ -87,4 +87,9 @@ export function setLocale(locale: Locale): void {
   safeStorage.set(STORAGE_KEY, locale);
 }
 
+/** The active display locale, narrowed to a supported one. */
+export function getLocale(): Locale {
+  return i18n.resolvedLanguage === "uk" ? "uk" : "en";
+}
+
 export default i18n;
