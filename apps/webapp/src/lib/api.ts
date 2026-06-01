@@ -71,7 +71,8 @@ export interface PunishmentCard {
 export interface PunishmentOutcome {
   spinner_id: number;
   result_segment_id: number;
-  kind: "lucky" | "punish";
+  /** "miss" = Chaos miss or a bot miss (no dare). */
+  kind: "lucky" | "punish" | "miss";
   card: PunishmentCard | null;
   /** False while a `punish` card is pending the spinner's done/refuse. */
   resolved: boolean;

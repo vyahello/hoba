@@ -593,6 +593,16 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                         return
                     await start_game(session, room)
                     await session.commit()
+                    # A solo bot is added at start_game — push fresh state so
+                    # it shows up in the standings (the live flow only sends
+                    # incremental patches, never re-sends the participant list).
+                    if str(BOT_USER_ID) in (room.punishment_predictions or {}):
+                        bot_state = (
+                            await build_room_state(session, room, current_user_id=user_id)
+                        ).model_dump(mode="json")
+                        await sio.emit(
+                            "room:state", bot_state, to=sid, namespace=NAMESPACE,
+                        )
                 if room.current_turn_user_id != user_id:
                     await sio.emit(
                         "error",

@@ -157,3 +157,47 @@ async def test_build_room_state_exposes_punish_card_outcome(
     assert outcome.card is not None
     assert outcome.card.text == "do a dance"
     assert outcome.resolved is False
+
+
+async def test_bot_appears_in_standings(db: AsyncSession) -> None:
+    """When the solo bot is in the race, build_room_state must inject it as a
+    participant (this is the path the lock PATCH returns — guard the 500)."""
+    from hoba_api.bot import BOT_USER_ID
+
+    host = await upsert_from_telegram(db, TelegramUser(id=9300, first_name="Solo"))
+    await db.flush()
+    room = await create_room(
+        db, host_id=host.id, question_text="Chaos?",
+        segments=[SegmentDraft(label="a"), SegmentDraft(label="b"), SegmentDraft(label="c")],
+        game_mode="chaos", spin_count=3,
+    )
+    # Simulate post-start state: host + bot have bets, game active, locked.
+    from hoba_api.services.punishment import _active_segment_ids
+    seg = sorted(await _active_segment_ids(db, room))
+    room.punishment_predictions = {str(host.id): seg[0], str(BOT_USER_ID): seg[1]}
+    room.status = "active"
+    room.is_locked = True
+    room.current_turn_user_id = BOT_USER_ID
+    # A Chaos/bot miss → kind "miss". This is what 500'd build_room_state
+    # (PunishmentOutcomeOut rejected "miss") on e.g. the lock PATCH.
+    room.punishment_last_outcome = {
+        "spinner_id": host.id,
+        "result_segment_id": seg[2],
+        "kind": "miss",
+        "card": None,
+        "resolved": True,
+        "pending_approval": False,
+        "approver_user_id": None,
+    }
+    await db.commit()
+
+    fetched = await get_room_by_code(db, room.code)
+    assert fetched is not None
+    state = await build_room_state(db, fetched, current_user_id=host.id)
+
+    assert state.room.punishment_last_outcome is not None
+    assert state.room.punishment_last_outcome.kind == "miss"
+    ids = {p.user_id for p in state.participants}
+    assert BOT_USER_ID in ids
+    bot = next(p for p in state.participants if p.user_id == BOT_USER_ID)
+    assert bot.display_name  # has a name

@@ -76,7 +76,9 @@ class PunishmentCardOut(BaseModel):
 class PunishmentOutcomeOut(BaseModel):
     spinner_id: int
     result_segment_id: int
-    kind: Literal["lucky", "punish"]
+    # "miss" = Chaos miss or a bot miss (no dare, no point) — must round-trip
+    # through build_room_state (REST fetch / rejoin / PATCH) without 500ing.
+    kind: Literal["lucky", "punish", "miss"]
     card: PunishmentCardOut | None = None
     resolved: bool
     pending_approval: bool = False

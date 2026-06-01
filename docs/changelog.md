@@ -4,6 +4,13 @@
 
 ---
 
+## Post-launch — 2026-06-01 — Fix: Chaos "miss" 500 + bot not showing in standings
+
+Device testing of the solo bot surfaced two issues, both traced on the prod DB (the lock-PATCH 500 had no log — structlog swallows HTTP tracebacks — so it was reproduced by running `build_room_state` against the live rooms in the container).
+- **500 on lock (and rejoin / any REST fetch) of a Chaos game** — pre-existing latent bug, not really bot-specific: `build_room_state` validates `punishment_last_outcome` through `PunishmentOutcomeOut`, whose `kind` was `Literal["lucky","punish"]` — but a **Chaos miss** (and now a bot miss) writes `kind="miss"`, so validation raised → 500. Live play never hit it because the WS patch sends the raw dict; `build_room_state` (REST GET, room:state on rejoin, the lock PATCH response) does validate. Fix: `kind` now allows `"miss"` (backend schema + frontend `PunishmentOutcome` type).
+- **Bot didn't appear in the standings** — the bot *was* being added (prod bets showed `-1000`), but the live flow only sends incremental patches after `start_game`, never re-sends the participant list, so the client never learned about the synthetic bot participant. Fix: on game start, when a bot was added, the server pushes a fresh `room:state` to the host so the bot shows up immediately (rejoin already worked via `build_room_state`).
+- Tests: `test_bot_appears_in_standings` now also asserts a `kind="miss"` outcome round-trips through `build_room_state`. Backend 314 / frontend 122 green.
+
 ## Post-launch — 2026-06-01 — Solo-play bot for Punishment & Chaos
 
 Owner feedback: playing these bet-race modes alone is pointless (you just spin until your own bet matches N). Now, starting either mode **solo** auto-adds a bot opponent so it's a real race.
