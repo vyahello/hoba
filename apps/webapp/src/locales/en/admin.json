@@ -1,0 +1,20 @@
+{
+  "moderation": {
+    "title": "Moderation",
+    "entry": "Moderation queue",
+    "subtitle": "Reported and auto-hidden wheels",
+    "empty": "Nothing to review — no reported wheels.",
+    "load_failed": "Couldn't load the queue. Try again.",
+    "forbidden": "You don't have access to this page.",
+    "hidden_badge": "Hidden",
+    "reported_badge": "Reported",
+    "reports_count": "{count, plural, one {# report} other {# reports}}",
+    "owner": "Owner #{id}",
+    "no_reason": "(no reason given)",
+    "unhide": "Restore",
+    "hide": "Take down",
+    "unhidden": "Restored — reports cleared.",
+    "hidden": "Taken down.",
+    "action_failed": "Action failed. Try again."
+  }
+}

@@ -98,6 +98,12 @@ SECRET_KEY=<openssl rand -hex 32>
 SENTRY_DSN=
 LOG_LEVEL=INFO
 AUTO_MIGRATE=true
+
+# Comma-separated Telegram user ids granted access to the moderation
+# review queue (/admin/moderation in the Mini App). Empty = no admins
+# (the entry stays hidden for everyone). Use your own tg_id; find it via
+# @userinfobot or the `tg_id` column in the users table.
+ADMIN_TG_IDS=
 ```
 
 Generate `SECRET_KEY` quickly:

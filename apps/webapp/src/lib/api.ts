@@ -229,6 +229,37 @@ export interface WheelReportPayload {
   reason?: string | null;
 }
 
+/** Authenticated user profile (`GET /me`). `is_admin` gates the moderation UI. */
+export interface Me {
+  id: number;
+  tg_id: number;
+  first_name: string;
+  language_code: "en" | "uk";
+  is_admin: boolean;
+}
+
+/** One reporter's complaint against a wheel (admin review queue). */
+export interface WheelReportRow {
+  reporter_id: number;
+  reporter_name: string;
+  reason: string | null;
+  reported_at: string;
+}
+
+/** A reported/hidden wheel plus its individual reports (admin review queue). */
+export interface ReportedWheel {
+  id: number;
+  title: string;
+  owner_id: number;
+  is_public: boolean;
+  is_hidden: boolean;
+  report_count: number;
+  category: string | null;
+  segments: SavedWheelSegment[];
+  created_at: string;
+  reports: WheelReportRow[];
+}
+
 export interface WheelSavePayload {
   title: string;
   segments: Array<{
@@ -370,6 +401,17 @@ export const api = {
   listSpins: (code: string, limit = 50): Promise<ServerSpin[]> =>
     request(`/rooms/${encodeURIComponent(code)}/spins?limit=${limit}`),
 
+  getMe: (): Promise<Me> => request("/me"),
+
   patchMe: (patch: Record<string, unknown>): Promise<unknown> =>
     request("/me", { method: "PATCH", body: patch }),
+
+  // --- Admin moderation review queue (admin-only; gated by ADMIN_TG_IDS) ---
+  listModerationReports: (): Promise<ReportedWheel[]> => request("/moderation/reports"),
+
+  unhideWheel: (id: number): Promise<ReportedWheel> =>
+    request(`/moderation/wheels/${id}/unhide`, { method: "POST" }),
+
+  hideWheel: (id: number): Promise<ReportedWheel> =>
+    request(`/moderation/wheels/${id}/hide`, { method: "POST" }),
 };

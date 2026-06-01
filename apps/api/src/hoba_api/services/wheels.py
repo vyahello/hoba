@@ -7,6 +7,7 @@ Reuses `RoomServiceError` so the REST layer maps codes uniformly.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from sqlalchemy import ColumnElement, delete, func, select
@@ -14,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from hoba_api.models.room import Room
 from hoba_api.models.segment import Segment
+from hoba_api.models.user import User
 from hoba_api.models.wheel import Wheel
 from hoba_api.models.wheel_social import WheelLike, WheelReport
 from hoba_api.moderation import contains_profanity, normalize_category
@@ -257,6 +259,90 @@ async def report_wheel(
         wheel.is_hidden = True
     await session.flush()
     return wheel.report_count
+
+
+# --- Stage G+: admin moderation review queue (spec §14 manual queue) ------
+
+
+@dataclass(frozen=True, slots=True)
+class ReportRow:
+    """One report against a wheel, with the reporter's display name."""
+
+    reporter_id: int
+    reporter_name: str
+    reason: str | None
+    reported_at: datetime
+
+
+async def list_reported_wheels(
+    session: AsyncSession,
+) -> list[tuple[Wheel, list[ReportRow]]]:
+    """All wheels that have at least one report or are hidden, newest-risk first.
+
+    Hidden wheels surface above merely-reported ones; within each, the
+    most-reported come first. Each wheel carries its individual reports
+    (reporter name + reason + time) for the admin to judge.
+    """
+    wheels = list(
+        (
+            await session.execute(
+                select(Wheel)
+                .where((Wheel.report_count > 0) | Wheel.is_hidden.is_(True))
+                .order_by(
+                    Wheel.is_hidden.desc(),
+                    Wheel.report_count.desc(),
+                    Wheel.id.desc(),
+                ),
+            )
+        )
+        .scalars()
+        .all(),
+    )
+    if not wheels:
+        return []
+    wheel_ids = [w.id for w in wheels]
+    rows = (
+        await session.execute(
+            select(WheelReport, User)
+            .join(User, User.id == WheelReport.user_id)
+            .where(WheelReport.wheel_id.in_(wheel_ids))
+            .order_by(WheelReport.created_at.desc()),
+        )
+    ).all()
+    by_wheel: dict[int, list[ReportRow]] = {wid: [] for wid in wheel_ids}
+    for report, reporter in rows:
+        by_wheel[report.wheel_id].append(
+            ReportRow(
+                reporter_id=reporter.id,
+                reporter_name=reporter.first_name,
+                reason=report.reason,
+                reported_at=report.created_at,
+            ),
+        )
+    return [(w, by_wheel[w.id]) for w in wheels]
+
+
+async def unhide_wheel(session: AsyncSession, wheel: Wheel) -> Wheel:
+    """Admin: dismiss the reports on a wheel and make it visible again.
+
+    Clears `is_hidden`, deletes the report rows, and resets `report_count`
+    to 0 — a clean slate, so the next report starts the count fresh rather
+    than instantly re-tripping the auto-hide threshold.
+    """
+    await session.execute(
+        delete(WheelReport).where(WheelReport.wheel_id == wheel.id),
+    )
+    wheel.is_hidden = False
+    wheel.report_count = 0
+    await session.flush()
+    return wheel
+
+
+async def hide_wheel(session: AsyncSession, wheel: Wheel) -> Wheel:
+    """Admin: take a wheel down regardless of the report count (manual override)."""
+    wheel.is_hidden = True
+    await session.flush()
+    return wheel
 
 
 async def get_public_wheel(session: AsyncSession, wheel_id: int) -> Wheel | None:

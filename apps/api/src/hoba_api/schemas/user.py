@@ -27,6 +27,8 @@ class UserMe(BaseModel):
     is_anonymous_default: bool
     created_at: datetime
     last_active_at: datetime
+    # True if this user's tg_id is in ADMIN_TG_IDS (gates the moderation UI).
+    is_admin: bool = False
 
 
 class UserMeUpdate(BaseModel):

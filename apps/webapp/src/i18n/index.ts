@@ -11,6 +11,7 @@ import i18n from "i18next";
 import ICU from "i18next-icu";
 import { initReactI18next } from "react-i18next";
 
+import enAdmin from "@/locales/en/admin.json";
 import enBrand from "@/locales/en/brand.json";
 import enCommon from "@/locales/en/common.json";
 import enCreate from "@/locales/en/create.json";
@@ -19,6 +20,7 @@ import enHome from "@/locales/en/home.json";
 import enLegal from "@/locales/en/legal.json";
 import enRoom from "@/locales/en/room.json";
 import enSettings from "@/locales/en/settings.json";
+import ukAdmin from "@/locales/uk/admin.json";
 import ukBrand from "@/locales/uk/brand.json";
 import ukCommon from "@/locales/uk/common.json";
 import ukCreate from "@/locales/uk/create.json";
@@ -58,6 +60,7 @@ void i18n
         create: enCreate,
         room: enRoom,
         legal: enLegal,
+        admin: enAdmin,
       },
       uk: {
         common: ukCommon,
@@ -68,12 +71,13 @@ void i18n
         create: ukCreate,
         room: ukRoom,
         legal: ukLegal,
+        admin: ukAdmin,
       },
     },
     lng: detectInitialLocale(),
     fallbackLng: "en",
     defaultNS: "common",
-    ns: ["common", "brand", "home", "settings", "dev", "create", "room"],
+    ns: ["common", "brand", "home", "settings", "dev", "create", "room", "legal", "admin"],
     interpolation: { escapeValue: false },
     returnNull: false,
   });

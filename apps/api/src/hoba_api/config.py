@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     # disables auth verification and causes /api/v1/* to return 500.
     telegram_bot_token: str = ""
 
+    # Comma-separated Telegram user ids granted admin access to the
+    # moderation review queue (spec §14 "manual queue UI later"). Empty =
+    # no admins (the /admin/moderation UI stays hidden for everyone).
+    admin_tg_ids: str = ""
+
     # Reject Telegram initData older than this many seconds (replay
     # protection; spec §6 mandates 24h).
     init_data_max_age_seconds: int = 24 * 60 * 60
@@ -41,6 +46,19 @@ class Settings(BaseSettings):
     # REACTIONS_WINDOW_SECONDS.
     reactions_per_window: int = 40
     reactions_window_seconds: int = 5
+
+    @property
+    def admin_tg_id_set(self) -> frozenset[int]:
+        """Parsed `admin_tg_ids` as a set of ints (ignores blanks/junk)."""
+        ids: set[int] = set()
+        for part in self.admin_tg_ids.split(","):
+            part = part.strip()
+            if part:
+                try:
+                    ids.add(int(part))
+                except ValueError:
+                    continue
+        return frozenset(ids)
 
 
 settings = Settings()

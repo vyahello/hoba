@@ -65,3 +65,18 @@ async def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def is_admin(user: User) -> bool:
+    """True if the user's Telegram id is in the configured admin set."""
+    return user.tg_id in settings.admin_tg_id_set
+
+
+async def get_admin_user(user: CurrentUser) -> User:
+    """Like `get_current_user`, but 403s anyone outside `ADMIN_TG_IDS`."""
+    if not is_admin(user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not_admin")
+    return user
+
+
+AdminUser = Annotated[User, Depends(get_admin_user)]

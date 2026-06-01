@@ -151,9 +151,9 @@ _TEMPLATES: tuple[TemplateDef, ...] = (
             TemplateSegmentDef("beer", _loc("Beer", "Пиво"), 0, "🍺"),
             TemplateSegmentDef("wine", _loc("Wine", "Вино"), 2, "🍷"),
             TemplateSegmentDef("cocktail", _loc("Cocktail", "Коктейль"), 4, "🍸"),
-            TemplateSegmentDef("coffee", _loc("Coffee", "Кава"), 6, "☕"),
-            TemplateSegmentDef("tea", _loc("Tea", "Чай"), 8, "🍵"),
-            TemplateSegmentDef("shot", _loc("Shot", "Шот"), 10, "🥃"),
+            TemplateSegmentDef("whiskey", _loc("Whiskey", "Віскі"), 6, "🥃"),
+            TemplateSegmentDef("rum", _loc("Rum", "Ром"), 8, "🍹"),
+            TemplateSegmentDef("shot", _loc("Shot", "Шот"), 10, "🥂"),
         ),
     ),
     TemplateDef(
@@ -164,7 +164,7 @@ _TEMPLATES: tuple[TemplateDef, ...] = (
         title=_loc("Which game?", "У що граємо?"),
         segments=(
             TemplateSegmentDef("poker", _loc("Poker", "Покер"), 0, "🃏"),
-            TemplateSegmentDef("fifa", _loc("FIFA", "FIFA"), 1, "⚽"),
+            TemplateSegmentDef("tag", _loc("Tag", "Лови"), 1, "🏃"),
             TemplateSegmentDef("mafia", _loc("Mafia", "Мафія"), 3, "🕵️"),
             TemplateSegmentDef("cards", _loc("Cards", "Карти"), 5, "🂡"),
             TemplateSegmentDef("board", _loc("Board game", "Настолка"), 7, "🎲"),

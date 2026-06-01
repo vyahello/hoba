@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { Card } from "@/components/ds/Card";
 import { StubPage } from "@/components/layout/StubPage";
 import { type Locale, SUPPORTED_LOCALES, setLocale } from "@/i18n";
+import { api } from "@/lib/api";
 import { haptics } from "@/lib/haptics";
 
 interface ToggleRowProps {
@@ -43,12 +44,28 @@ function ToggleRow({ label, on, onToggle }: ToggleRowProps): JSX.Element {
 }
 
 export function SettingsPage(): JSX.Element {
-  const { t, i18n } = useTranslation(["settings", "common", "brand"]);
+  const { t, i18n } = useTranslation(["settings", "common", "brand", "admin"]);
   const navigate = useNavigate();
   const currentLocale = (i18n.resolvedLanguage ?? "en") as Locale;
   const [sound, setSound] = useState(true);
   const [hapticsOn, setHapticsOn] = useState(true);
   const [anon, setAnon] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void api
+      .getMe()
+      .then((me) => {
+        if (!cancelled) setIsAdmin(me.is_admin);
+      })
+      .catch(() => {
+        /* non-admin / offline: leave the entry hidden */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <StubPage title={t("settings:title")} phase={11}>
@@ -111,6 +128,29 @@ export function SettingsPage(): JSX.Element {
             />
           </Card>
         </section>
+
+        {isAdmin ? (
+          <section>
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-ink-light-2 dark:text-ink-dark-2 mb-2 px-1">
+              {t("admin:moderation.title")}
+            </h2>
+            <Card padding="none" className="overflow-hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  haptics.selection();
+                  navigate("/admin/moderation");
+                }}
+                className="ds-tactile w-full flex items-center justify-between px-4 py-3 min-h-[48px] active:bg-surface-light-2 dark:active:bg-surface-dark-2"
+              >
+                <span className="font-medium text-base text-ink-light-1 dark:text-ink-dark-1">
+                  {t("admin:moderation.entry")}
+                </span>
+                <span aria-hidden className="text-ink-light-2 dark:text-ink-dark-2">→</span>
+              </button>
+            </Card>
+          </section>
+        ) : null}
 
         <section className="pt-2">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-ink-light-2 dark:text-ink-dark-2 mb-2 px-1">

@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
 
 import { RootLayout } from "@/components/layout/RootLayout";
+import { AdminModerationPage } from "@/pages/AdminModerationPage";
 import { CreatePage } from "@/pages/CreatePage";
 import { DevDSPage } from "@/pages/DevDSPage";
 import { HomePage } from "@/pages/HomePage";
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
       { path: "/library", element: <LibraryPage /> },
       { path: "/trending", element: <TrendingPage /> },
       { path: "/settings", element: <SettingsPage /> },
+      { path: "/admin/moderation", element: <AdminModerationPage /> },
       { path: "/privacy", element: <LegalPage doc="privacy" /> },
       { path: "/terms", element: <LegalPage doc="terms" /> },
       { path: "/dev/ds", element: <DevDSPage /> },

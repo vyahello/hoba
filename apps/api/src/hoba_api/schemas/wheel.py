@@ -61,3 +61,29 @@ class WheelReportIn(BaseModel):
 
     wheel_id: int
     reason: str | None = Field(default=None, max_length=200)
+
+
+class ReportRowOut(BaseModel):
+    """One reporter's complaint against a wheel (admin review)."""
+
+    reporter_id: int
+    reporter_name: str
+    reason: str | None
+    reported_at: datetime
+
+
+class ReportedWheelOut(BaseModel):
+    """A reported/hidden wheel plus its individual reports (admin queue)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    title: str
+    owner_id: int
+    is_public: bool
+    is_hidden: bool
+    report_count: int
+    category: str | None
+    segments: list[SegmentOut]
+    created_at: datetime
+    reports: list[ReportRowOut] = Field(default_factory=list)

@@ -4,6 +4,17 @@
 
 ---
 
+## Post-launch — 2026-06-01 — Admin moderation review UI
+
+Closed the only functional gap left after Stage G: reports auto-hid a wheel at 3 distinct reporters, but there was no way to *review* or *reverse* that — the queue lived only in the DB. Now there's an admin-gated review UI.
+
+- **Admin gate** — new `ADMIN_TG_IDS` env var (comma-separated Telegram ids) parsed to a set on `Settings.admin_tg_id_set`; `auth/dependencies.py` gains `is_admin(user)` + an `AdminUser` dependency (403 `not_admin` for everyone else). `GET /api/v1/me` now returns `is_admin` so the client can show/hide the entry.
+- **Endpoints** (`api/v1/moderation.py`, admin-only): `GET /moderation/reports` lists every reported-or-hidden wheel with its reporters + reasons (hidden first, then by report count); `POST /moderation/wheels/{id}/unhide` clears `is_hidden`, deletes the report rows, and resets `report_count` to 0 (clean slate so the next report starts fresh); `POST /moderation/wheels/{id}/hide` is a manual takedown for wheels below the auto-hide threshold.
+- **Service** (`services/wheels.py`): `list_reported_wheels` (one wheels query + one batched reports-join-users query, returns `(Wheel, [ReportRow])`), `unhide_wheel`, `hide_wheel`. Schemas `ReportedWheelOut` + `ReportRowOut`.
+- **Frontend** — `/admin/moderation` page (`AdminModerationPage.tsx`): loads the queue, renders each wheel with its option chips + per-reporter complaints + Restore/Take-down actions, self-guards on 403. Entry surfaces in Settings only when `is_admin`. New `admin` i18n namespace (EN+UK).
+- **Tests** — `tests/api/test_moderation.py` (9): admin gate, `is_admin` flag, queue contents, threshold→hide→unhide→restore round-trip (incl. trending visibility), manual hide below threshold, 404s. Backend 306 / frontend 116 green; mypy strict + ruff + tsc + eslint + i18n:check clean.
+- **Ops** — `ADMIN_TG_IDS` passthrough added to `docker-compose.yml` api env + documented in `docs/deployment.md`. (`.env.example` is permission-blocked in the working sandbox; owner should add the line manually.) **No migration** — schema unchanged.
+
 ## 🎉 STAGE G COMPLETE — 2026-06-01 — ALL STAGES A→G DONE
 
 **Phases 11 + 12 delivered: host moderation, hardening, launch.** With this, the full `docs/spec.md` is implemented and the post-MVP roadmap (A→G) is finished. Three slices, each gated + committed separately. Remaining work is owner-only launch ops (BotFather, GIF, fresh-VPS smoke, device audit) — tracked in `docs/TODO.md`.
