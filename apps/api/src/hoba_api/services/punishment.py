@@ -34,6 +34,7 @@ import secrets
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from hoba_api.bot import BOT_USER_ID
 from hoba_api.models.participant import Participant
 from hoba_api.models.question import Question
 from hoba_api.models.room import Room
@@ -137,6 +138,10 @@ async def _advance_turn(session: AsyncSession, room: Room) -> int | None:
     bets = room.punishment_predictions or {}
     online = await presence_user_ids(room.id)
     eligible = [u for u in rows if str(u) in bets and u in online]
+    # The solo-play bot isn't a Participant or a presence entry — it's always
+    # "online" and takes its turn after the humans (join order, then bot).
+    if str(BOT_USER_ID) in bets:
+        eligible.append(BOT_USER_ID)
     if not eligible:
         room.current_turn_user_id = None
         return None
@@ -150,8 +155,35 @@ async def _advance_turn(session: AsyncSession, room: Room) -> int | None:
     return nxt
 
 
+async def maybe_add_bot(session: AsyncSession, room: Room) -> bool:
+    """Add a solo-play bot opponent iff the host is starting the race alone.
+
+    "Alone" = exactly one human present and no other human has bet. The bot
+    locks a unique free segment (so the host always has a real opponent in
+    Punishment/Chaos solo). Returns True if a bot was added.
+    """
+    if room.game_mode not in ("punishment", "chaos"):
+        return False
+    bets = dict(room.punishment_predictions or {})
+    if str(BOT_USER_ID) in bets:
+        return False
+    present = await presence_user_ids(room.id)
+    human_bettors = [u for u in bets if int(u) != BOT_USER_ID]
+    if len(present) > 1 or len(human_bettors) > 1:
+        return False
+    active = await _active_segment_ids(session, room)
+    taken = set(bets.values())
+    free = sorted(active - taken) or sorted(active)
+    if not free:
+        return False
+    bets[str(BOT_USER_ID)] = free[secrets.randbelow(len(free))]
+    room.punishment_predictions = bets
+    return True
+
+
 async def start_game(session: AsyncSession, room: Room) -> None:
     """Seed the turn cursor to host (if they have a bet), else first eligible."""
+    await maybe_add_bot(session, room)
     if room.current_turn_user_id is None:
         bets = room.punishment_predictions or {}
         online = await presence_user_ids(room.id)
@@ -195,9 +227,9 @@ async def resolve_turn(
             room.punishment_winner_user_id = spinner_id
         else:
             await _advance_turn(session, room)
-    elif room.game_mode == "chaos":
-        # Chaos is a bet race with NO dares: a miss is a no-op — just confetti
-        # on the client + the next player's turn.
+    elif room.game_mode == "chaos" or spinner_id == BOT_USER_ID:
+        # No dare here: Chaos has none, and the bot can't perform one — a miss
+        # is a no-op (confetti on the client) and the turn just advances.
         outcome = {
             "spinner_id": spinner_id,
             "result_segment_id": result_segment_id,

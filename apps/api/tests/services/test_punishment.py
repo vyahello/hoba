@@ -9,6 +9,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from hoba_api.bot import BOT_USER_ID
 from hoba_api.models.participant import Participant
 from hoba_api.models.question import Question
 from hoba_api.models.room import Room
@@ -412,3 +413,72 @@ async def test_reset_game_clears_round_keeps_done_count(db: AsyncSession) -> Non
     assert room.current_turn_user_id is None
     assert room.status == "lobby"
     assert room.punishment_done_count == 1  # cumulative stat persists
+
+
+# --- solo-play bot --------------------------------------------------------
+
+
+async def test_maybe_add_bot_adds_unique_bet_when_solo(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=900, players=1)
+    await punishment.place_bet(db, room, users[0], seg[0])
+
+    added = await punishment.maybe_add_bot(db, room)
+
+    assert added is True
+    bets = room.punishment_predictions or {}
+    assert str(BOT_USER_ID) in bets
+    assert bets[str(BOT_USER_ID)] in seg
+    assert bets[str(BOT_USER_ID)] != seg[0]  # unique vs the host
+
+
+async def test_maybe_add_bot_skips_when_not_solo(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=910, players=2)
+    await punishment.place_bet(db, room, users[0], seg[0])
+
+    added = await punishment.maybe_add_bot(db, room)
+
+    assert added is False
+    assert str(BOT_USER_ID) not in (room.punishment_predictions or {})
+
+
+async def test_start_game_adds_bot_and_turn_pingpongs(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=920, players=1)
+    await punishment.place_bet(db, room, users[0], seg[0])
+
+    await punishment.start_game(db, room)
+
+    assert str(BOT_USER_ID) in (room.punishment_predictions or {})
+    assert room.current_turn_user_id == users[0]  # host first
+    await punishment._advance_turn(db, room)
+    assert room.current_turn_user_id == BOT_USER_ID  # then the bot
+    await punishment._advance_turn(db, room)
+    assert room.current_turn_user_id == users[0]  # back to the host
+
+
+async def test_bot_miss_is_noop_no_dare(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=930, players=1)
+    room.punishment_predictions = {str(users[0]): seg[0], str(BOT_USER_ID): seg[1]}
+    room.current_turn_user_id = BOT_USER_ID
+    await db.commit()
+
+    # Bot lands on something other than its own bet → no dare, just advance.
+    outcome = await punishment.resolve_turn(db, room, BOT_USER_ID, seg[2], "en")
+
+    assert outcome["kind"] == "miss"
+    assert outcome["card"] is None
+    assert outcome["resolved"] is True
+    assert room.current_turn_user_id == users[0]
+
+
+async def test_bot_lucky_scores_and_wins(db: AsyncSession) -> None:
+    room, seg, users = await _make_room(db, tg_base=940, players=1, n=1)
+    room.punishment_predictions = {str(users[0]): seg[0], str(BOT_USER_ID): seg[1]}
+    room.current_turn_user_id = BOT_USER_ID
+    await db.commit()
+
+    # Bot lands on its own bet with N=1 → instant win.
+    outcome = await punishment.resolve_turn(db, room, BOT_USER_ID, seg[1], "en")
+
+    assert outcome["kind"] == "lucky"
+    assert room.punishment_match_counts[str(BOT_USER_ID)] == 1
+    assert room.punishment_winner_user_id == BOT_USER_ID

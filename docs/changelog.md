@@ -4,6 +4,15 @@
 
 ---
 
+## Post-launch — 2026-06-01 — Solo-play bot for Punishment & Chaos
+
+Owner feedback: playing these bet-race modes alone is pointless (you just spin until your own bet matches N). Now, starting either mode **solo** auto-adds a bot opponent so it's a real race.
+- **`hoba_api/bot.py`** — `BOT_USER_ID = -1000` (sentinel, no `User`/`Participant` row) + a fun localized, stable-per-room name.
+- **`services/punishment.py`** — `maybe_add_bot` (locks a unique free segment when the host starts alone; called from `start_game`); `_advance_turn` appends the bot after the humans (host→bot→host); a bot miss is a no-op in *both* modes (a bot can't do a dare, and it can't be a dare approver — so the human's dare still auto-approves solo).
+- **`realtime/handlers.py`** — `_drive_bot_spin`: a server-driven, self-guarding spin that broadcasts `spin:announced/started/settled` (so the human watches the wheel) and resolves via the normal settle path. Scheduled from every turn-advance site: spin-settle, dare-resolve, dare-approve. Fair odds (`trigger_spin`, weights 1 → uniform; no rigging).
+- **`services/room_state.py`** — injects a synthetic bot participant into the standings/turn banner when the bot is in the race.
+- **No DB change / migration** — the bot rides the existing race maps + turn cursor. Frontend needed **zero** changes (it already keys standings/turn/winner off `participants` + the bet/count maps). Tests: 5 new in `test_punishment.py` (add-when-solo, skip-when-multiplayer, turn ping-pong, bot-miss-no-dare, bot-lucky-wins). Backend 313 / frontend 122 green; all gates clean.
+
 ## Post-launch — 2026-06-01 — Fix: language choice now drives server-rendered text
 
 Bug: punishment cards rendered in the **device** language, not the one picked in-app. Root cause — punishment decks are localized server-side from `host.language_code`, but the in-app language switch only changed client i18n + localStorage (`setLocale`); it never persisted to the server. English/Russian phones therefore got English cards even after choosing Ukrainian.

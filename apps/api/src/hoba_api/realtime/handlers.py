@@ -20,6 +20,7 @@ from hoba_api.auth.initdata import (
     parse_telegram_user,
     validate_init_data,
 )
+from hoba_api.bot import BOT_USER_ID
 from hoba_api.config import settings
 from hoba_api.db import SessionLocal
 from hoba_api.models.question import Question
@@ -70,6 +71,9 @@ SPIN_ANNOUNCE_DELAY_SECONDS = 0.3
 SPIN_COOLDOWN_MS = 1500
 SPIN_RATE_LIMIT_MAX = 30
 SPIN_RATE_LIMIT_WINDOW_SECONDS = 3600
+# Beat between a turn passing to the solo-play bot and its spin, so the
+# human reads "{bot}'s turn" before the wheel goes.
+BOT_TURN_DELAY_SECONDS = 1.1
 
 
 def _spin_cooldown_key(room_id: int) -> str:
@@ -144,6 +148,7 @@ async def _emit_settled(
     advanced = False
     punishment_patch: dict[str, Any] | None = None
     bon_patch: dict[str, Any] | None = None
+    drive_bot = False
 
     async with SessionLocal() as session:
         room = await session.get(Room, room_id)
@@ -210,6 +215,10 @@ async def _emit_settled(
                         "punishment_last_outcome": outcome,
                         "current_turn_user_id": room.current_turn_user_id,
                     }
+                    drive_bot = (
+                        room.punishment_winner_user_id is None
+                        and room.current_turn_user_id == BOT_USER_ID
+                    )
 
             # Best-of-N (Classic + Rigged, spin_count > 1): recompute the round
             # from the committed Spin rows rather than incrementing shared
@@ -297,6 +306,79 @@ async def _emit_settled(
             room=room_code,
             namespace=NAMESPACE,
         )
+    if drive_bot:
+        _schedule(_drive_bot_spin(sio, room_code, room_id))
+
+
+async def _drive_bot_spin(
+    sio: socketio.AsyncServer, room_code: str, room_id: int,
+) -> None:
+    """Server-driven spin for the solo-play bot (Punishment/Chaos).
+
+    Self-guarding: only spins if it's genuinely the bot's turn and the game
+    isn't over. Mirrors the human spin broadcast (announced → started →
+    settled) so every client animates the wheel for the bot's turn; the
+    settle resolve (`_emit_settled`) advances the turn back to the human.
+    """
+    await asyncio.sleep(BOT_TURN_DELAY_SECONDS)
+    async with SessionLocal() as session:
+        room = await get_room_by_code(session, room_code)
+        if (
+            room is None
+            or room.game_mode not in ("punishment", "chaos")
+            or room.punishment_winner_user_id is not None
+            or room.current_turn_user_id != BOT_USER_ID
+        ):
+            return
+        # Don't spin into an empty room — if the human left, freeze the bot's
+        # turn (it resumes when they rejoin, see on_room_join). The bot is
+        # never in presence, so this is purely the human count.
+        if not await presence_user_ids(room_id):
+            return
+        try:
+            spin = await trigger_spin(session, room=room, user_id=BOT_USER_ID)
+        except RoomServiceError:
+            return
+        await session.commit()
+        series = spin.mode_state_snapshot.get("series", [])
+        spin_payload = {
+            "spin_id": spin.id,
+            "question_id": spin.question_id,
+            "triggered_by": BOT_USER_ID,
+            "result_segment_id": spin.result_segment_id,
+            "final_angle_deg": spin.final_angle_deg,
+            "duration_ms": spin.duration_ms,
+            "seed": spin.seed,
+            "started_at_server": spin.started_at.isoformat(),
+            "mode_effects": spin.mode_state_snapshot.get("mode_effects", {}),
+            "series": series,
+            "winner_segment_id": spin.result_segment_id,
+        }
+        spin_id = spin.id
+        result_segment_id = spin.result_segment_id
+        duration_ms = (
+            sum(int(e["duration_ms"]) for e in series)
+            if isinstance(series, list) and series
+            else spin.duration_ms
+        )
+
+    await sio.emit(
+        "spin:announced",
+        {
+            "spin_id": spin_id,
+            "triggered_by": BOT_USER_ID,
+            "countdown_ms": int(SPIN_ANNOUNCE_DELAY_SECONDS * 1000),
+        },
+        room=room_code,
+        namespace=NAMESPACE,
+    )
+    await asyncio.sleep(SPIN_ANNOUNCE_DELAY_SECONDS)
+    await sio.emit("spin:started", spin_payload, room=room_code, namespace=NAMESPACE)
+    _schedule(
+        _emit_settled(
+            sio, room_code, room_id, spin_id, result_segment_id, duration_ms,
+        ),
+    )
 
 
 def register_handlers(sio: socketio.AsyncServer) -> None:
@@ -385,6 +467,14 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
             ).model_dump(mode="json")
             room_id = room.id
             room_code = room.code
+            # If a solo game was frozen on the bot's turn (host had left),
+            # resume the bot now that a human is back.
+            resume_bot = (
+                not pending
+                and room.game_mode in ("punishment", "chaos")
+                and room.punishment_winner_user_id is None
+                and room.current_turn_user_id == BOT_USER_ID
+            )
 
         sess["room_id"] = room_id
         sess["room_code"] = room_code
@@ -403,6 +493,8 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
             namespace=NAMESPACE,
             skip_sid=sid,
         )
+        if resume_bot:
+            _schedule(_drive_bot_spin(sio, room_code, room_id))
         log.info("ws.room.join", user_id=user_id, code=room_code, pending=pending)
 
     @sio.on("room:leave", namespace=NAMESPACE)
@@ -721,12 +813,18 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                 "punishment_done_count": room.punishment_done_count,
                 "current_turn_user_id": room.current_turn_user_id,
             }
+            bot_turn = (
+                room.punishment_winner_user_id is None
+                and room.current_turn_user_id == BOT_USER_ID
+            )
         await sio.emit(
             "room:updated",
             {"patch": patch},
             room=room_code,
             namespace=NAMESPACE,
         )
+        if bot_turn:
+            _schedule(_drive_bot_spin(sio, room_code, room_id))
         log.info(
             "ws.punishment.resolve", user_id=user_id, refuse=refuse, code=room_code,
         )
@@ -756,12 +854,18 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
                 "punishment_done_counts": room.punishment_done_counts,
                 "current_turn_user_id": room.current_turn_user_id,
             }
+            bot_turn = (
+                room.punishment_winner_user_id is None
+                and room.current_turn_user_id == BOT_USER_ID
+            )
         await sio.emit(
             "room:updated",
             {"patch": patch},
             room=room_code,
             namespace=NAMESPACE,
         )
+        if bot_turn:
+            _schedule(_drive_bot_spin(sio, room_code, room_id))
         log.info("ws.punishment.approve", user_id=user_id, code=room_code)
 
     @sio.on("punishment:reject", namespace=NAMESPACE)

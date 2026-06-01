@@ -120,6 +120,16 @@ This is the third Punishment design. It supersedes the v2 "prediction wager" (se
 
 Standings show each player's `matches/N` plus a `✓done` badge (per-player performed-dare count).
 
+### Solo play (bot opponent)
+
+Solo, a bet race is pointless — you'd just spin until your own bet comes up N times. So when the host **starts the game alone** (exactly one human present), the server adds **one bot opponent** (`hoba_api/bot.py`, `BOT_USER_ID = -1000`, a fun localized name stable per room). The bot:
+- locks a **unique free segment** at `start_game` (`maybe_add_bot`);
+- takes its turns via **server-driven spins** (`realtime.handlers._drive_bot_spin`): after the human's turn passes to it, the server runs a **fair** spin (same true-random odds — no rigging) and broadcasts `spin:announced/started/settled` so the human watches the wheel, then the turn passes back;
+- **never performs dares** — a bot miss is a no-op (treated like a Chaos miss); only the human draws dares, and the human's dare still auto-approves (the bot isn't in presence, so it can't be the approver);
+- races to N like any player; reaching N first sets `punishment_winner_user_id = BOT_USER_ID`.
+
+The bot is **not** a `User`/`Participant` row — it lives in the existing race maps + turn cursor (keyed by the sentinel) and `build_room_state` injects a synthetic participant so it shows in standings + the turn banner. **No new DB columns.** Turn order ping-pongs host→bot→host (`_advance_turn` appends the bot after the humans). It's driven from every place the turn can reach it: spin-settle (`_emit_settled`), dare-resolve, and dare-approve, each scheduling the self-guarding `_drive_bot_spin`. The same logic powers Chaos solo (no dares there).
+
 ### Decks
 
 Host picks `mild` / `spicy` / `chaos` in the mode picker. Cards are server-authored content (180 cards: 3 decks × 30 × EN/UK), dealt in the **host's** language, and sent to the client only as the dealt card text (bypasses `t()` like user-entered segment labels).

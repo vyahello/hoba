@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hoba_api.anon import generate_nickname
+from hoba_api.bot import BOT_USER_ID, bot_display_name
 from hoba_api.models.participant import Participant
 from hoba_api.models.room import Room
 from hoba_api.models.user import User
@@ -95,6 +96,18 @@ async def build_room_state(
     # the live roster, surfaced to the HOST as `pending_participants`, and the
     # pending guest themselves learns via `me_pending`.
     participant_out = [_out(p) for p in participants if p.approved]
+    # Solo-play bot (Punishment/Chaos): it's not a Participant row, so synthesize
+    # a roster entry from the race maps so it shows in the standings + turn UI.
+    if bets is not None and str(BOT_USER_ID) in bets:
+        participant_out.append(
+            ParticipantOut(
+                user_id=BOT_USER_ID,
+                role="guest",
+                display_name=bot_display_name(room.id, viewer_lang),
+                joined_at=room.created_at,
+                last_seen_at=room.created_at,
+            ),
+        )
     pending_out = [_out(p) for p in participants if not p.approved] if is_host else []
     me_pending = any(
         p.user_id == current_user_id and not p.approved for p in participants
