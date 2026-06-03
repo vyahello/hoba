@@ -336,6 +336,39 @@ Suggested host crontab line (hourly):
 0 * * * * cd /home/cax/_hoba && docker compose -f compose.shared.yaml exec -T api python -m hoba_api.tasks.cleanup >> /var/log/hoba-cleanup.log 2>&1
 ```
 
+### 8b. Who used the app — visitor / usage report
+
+`scripts/visitors.py` is a read-only report that stitches together the
+three places Hoba records usage: the `users` table (identity), the API
+container logs (`ws.connect` events ↔ which user), and the webapp
+container's nginx log (device / OS / browser from the User-Agent).
+
+```bash
+# Everything currently in the log buffers:
+python3 scripts/visitors.py
+
+# Restrict to a window (also 7d, 90m):
+python3 scripts/visitors.py --since 24h
+
+# Add real client IPs from the host nginx log (the only place they
+# survive the reverse proxy — needs read perms, hence sudo):
+sudo python3 scripts/visitors.py --nginx-log /var/log/nginx/access.log
+```
+
+Sections: **[1]** registered users (tg_id, name, lang, first/last seen;
+`Probe` test rows auto-flagged), **[2]** websocket connections per user,
+**[3]** client devices/OS (bots & scanners excluded), **[4]** per-IP ×
+device (only with `--nginx-log`).
+
+Two limits to know:
+
+- **Identity (§1/§2) and device/OS (§3) can't be auto-joined** — the
+  static webapp layer has no auth and the proxy masks client IPs in the
+  container log. Correlate by timestamp, or use `--nginx-log`.
+- **`docker logs` is a buffer, not history** — it holds only events since
+  the container last started / rotated. For durable analytics, persist
+  connect events (with platform/version) to the DB.
+
 ## 9. Common first-deploy gotchas
 
 - **Caddy stuck on "obtaining certificate":** DNS hasn't propagated yet
