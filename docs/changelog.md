@@ -4,6 +4,14 @@
 
 ---
 
+## Post-launch — 2026-06-03 — Real music playlist + host-only in-room bed + bot turn pacing
+
+- **Bot turn pacing** — `BOT_TURN_DELAY_SECONDS` 1.1 → 2.8 so after the host's spin settles there's a readable beat before the bot's wheel goes (owner couldn't see the host's landed option). Covers every bot hand-off (spin-settle, dare-resolve/approve, rejoin-resume).
+- **Background music is now real tracks, not synth** — replaced the single synthesized `bg_music.mp3` loop with **6 user-supplied tracks** (`bg_1..6.mp3`), re-encoded to 112 kbps stereo + `loudnorm I=-16` (metadata/art stripped) → 41 MB raw down to ~16 MB. The dead `c_bg_music` synth cue + its bitrate special-case were removed from `scripts/generate_sounds.py` (11 SFX cues remain).
+- **Shuffled playlist** (`audio/index.ts`, `manifest.ts`) — tracks stream once via **html5** (not Web Audio: full songs would fully decode into RAM), then advance to a random next track (`pickNextTrack`, never the same one twice in a row) on `onend`. The old gapless-loop concern doesn't apply when each track plays once. Per-track Howls are unloaded on advance to avoid leaking `<audio>` elements.
+- **One source of music per room** — gating refactored into `musicShouldPlay()` = `wanted && enabled && allowed` + `reconcileMusic()`. New `setMusicAllowed(bool)`; `RoomPage` sets it to `callerIsHost` (cleanup restores `true` on leave), so **only the host plays the bed inside a room** — co-located guests don't stack different tracks. Guests still get all SFX; lobby music is unaffected.
+- **License**: tracks are owner-supplied — `docs/audio-licenses.md` has a ⚠️ pre-launch TODO to confirm each is commercial/redistribution-clean. Frontend gates green (tsc · eslint · settings tests · build, all 6 tracks copied to `dist/sounds/`). No backend test count change.
+
 ## Post-launch — 2026-06-02 — Room defaults: approval ON, "anonymous by default" setting removed
 
 - **Join-approval ON by default** — `create_room` now sets `requires_approval=True` (host can still toggle it off per-room). Applies to all create paths (direct / from-template / use-wheel); the host auto-approves themselves, guests wait. Tests creating "open" rooms now pass `requires_approval=False` explicitly.

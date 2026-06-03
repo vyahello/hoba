@@ -44,6 +44,18 @@ export const AUDIO_MANIFEST: Record<AudioName, AudioDef> = {
   winner_fanfare: { src: "/sounds/winner_fanfare.mp3", volume: 0.95 },
 };
 
-/** Looping in-room background music — handled separately from one-shot SFX. */
-export const MUSIC_SRC = "/sounds/bg_music.mp3";
+/**
+ * Background music playlist — handled separately from one-shot SFX. Played
+ * as a shuffled sequence: each track streams once, then the next starts
+ * (never the same track twice in a row). Tracks are user-supplied, 112 kbps
+ * loudness-normalized MP3s — see `docs/audio-licenses.md`.
+ */
+export const MUSIC_TRACKS = [
+  "/sounds/bg_1.mp3",
+  "/sounds/bg_2.mp3",
+  "/sounds/bg_3.mp3",
+  "/sounds/bg_4.mp3",
+  "/sounds/bg_5.mp3",
+  "/sounds/bg_6.mp3",
+] as const;
 export const MUSIC_VOLUME = 0.22;

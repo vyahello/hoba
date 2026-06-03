@@ -548,6 +548,16 @@ export function RoomPage(): JSX.Element {
   const hasOtherPlayers = presentUserIds.some((id) => id !== snapshot?.room.host_id);
   const turnState = computeTurnState(snapshot);
 
+  // One source of background music per room: only the host plays the bed, so
+  // co-located guests don't stack different tracks. Suppress only once we
+  // positively know we're a non-host (avoids dipping the host's music while
+  // the snapshot is still loading). Leaving (unmount) restores lobby music.
+  const suppressMusic = snapshot !== null && !callerIsHost;
+  useEffect(() => {
+    audio.setMusicAllowed(!suppressMusic);
+    return () => audio.setMusicAllowed(true);
+  }, [suppressMusic]);
+
   // Spinning is the only state without status lines. No mode has a bottom
   // SPIN button anymore (the centered hub is the sole control), so the
   // wheel lingers in "settled" between spins — keep the turn/status

@@ -407,107 +407,6 @@ def c_winner_fanfare() -> Stereo:
     return norm_stereo(reverb_stereo(soft_clip(out, 1.15), decay=0.6, mix_amt=0.3), 0.95)
 
 
-def c_bg_music() -> Stereo:
-    # Lively, gamey, *gapless* loop: upbeat C–G–Am–F (8 bars @ 124 BPM) with
-    # a driving bass, bright pulse arpeggio, a catchy hook, and a four-on-the
-    # -floor groove. Tails wrap circularly (mix_wrap) so end → start has no
-    # click and Web-Audio loop=true plays it forever with no seam.
-    bpm = 124.0
-    beat = 60.0 / bpm
-    eighth = beat / 2
-    bars = 8
-    n = int(bars * 4 * beat * SR)
-    left = [0.0] * n
-    right = [0.0] * n
-
-    def wrap(dst: Samples, src: Samples, at: float, gain: float) -> None:
-        start = int(at * SR)
-        for i, s in enumerate(src):
-            dst[(start + i) % n] += s * gain
-
-    # I–V–vi–IV ×2 — the uplifting "pop" progression (root, then chord tones).
-    roots = [C3, G3, A2 * 2, F4 * 0.5]  # C3 G3 A3 F3 (tight bass octave)
-    chord_tones = [
-        [C4, E4, G4],
-        [G3, B4 * 0.5, D5 * 0.5],
-        [A2 * 2, C4, E4],
-        [F4 * 0.5 * 2, A4 * 0.5 * 2, C5 * 0.5],
-    ]
-    prog = [0, 1, 2, 3, 0, 1, 2, 3]
-
-    # precompute reusable drum hits
-    kck, hht = kick(0.2), hat(0.045)
-    clp0 = highpass(noise(int(0.09 * SR)), 1500)
-    clp = [clp0[i] * math.exp(-i / (0.03 * SR)) for i in range(len(clp0))]
-
-    # Memoized voices — the arp/bass/lead repeat the same notes across bars,
-    # so render each (waveform, freq, length) once. (Avoids recomputing — and
-    # never call a synth inside a per-sample comprehension: that's O(n²).)
-    arp_len = int(0.16 * SR)
-    arp_env = env_perc(arp_len, 0.002, 0.05)
-    bass_cache: dict[float, Samples] = {}
-    arp_cache: dict[float, Samples] = {}
-
-    def bass_note(f: float) -> Samples:
-        if f not in bass_cache:
-            bass_cache[f] = lowpass(pluck(f, 0.26, 0.1), 1200)
-        return bass_cache[f]
-
-    def arp_note(f: float) -> Samples:
-        if f not in arp_cache:
-            pw = pulse(f, arp_len, 0.4)
-            arp_cache[f] = [pw[i] * arp_env[i] for i in range(arp_len)]
-        return arp_cache[f]
-
-    for bar in range(bars):
-        ci = prog[bar]
-        root = roots[ci]
-        tones = chord_tones[ci]
-        bar_at = bar * 4 * beat
-        for e in range(8):
-            bf = root * (2 if e % 4 == 3 else 1)
-            wrap(left, bass_note(bf), bar_at + e * eighth, 0.32)
-            wrap(right, bass_note(bf), bar_at + e * eighth, 0.32)
-            f = tones[e % len(tones)] * 2
-            arp = arp_note(f)
-            panl = 0.7 if e % 2 == 0 else 0.4
-            wrap(left, arp, bar_at + e * eighth, 0.1 * panl)
-            wrap(right, arp, bar_at + e * eighth, 0.1 * (1.1 - panl))
-        for b in range(4):
-            wrap(left, kck, bar_at + b * beat, 0.34)
-            wrap(right, kck, bar_at + b * beat, 0.34)
-            wrap(left, hht, bar_at + b * beat + eighth, 0.1)
-            wrap(right, hht, bar_at + b * beat + eighth, 0.1)
-            if b in (1, 3):
-                wrap(left, clp, bar_at + b * beat, 0.22)
-                wrap(right, clp, bar_at + b * beat, 0.22)
-
-    # catchy lead hook (pulse), a 2-bar phrase repeated 4× — sits up top
-    hook = [
-        (G5, 1), (E5, 1), (C5, 2), (E5, 1), (G5, 1), (A5, 2),
-        (G5, 1), (E5, 1), (D5, 2), (D5, 1), (E5, 1), (G5, 2),
-    ]
-    lead_cache: dict[tuple[float, int], Samples] = {}
-
-    def lead_note(note: float, ln: int) -> Samples:
-        key = (note, ln)
-        if key not in lead_cache:
-            pw = pulse(note, ln, 0.5)
-            ev = env_perc(ln, 0.004, (ln / SR) * 0.5)
-            lead_cache[key] = [pw[i] * ev[i] for i in range(ln)]
-        return lead_cache[key]
-
-    for rep in range(4):
-        t = rep * 8 * beat  # each hook phrase is 2 bars (16 eighths)
-        for note, dur in hook:
-            ln = int(dur * eighth * SR)
-            wrap(left, lead_note(note, ln), t, 0.12)
-            wrap(right, lead_note(note, ln), t, 0.12)
-            t += dur * eighth
-
-    return norm_stereo((left, right), 0.82)
-
-
 CUES: dict[str, Callable[[], Stereo]] = {
     "ui_tap": c_ui_tap,
     "ui_swipe": c_ui_swipe,
@@ -520,7 +419,6 @@ CUES: dict[str, Callable[[], Stereo]] = {
     "join_ping": c_join_ping,
     "rigged_reveal": c_rigged_reveal,
     "winner_fanfare": c_winner_fanfare,
-    "bg_music": c_bg_music,
 }
 
 
@@ -552,8 +450,7 @@ def main() -> None:
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
             wav_path = Path(tmp.name)
         write_wav(wav_path, s)
-        # bg_music is the longest cue → a touch higher bitrate; SFX stay tiny.
-        bitrate = "128k" if name == "bg_music" else "112k"
+        bitrate = "112k"  # SFX stay tiny
         mp3_path = OUT_DIR / f"{name}.mp3"
         subprocess.run(
             ["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav_path),

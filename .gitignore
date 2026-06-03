@@ -42,3 +42,7 @@ Thumbs.db
 
 # ssh mcp
 ssh-mcp
+
+# raw background-music masters (anchored — only the compressed
+# apps/webapp/public/sounds/bg_*.mp3 ship; keep originals local)
+/media/

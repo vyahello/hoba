@@ -10,7 +10,7 @@
 
 import { Howl, Howler } from "howler";
 
-import { AUDIO_MANIFEST, type AudioName, MUSIC_SRC, MUSIC_VOLUME } from "./manifest";
+import { AUDIO_MANIFEST, type AudioName, MUSIC_TRACKS, MUSIC_VOLUME } from "./manifest";
 
 const DEFAULT_MASTER_VOLUME = 0.6;
 const MUSIC_FADE_MS = 800;
@@ -20,10 +20,12 @@ class AudioManager {
   private enabled = true;
   private master = DEFAULT_MASTER_VOLUME;
   private unlockBound = false;
-  // Background music is a separate looping track with its own on/off.
-  private music?: Howl;
-  private musicEnabled = true;
-  private musicWanted = false; // a screen (active room) wants music playing
+  // Background music is a shuffled playlist with its own on/off.
+  private music?: Howl; // the currently playing track
+  private currentTrack = -1; // index into MUSIC_TRACKS of the live track
+  private musicEnabled = true; // Settings → Music
+  private musicWanted = false; // app is past boot and wants the bed playing
+  private musicAllowed = true; // context permits it (false for a guest in a room)
 
   setEnabled(value: boolean): void {
     this.enabled = value;
@@ -52,7 +54,7 @@ class AudioManager {
       }
       // A gesture is also our chance to (re)start music that wants to play
       // but was blocked by autoplay policy or paused on backgrounding.
-      if (this.musicWanted && this.musicEnabled) this.startMusic();
+      if (this.musicShouldPlay()) this.startMusic();
     };
     for (const event of ["touchend", "pointerdown", "click"] as const) {
       document.addEventListener(event, revive, { passive: true });
@@ -102,51 +104,101 @@ class AudioManager {
 
   // --- background music ---------------------------------------------------
 
-  /** Turn the music track on/off (Settings → Music). Starts/stops if a
-   *  screen currently wants music. */
+  /** True when every gate agrees the bed should be playing. */
+  private musicShouldPlay(): boolean {
+    return this.musicWanted && this.musicEnabled && this.musicAllowed;
+  }
+
+  /** Start or stop the bed to match the current gate state. */
+  private reconcileMusic(): void {
+    if (this.musicShouldPlay()) this.startMusic();
+    else this.stopMusic();
+  }
+
+  /** Turn the music track on/off (Settings → Music). */
   setMusicEnabled(value: boolean): void {
     this.musicEnabled = value;
-    if (value) {
-      if (this.musicWanted) this.startMusic();
-    } else {
-      this.stopMusic();
-    }
+    this.reconcileMusic();
+  }
+
+  /** Context gate: only the host plays the background bed inside a room, so
+   *  co-located players don't get a cacophony of different tracks. Guests in
+   *  a room set this false; it's true on the lobby / for the host. */
+  setMusicAllowed(value: boolean): void {
+    this.musicAllowed = value;
+    this.reconcileMusic();
   }
 
   /** Ask for the background bed to play (called once at app boot). It then
-   *  loops for the whole session; only the Music setting stops it. */
+   *  loops for the whole session; the Music setting + context gate stop it. */
   requestMusic(): void {
     this.musicWanted = true;
-    if (this.musicEnabled) this.startMusic();
+    this.reconcileMusic();
   }
 
   private startMusic(): void {
-    if (this.music === undefined) {
-      this.music = new Howl({
-        src: [MUSIC_SRC],
-        loop: true,
-        volume: 0,
-        // Web Audio (NOT html5): the html5 <audio> loop has an audible gap
-        // at the loop point in WebViews — Web Audio's buffer loop is sample
-        // -accurate and gapless. The clip is small (~150 KB) so decoding it
-        // fully is cheap, and it no longer randomly stalls like html5 did.
-        html5: false,
-        onloaderror: () => {
-          /* missing music file — silent */
-        },
-        onplayerror: () => {
-          /* gesture not yet received — retried by installUnlock */
-        },
-      });
-    }
-    const m = this.music;
     try {
       if (Howler.ctx && Howler.ctx.state !== "running") void Howler.ctx.resume();
     } catch {
       /* no context */
     }
-    if (!m.playing()) m.play();
-    m.fade(m.volume(), MUSIC_VOLUME, MUSIC_FADE_MS);
+    const m = this.music;
+    if (m !== undefined) {
+      // A track already exists — resume it (paused on disable / blocked by
+      // autoplay at boot) and fade back up. The playlist keeps advancing
+      // from wherever it was.
+      if (!m.playing()) m.play();
+      m.fade(m.volume(), MUSIC_VOLUME, MUSIC_FADE_MS);
+      return;
+    }
+    this.playTrack(this.pickNextTrack());
+  }
+
+  /** A random track index, never the one currently/last playing (unless
+   *  there is only one track to choose from). */
+  private pickNextTrack(): number {
+    const n = MUSIC_TRACKS.length;
+    if (n <= 1) return 0;
+    let next = this.currentTrack;
+    while (next === this.currentTrack) {
+      next = Math.floor(Math.random() * n);
+    }
+    return next;
+  }
+
+  private playTrack(index: number): void {
+    // Tear down the previous track's Howl so we don't leak <audio> elements.
+    if (this.music !== undefined) {
+      this.music.unload();
+      this.music = undefined;
+    }
+    this.currentTrack = index;
+    const howl = new Howl({
+      src: [MUSIC_TRACKS[index]],
+      loop: false,
+      volume: 0,
+      // html5 streaming (NOT Web Audio): full-length tracks would otherwise
+      // be downloaded + decoded into RAM in full, which is heavy on mobile.
+      // Streaming keeps memory and start latency low. The old gapless-loop
+      // concern that forced Web Audio doesn't apply here — each track plays
+      // once and we advance, so there is no loop point to gap.
+      html5: true,
+      onend: () => {
+        // Chain to the next track only while every gate still agrees.
+        if (this.musicShouldPlay()) {
+          this.playTrack(this.pickNextTrack());
+        }
+      },
+      onloaderror: () => {
+        /* missing track file — silent */
+      },
+      onplayerror: () => {
+        /* gesture not yet received — retried by installUnlock */
+      },
+    });
+    this.music = howl;
+    howl.play();
+    howl.fade(0, MUSIC_VOLUME, MUSIC_FADE_MS);
   }
 
   private stopMusic(): void {
@@ -154,8 +206,8 @@ class AudioManager {
     if (m === undefined || !m.playing()) return;
     m.fade(m.volume(), 0, MUSIC_FADE_MS);
     m.once("fade", () => {
-      // Only pause if nothing re-requested music during the fade.
-      if (!this.musicWanted) m.pause();
+      // Pause to stop streaming, unless music got re-requested during the fade.
+      if (!this.musicShouldPlay()) m.pause();
     });
   }
 }
