@@ -266,8 +266,28 @@ function wireListeners(s: Socket): void {
   });
 
   s.on("round:reset", () => {
-    const snap = getState().snapshot;
-    if (snap !== null) setState({ snapshot: reviveAllSegments(snap) });
+    // Authoritative reset. For Punishment/Chaos the server clears bets, match
+    // counts, the winner, the turn cursor and the solo bot — none of which a
+    // segment-only revive expresses, so the winner screen would otherwise
+    // linger (pressing "New Game" just re-fires this with no visible change).
+    // Refetch the room (per-viewer correct, e.g. anonymous nicknames), same as
+    // rigged:revealed; fall back to a local segment revive if the fetch fails.
+    setState({ currentSpin: null, spinSettled: null });
+    const code = getState().joinedCode;
+    if (code === null) {
+      const snap = getState().snapshot;
+      if (snap !== null) setState({ snapshot: reviveAllSegments(snap) });
+      return;
+    }
+    void api
+      .getRoom(code)
+      .then((state) => {
+        getState().setSnapshot(state);
+      })
+      .catch(() => {
+        const snap = getState().snapshot;
+        if (snap !== null) setState({ snapshot: reviveAllSegments(snap) });
+      });
   });
 
   // Rigged Mode 🎭 reveal: the secret is out. Refetch the (now un-redacted)

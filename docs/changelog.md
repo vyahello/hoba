@@ -4,6 +4,12 @@
 
 ---
 
+## Post-launch — 2026-06-03 — Fix: "New Game" stuck on the winner screen (Punishment/Chaos)
+
+- **Bug**: after a Punishment/Chaos game ended, pressing **New Game** did nothing visible — the winner screen lingered and the button just re-fired `round:reset` (repeated `ws.round.reset` log). Surfaced in solo bot play but was a general mode bug.
+- **Cause**: the server's `reset_game` clears bets / match counts / winner / last outcome / turn cursor / the solo bot and sets `status="lobby"`, then emits an **empty** `round:reset`. The client handler only ran `reviveAllSegments` (Elimination's needs) — it never applied the cleared Punishment/Chaos fields, so the snapshot kept its old winner.
+- **Fix** (`stores/room.ts`): on `round:reset`, **refetch the room** (`api.getRoom`, per-viewer correct for anonymous nicknames — same pattern as `rigged:revealed`) and clear the `currentSpin`/`spinSettled` transients; falls back to a local segment revive if the fetch fails. Frontend gates green (tsc · eslint · 10 store tests · build).
+
 ## Post-launch — 2026-06-03 — Settings: Sound gates all audio; louder + wider picker SFX
 
 - **Two toggles, not three** — removed the separate "Background music" toggle. **Sound** is now the single audio switch: it gates SFX *and* the music bed (`applySound` in `stores/settings.ts` calls both `audio.setEnabled` + `audio.setMusicEnabled`). Dropped `setMusic`/`music`/`KEY_MUSIC` from the store, the `Music` row from `SettingsPage`, the `settings:music` locale key (EN+UK), `music_enabled` from `Me`/`UserMe`/`UserMeUpdate`. The `users.music_enabled` **column is kept vestigial** (alongside `is_anonymous_default`) to avoid a SQLite rebuild — `docs/TODO.md` tracks dropping both.
