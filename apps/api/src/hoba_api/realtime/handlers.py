@@ -7,6 +7,7 @@ happens once at app import, with clear deps. Per spec §7 events.
 from __future__ import annotations
 
 import asyncio
+import secrets
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import parse_qs
@@ -71,10 +72,18 @@ SPIN_ANNOUNCE_DELAY_SECONDS = 0.3
 SPIN_COOLDOWN_MS = 1500
 SPIN_RATE_LIMIT_MAX = 30
 SPIN_RATE_LIMIT_WINDOW_SECONDS = 3600
-# Beat between a turn passing to the solo-play bot and its spin, so the
-# human reads the previous result on the wheel before it spins again, then
-# registers "{bot}'s turn".
-BOT_TURN_DELAY_SECONDS = 2.8
+# The solo bot "reacts" like a real player taking its turn: a *randomized*
+# beat between the turn passing to it and its spin, so it never feels
+# robotically instant. The lower bound also lets the human read the previous
+# result on the wheel before it spins again.
+BOT_TURN_DELAY_MIN_SECONDS = 2.8
+BOT_TURN_DELAY_MAX_SECONDS = 5.0
+
+
+def _bot_turn_delay_seconds() -> float:
+    """Human-like jitter in [MIN, MAX] (secrets — the codebase avoids `random`)."""
+    span_ms = int((BOT_TURN_DELAY_MAX_SECONDS - BOT_TURN_DELAY_MIN_SECONDS) * 1000)
+    return BOT_TURN_DELAY_MIN_SECONDS + secrets.randbelow(span_ms + 1) / 1000
 
 
 def _spin_cooldown_key(room_id: int) -> str:
@@ -321,7 +330,7 @@ async def _drive_bot_spin(
     settled) so every client animates the wheel for the bot's turn; the
     settle resolve (`_emit_settled`) advances the turn back to the human.
     """
-    await asyncio.sleep(BOT_TURN_DELAY_SECONDS)
+    await asyncio.sleep(_bot_turn_delay_seconds())
     async with SessionLocal() as session:
         room = await get_room_by_code(session, room_code)
         if (
