@@ -159,15 +159,27 @@ terminator too.
 # 1. DNS A-record for hoba.<your-domain> → VPS public IP. Verify:
 dig +short hoba.<your-domain>
 
-# 2. Issue a Let's Encrypt cert for the subdomain
-sudo certbot --nginx -d hoba.<your-domain>
+# 2. Issue the cert FIRST so the files exist before the vhost references
+#    them. `certonly` obtains the cert without editing any vhost.
+sudo certbot certonly --nginx -d hoba.<your-domain>
 
-# 3. Drop in Hoba's nginx server block
-sudo cp ~/hoba/infra/nginx/hoba.conf /etc/nginx/sites-available/hoba
+# 3. Drop in Hoba's nginx server block. The single sed rewrites
+#    `hoba.example.com` everywhere it appears — both `server_name` AND the
+#    two `ssl_certificate` paths — so the block points at the cert from
+#    step 2. (The template ships ACTIVE, not commented, cert lines.)
+sudo cp ~/_hoba/infra/nginx/hoba.conf /etc/nginx/sites-available/hoba
 sudo sed -i 's/hoba\.example\.com/hoba.<your-domain>/g' /etc/nginx/sites-available/hoba
 sudo ln -s /etc/nginx/sites-available/hoba /etc/nginx/sites-enabled/hoba
 sudo nginx -t && sudo systemctl reload nginx
 ```
+
+> ⚠️ **Never `cp` this template over a vhost that's already live.** It
+> clobbers the real `server_name` and `ssl_certificate` paths, and
+> `nginx -t` then fails with `no "ssl_certificate" is defined`. Because
+> the failed test short-circuits the `&& reload`, the running server
+> keeps serving — but the on-disk config is now a landmine that takes
+> the box down on the next restart. To recover, see § 9b "Nginx vhost
+> recovery". Back up first: `sudo cp /etc/nginx/sites-available/hoba{,.bak}`.
 
 **Boot Hoba with the shared override:**
 
@@ -212,7 +224,9 @@ Verify the chain works:
 ```bash
 # From your laptop:
 curl -sI https://hoba.<your-domain>/api/v1/me
-# → HTTP/2 401 (missing X-Telegram-Init-Data — expected, proves /api/v1 proxies)
+# → HTTP/2 405 — `-I` sends HEAD, which /me doesn't allow; the 405 comes
+#   FROM the app (not nginx), so it still proves /api/v1 proxies. A GET
+#   (`curl -s`) with no X-Telegram-Init-Data returns 401.
 
 # The OpenAPI spec / docs are deliberately blocked at the edge (see § 4b);
 # this confirms the block is live:
@@ -230,9 +244,10 @@ for the trace.
 ```bash
 # From your laptop / phone, not the server:
 # Real API routes live under /api/v1/* — sanity check with a route
-# that exists but needs auth; 401 confirms the proxy chain is live.
+# that exists but needs auth. `-I` (HEAD) → 405, a GET → 401; either is
+# an app-level response, so it confirms the proxy chain is live (not 502).
 curl -sI https://hoba.example.com/api/v1/me | head -3
-# → HTTP/2 401, server: uvicorn
+# → HTTP/2 405, server: uvicorn
 
 # /openapi.json, /docs, /redoc are blocked at the edge (§ 4b) → 404.
 # To read the spec for debugging, hit the loopback container port over
@@ -474,11 +489,21 @@ sudo nginx -T 2>/dev/null | grep -B 2 -A 30 "<your-domain>" | head -50
 Expected: `proxy_pass http://127.0.0.1:8800;` for `/api/` and `/socket.io/` (`/openapi.json` is intentionally `404`ed at the edge — see § 4b). If the vhost is missing or the upstream port differs:
 
 ```bash
-sudo cp ~/hoba/infra/nginx/hoba.conf /etc/nginx/sites-available/hoba
+sudo cp /etc/nginx/sites-available/hoba{,.bak}   # back up the live file first
+sudo cp ~/_hoba/infra/nginx/hoba.conf /etc/nginx/sites-available/hoba
 sudo sed -i 's/hoba\.example\.com/<your-domain>/g' /etc/nginx/sites-available/hoba
 sudo ln -sf /etc/nginx/sites-available/hoba /etc/nginx/sites-enabled/hoba
 sudo nginx -t && sudo systemctl reload nginx
 ```
+
+**If `nginx -t` fails with `no "ssl_certificate" is defined for the "listen ... ssl" directive`:** the template you just copied has cert lines that don't match this host, or the `sed` didn't rewrite `hoba.example.com` to the exact name on your cert. Confirm the cert's real name and paths, then make `server_name` **and** both `ssl_certificate*` paths use that exact domain:
+
+```bash
+sudo certbot certificates          # shows Certificate Name + Certificate Path
+sudo ls /etc/letsencrypt/live/      # the live dir name must match server_name
+```
+
+The `server_name`, the cert directory, and the `-d` domain certbot issued must all be byte-identical (e.g. `hobagame.duckdns.org`, not `hoba.duckdns.org`). A mismatch either fails `nginx -t` (missing cert) or makes requests fall through to the wrong server block. The failed `nginx -t` short-circuits the `&& reload`, so the running server keeps serving the old config — fix the file before any restart, or the box goes down on next boot.
 
 ### Recipe — Docker image cache during `--build`
 
