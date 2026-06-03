@@ -4,6 +4,11 @@
 
 ---
 
+## Post-launch — 2026-06-03 — Fix: result/winner shown only after the wheel lands
+
+- **Bug**: the per-spin outcome ("what you got") and the end-game winner popup sometimes appeared **before** the wheel finished landing (seconds early). Cause: those come from the server's `spin:settled` patch, which fires on the server's `duration_ms` timer — but the *local* animation runs longer (Chaos prepends an announce card and multi-phase spins the server doesn't wait for), so the snapshot-driven UI beat the wheel.
+- **Fix** (`RoomPage`): a local `spinLanded` flag — `false` while a spin animates, set `true` the instant the wheel visually settles (and `true` whenever no spin is active, so a rejoin into a finished game still shows the result immediately). The snapshot-derived result/winner UI is now gated on it: the Punishment/Chaos lucky text + dare card, all three `WinnerOverlay`s, and the winner celebration effects (fanfare/confetti). During the final spin the wheel keeps animating to its landing instead of being swapped out early. Now consistent across every mode. Gates: tsc · eslint · i18n · build green.
+
 ## Post-launch — 2026-06-03 — Unified winner popup across all modes
 
 - **Problem**: the end-of-game winner (🏆 + Hoba! + winning option) was rendered inline and *below* the wheel + standings in **Punishment/Chaos**, so you had to scroll to see who won. Each mode also styled its finish differently (Elimination/Best-of-N replaced the wheel; Classic already used a centered overlay).

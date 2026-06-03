@@ -138,6 +138,15 @@ export function RoomPage(): JSX.Element {
 
   const [wheelState, setWheelState] = useState<WheelState>("idle");
   const [revealed, setRevealed] = useState(false);
+  // True when no spin is animating locally — i.e. the wheel has visually
+  // landed (or there's no active spin). Server `spin:settled` patches (the
+  // per-spin outcome text, the winner) arrive on the server's shorter timer
+  // and can beat the local animation (Chaos adds an announce card + extra
+  // spin phases the server doesn't wait for). Gating the snapshot-derived
+  // result/winner UI on this keeps "what you got" + the winner popup from
+  // showing before the wheel lands. Starts true so a rejoin into a finished
+  // game shows the result immediately.
+  const [spinLanded, setSpinLanded] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [modePickerOpen, setModePickerOpen] = useState(false);
@@ -281,6 +290,7 @@ export function RoomPage(): JSX.Element {
     if (currentSpin === null) {
       setWheelState("idle");
       setRevealed(false);
+      setSpinLanded(true); // not animating → result/winner may show
       setChaosAnnounce(null);
       setPhaseSpin(null);
       return undefined;
@@ -299,6 +309,7 @@ export function RoomPage(): JSX.Element {
       });
 
     setRevealed(false);
+    setSpinLanded(false); // a spin is animating → hold result/winner UI
     setPhaseSpin(null);
 
     async function run(): Promise<void> {
@@ -373,6 +384,7 @@ export function RoomPage(): JSX.Element {
       haptics.success();
       audio.play("result_chime");
       setWheelState("settled");
+      setSpinLanded(true); // wheel has visually landed → reveal result/winner
 
       await sleep(isElimination ? ELIM_REVEAL_DELAY_MS : REVEAL_DELAY_MS);
       if (cancelled) return;
@@ -412,24 +424,26 @@ export function RoomPage(): JSX.Element {
     fireConfetti();
   }, []);
 
-  // Crown the survivor: celebrate once when the round ends.
+  // Crown the survivor: celebrate once when the round ends — but only after
+  // the wheel has visually landed (spinLanded), so the fanfare + winner popup
+  // never beat the final spin.
   useEffect(() => {
-    if (!roundOver) return;
+    if (!(roundOver && spinLanded)) return;
     celebrateWinner();
-  }, [roundOver, celebrateWinner]);
+  }, [roundOver, spinLanded, celebrateWinner]);
 
   // Same celebration when a best-of-N round finalizes a winner.
   useEffect(() => {
-    if (!bonOver) return;
+    if (!(bonOver && spinLanded)) return;
     celebrateWinner();
-  }, [bonOver, celebrateWinner]);
+  }, [bonOver, spinLanded, celebrateWinner]);
 
   // Chaos has no per-spin confetti, so the bet-race winner gets its own
-  // celebration on the winner-hero page. (Punishment keeps its per-spin burst.)
+  // celebration on the winner popup. (Punishment keeps its per-spin burst.)
   useEffect(() => {
-    if (!(punishOver && isChaos)) return;
+    if (!(punishOver && isChaos && spinLanded)) return;
     celebrateWinner();
-  }, [punishOver, isChaos, celebrateWinner]);
+  }, [punishOver, isChaos, spinLanded, celebrateWinner]);
 
   // Rigged Mode 🎭 reveal: when the host pulls the trigger, everyone's snapshot
   // un-redacts (rigged_revealed → true). Play the full-screen reveal once.
@@ -890,10 +904,11 @@ export function RoomPage(): JSX.Element {
       </section>
 
       <main className="flex-1 px-4 pt-3 pb-6 flex flex-col gap-4 relative">
-        {roundOver ? (
+        {roundOver && spinLanded ? (
           // Joyful finish — the lone survivor, as a centered popup so the
-          // result is unmissable without scrolling. Confetti fires from the
-          // roundOver effect above.
+          // result is unmissable without scrolling. Gated on spinLanded so it
+          // never appears before the final spin lands; confetti fires from the
+          // roundOver effect above (also spinLanded-gated).
           <WinnerOverlay
             emoji={survivor?.emoji}
             title={t("room:elimination.winner_title", { label: survivor?.label ?? "" })}
@@ -902,7 +917,7 @@ export function RoomPage(): JSX.Element {
             onAction={resetRound}
             waitingLabel={t("room:elimination.waiting_new_round")}
           />
-        ) : isBon && bonOver ? (
+        ) : isBon && bonOver && spinLanded ? (
           // Best-of-N finish — same centered popup so the result is
           // unmissable without scrolling.
           <WinnerOverlay
@@ -984,7 +999,7 @@ export function RoomPage(): JSX.Element {
         {/* Punishment/Chaos: winner popup (game over) — same centered overlay
             as the other modes, so the result no longer hides below the
             standings. */}
-        {punishOver && punishWinnerId !== null ? (
+        {punishOver && punishWinnerId !== null && spinLanded ? (
           <WinnerOverlay
             title={t("room:punishment.winner_title", {
               item: segLabel(
@@ -1107,7 +1122,7 @@ export function RoomPage(): JSX.Element {
                 );
               })}
             </div>
-            {punishPending !== null ? (
+            {!spinLanded ? null : punishPending !== null ? (
               punishPendingApproval ? (
                 // Dare was performed ("Done"): the dare card is gone; only a
                 // slim approval prompt remains for the chosen approver.
