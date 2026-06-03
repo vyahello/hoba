@@ -20,6 +20,7 @@ import { RigEditorSheet } from "@/components/room/RigEditorSheet";
 import { InviteSheet } from "@/components/room/InviteSheet";
 import { RoomModePickerSheet } from "@/components/room/RoomModePickerSheet";
 import { RoomSettingsSheet } from "@/components/room/RoomSettingsSheet";
+import { WinnerOverlay } from "@/components/room/WinnerOverlay";
 import {
   eliminatedSegments,
   isRoundOver,
@@ -890,87 +891,34 @@ export function RoomPage(): JSX.Element {
 
       <main className="flex-1 px-4 pt-3 pb-6 flex flex-col gap-4 relative">
         {roundOver ? (
-          // Joyful finish — the lone survivor as a winner hero, in place
-          // of a pointless single-wedge wheel. Confetti fires from the
+          // Joyful finish — the lone survivor, as a centered popup so the
+          // result is unmissable without scrolling. Confetti fires from the
           // roundOver effect above.
-          <div className="max-w-md mx-auto w-full flex flex-col items-center justify-center text-center py-10 gap-4">
-            {/* Skewed brand exclamation — the celebratory "Хоба!" beat. */}
-            <motion.div
-              initial={{ scale: 0.3, opacity: 0, skewX: -18, rotate: -10 }}
-              animate={{ scale: 1, opacity: 1, skewX: -11, rotate: -4 }}
-              transition={{ type: "spring", damping: 9, stiffness: 240 }}
-              className="origin-center"
-            >
-              <HobaWord />
-            </motion.div>
-            <motion.span
-              key={survivor?.id}
-              initial={{ scale: 0.4, rotate: -10, opacity: 0 }}
-              animate={{ scale: 1, rotate: 0, opacity: 1 }}
-              transition={{ delay: 0.15, type: "spring", damping: 12, stiffness: 220 }}
-              className="text-7xl leading-none"
-              aria-hidden
-            >
-              {survivor?.emoji ? `${survivor.emoji} ` : ""}🏆
-            </motion.span>
-            <h2 className="font-display font-extrabold text-3xl text-brand-amber-3">
-              {t("room:elimination.winner_title", { label: survivor?.label ?? "" })}
-            </h2>
-            {callerIsHost ? (
-              <Button variant="primary" size="lg" className="mt-2" onClick={resetRound}>
-                {t("room:elimination.new_round")}
-              </Button>
-            ) : (
-              <p className="text-sm text-ink-light-2 dark:text-ink-dark-2">
-                {t("room:elimination.waiting_new_round")}
-              </p>
-            )}
-          </div>
+          <WinnerOverlay
+            emoji={survivor?.emoji}
+            title={t("room:elimination.winner_title", { label: survivor?.label ?? "" })}
+            isHost={callerIsHost}
+            actionLabel={t("room:elimination.new_round")}
+            onAction={resetRound}
+            waitingLabel={t("room:elimination.waiting_new_round")}
+          />
         ) : isBon && bonOver ? (
-          // Best-of-N finish — winner hero in place of the wheel so the
-          // result is unmissable without scrolling.
-          <div className="max-w-md mx-auto w-full flex flex-col items-center justify-center text-center py-10 gap-4">
-            {(() => {
-              const winner = snapshot.active_question?.segments.find(
-                (s) => s.id === bonWinnerId,
-              );
-              return (
-                <>
-                  {/* Skewed brand exclamation — the celebratory "Хоба!" beat. */}
-                  <motion.div
-                    initial={{ scale: 0.3, opacity: 0, skewX: -18, rotate: -10 }}
-                    animate={{ scale: 1, opacity: 1, skewX: -11, rotate: -4 }}
-                    transition={{ type: "spring", damping: 9, stiffness: 240 }}
-                    className="origin-center"
-                  >
-                    <HobaWord />
-                  </motion.div>
-                  <motion.span
-                    key={winner?.id}
-                    initial={{ scale: 0.4, rotate: -10, opacity: 0 }}
-                    animate={{ scale: 1, rotate: 0, opacity: 1 }}
-                    transition={{ delay: 0.15, type: "spring", damping: 12, stiffness: 220 }}
-                    className="text-7xl leading-none"
-                    aria-hidden
-                  >
-                    {winner?.emoji ? `${winner.emoji} ` : ""}🏆
-                  </motion.span>
-                  <h2 className="font-display font-extrabold text-3xl text-brand-amber-3">
-                    {t("room:best_of_n.winner", { label: winner?.label ?? "" })}
-                  </h2>
-                </>
-              );
-            })()}
-            {callerIsHost ? (
-              <Button variant="primary" size="lg" className="mt-2" onClick={bestOfNReset}>
-                {t("room:best_of_n.new_round")}
-              </Button>
-            ) : (
-              <p className="text-sm text-ink-light-2 dark:text-ink-dark-2">
-                {t("room:elimination.waiting_new_round")}
-              </p>
-            )}
-          </div>
+          // Best-of-N finish — same centered popup so the result is
+          // unmissable without scrolling.
+          <WinnerOverlay
+            emoji={
+              snapshot.active_question?.segments.find((s) => s.id === bonWinnerId)?.emoji
+            }
+            title={t("room:best_of_n.winner", {
+              label:
+                snapshot.active_question?.segments.find((s) => s.id === bonWinnerId)
+                  ?.label ?? "",
+            })}
+            isHost={callerIsHost}
+            actionLabel={t("room:best_of_n.new_round")}
+            onAction={bestOfNReset}
+            waitingLabel={t("room:elimination.waiting_new_round")}
+          />
         ) : (
           <motion.div ref={wheelScope}>
             <Wheel
@@ -1033,33 +981,21 @@ export function RoomPage(): JSX.Element {
           </motion.div>
         )}
 
-        {/* Punishment: winner hero (game over). */}
+        {/* Punishment/Chaos: winner popup (game over) — same centered overlay
+            as the other modes, so the result no longer hides below the
+            standings. */}
         {punishOver && punishWinnerId !== null ? (
-          <div className="max-w-md mx-auto w-full flex flex-col items-center justify-center text-center py-6 gap-3">
-            <motion.div
-              initial={{ scale: 0.3, opacity: 0, skewX: -18, rotate: -10 }}
-              animate={{ scale: 1, opacity: 1, skewX: -11, rotate: -4 }}
-              transition={{ type: "spring", damping: 9, stiffness: 240 }}
-              className="origin-center"
-            >
-              <HobaWord />
-            </motion.div>
-            <span className="text-6xl leading-none" aria-hidden>
-              🏆
-            </span>
-            <h2 className="font-display font-extrabold text-2xl text-brand-amber-3">
-              {t("room:punishment.winner_title", {
-                item: segLabel(
-                  snapshot.room.punishment_bets?.[String(punishWinnerId)] ?? -1,
-                ),
-              })}
-            </h2>
-            {callerIsHost ? (
-              <Button variant="primary" size="lg" className="mt-2" onClick={resetRound}>
-                {t("room:punishment.new_round")}
-              </Button>
-            ) : null}
-          </div>
+          <WinnerOverlay
+            title={t("room:punishment.winner_title", {
+              item: segLabel(
+                snapshot.room.punishment_bets?.[String(punishWinnerId)] ?? -1,
+              ),
+            })}
+            isHost={callerIsHost}
+            actionLabel={t("room:punishment.new_round")}
+            onAction={resetRound}
+            waitingLabel={t("room:elimination.waiting_new_round")}
+          />
         ) : null}
 
         {/* Punishment: betting phase — pick your option (public). */}

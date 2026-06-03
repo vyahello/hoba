@@ -4,6 +4,12 @@
 
 ---
 
+## Post-launch — 2026-06-03 — Unified winner popup across all modes
+
+- **Problem**: the end-of-game winner (🏆 + Hoba! + winning option) was rendered inline and *below* the wheel + standings in **Punishment/Chaos**, so you had to scroll to see who won. Each mode also styled its finish differently (Elimination/Best-of-N replaced the wheel; Classic already used a centered overlay).
+- **Fix**: new `WinnerOverlay` component — one centered, full-area popup (z-30, the same pattern Classic's per-spin reveal uses) showing the skewed Hoba!, the cup (+ winning segment emoji), the winner headline, and the host's New Game/Round action (guests see a waiting note). Now used by **Elimination, Best-of-N, and Punishment/Chaos** alike, so the result is unmissable without scrolling and every mode finishes the same way.
+- Dropped the now-duplicated `🏆` from `room:punishment.winner_title` (EN+UK) since the overlay shows a big cup. RoomPage lost ~64 lines (three bespoke hero blocks → one component). Gates: tsc · eslint · i18n parity · build green.
+
 ## Post-launch — 2026-06-03 — Fix: "New Game" stuck on the winner screen (Punishment/Chaos)
 
 - **Bug**: after a Punishment/Chaos game ended, pressing **New Game** did nothing visible — the winner screen lingered and the button just re-fired `round:reset` (repeated `ws.round.reset` log). Surfaced in solo bot play but was a general mode bug.

@@ -201,7 +201,7 @@
     "lucky_you": "You",
     "lucky_tail": "got lucky — it landed on {item} 🍀",
     "must_do": "{name} must do: {card}",
-    "winner_title": "{item} wins! 🏆",
+    "winner_title": "{item} wins!",
     "spin_count_label": "Matches to win",
     "deck_mild": {
       "label": "Mild",

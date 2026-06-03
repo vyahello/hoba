@@ -201,7 +201,7 @@
     "lucky_you": "Тобі",
     "lucky_tail": "повезло — випало {item} 🍀",
     "must_do": "{name} має виконати: {card}",
-    "winner_title": "{item} — переможець! 🏆",
+    "winner_title": "{item} — переможець!",
     "spin_count_label": "Перемог для виграшу",
     "deck_mild": {
       "label": "Лагідний",
