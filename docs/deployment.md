@@ -183,6 +183,23 @@ The override:
   internet — only from the host).
 - Disables the bundled Caddy (your nginx is doing TLS termination).
 
+### 4b. Edge hardening (built into `hoba.conf`)
+
+The server block ships with two defensive rules — no extra setup needed,
+but worth knowing they're there:
+
+- **Scanner probes return `444`.** Requests for `wp-includes`,
+  `wp-admin`, `wp-login`, `xmlrpc.php`, `wlwmanifest`, `.env`, `.git/`,
+  `.aws/`, and `/vendor/` are dropped with a connectionless close. None
+  of those exist here, but without the rule the SPA fallback answers
+  `200` with `index.html`, which advertises a live host and floods the
+  access log with WordPress-scan noise.
+- **API docs are not public.** `/docs`, `/redoc`, and `/openapi.json`
+  return `404` at the edge so the full API surface isn't browsable by
+  anyone. To read the spec for debugging, tunnel to the loopback
+  container port: `ssh -L 8800:127.0.0.1:8800 <server>`, then
+  `curl localhost:8800/openapi.json`.
+
 In `.env` for this flavour:
 
 ```ini
@@ -194,10 +211,13 @@ Verify the chain works:
 
 ```bash
 # From your laptop:
-curl -fsI https://hoba.<your-domain>/openapi.json
-# → HTTP/2 200, server: nginx, proxied to uvicorn
 curl -sI https://hoba.<your-domain>/api/v1/me
 # → HTTP/2 401 (missing X-Telegram-Init-Data — expected, proves /api/v1 proxies)
+
+# The OpenAPI spec / docs are deliberately blocked at the edge (see § 4b);
+# this confirms the block is live:
+curl -sI https://hoba.<your-domain>/openapi.json | head -1
+# → HTTP/2 404
 ```
 
 If you get a 502: the Hoba containers aren't listening on the expected
@@ -209,14 +229,15 @@ for the trace.
 
 ```bash
 # From your laptop / phone, not the server:
-curl -fsSL https://hoba.example.com/openapi.json | head -1
-# → {"openapi":"3.1.0", ...}
-# (FastAPI mounts the OpenAPI spec at root, not under /api/v1.)
-
 # Real API routes live under /api/v1/* — sanity check with a route
 # that exists but needs auth; 401 confirms the proxy chain is live.
 curl -sI https://hoba.example.com/api/v1/me | head -3
 # → HTTP/2 401, server: uvicorn
+
+# /openapi.json, /docs, /redoc are blocked at the edge (§ 4b) → 404.
+# To read the spec for debugging, hit the loopback container port over
+# an SSH tunnel instead of the public subdomain:
+#   ssh -L 8800:127.0.0.1:8800 <server> then curl localhost:8800/openapi.json
 
 # Browser: open https://hoba.example.com
 # → Hoba! webapp renders (without Telegram context the Mini App will
@@ -450,7 +471,7 @@ ls -la /etc/nginx/sites-enabled/
 sudo nginx -T 2>/dev/null | grep -B 2 -A 30 "<your-domain>" | head -50
 ```
 
-Expected: `proxy_pass http://127.0.0.1:8800;` for `/api/`, `/openapi.json`, `/socket.io/`. If the vhost is missing or the upstream port differs:
+Expected: `proxy_pass http://127.0.0.1:8800;` for `/api/` and `/socket.io/` (`/openapi.json` is intentionally `404`ed at the edge — see § 4b). If the vhost is missing or the upstream port differs:
 
 ```bash
 sudo cp ~/hoba/infra/nginx/hoba.conf /etc/nginx/sites-available/hoba
