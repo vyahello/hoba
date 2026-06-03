@@ -1,0 +1,17 @@
+{
+  "title": "Credits",
+  "music": {
+    "heading": "Music",
+    "intro": "Background music used under license. Five tracks by Kevin MacLeod are licensed under Creative Commons Attribution 4.0.",
+    "by": "by",
+    "license_cc_by": "Licensed under CC BY 4.0",
+    "license_pixabay": "Pixabay Content License",
+    "view_license": "View license",
+    "view_source": "Source",
+    "pixabay_track": "Additional track"
+  },
+  "sound": {
+    "heading": "Sound effects",
+    "body": "All in-app sound effects are original, synthesized for Hoba!"
+  }
+}

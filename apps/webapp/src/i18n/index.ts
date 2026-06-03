@@ -15,6 +15,7 @@ import enAdmin from "@/locales/en/admin.json";
 import enBrand from "@/locales/en/brand.json";
 import enCommon from "@/locales/en/common.json";
 import enCreate from "@/locales/en/create.json";
+import enCredits from "@/locales/en/credits.json";
 import enDev from "@/locales/en/dev.json";
 import enHome from "@/locales/en/home.json";
 import enLegal from "@/locales/en/legal.json";
@@ -24,6 +25,7 @@ import ukAdmin from "@/locales/uk/admin.json";
 import ukBrand from "@/locales/uk/brand.json";
 import ukCommon from "@/locales/uk/common.json";
 import ukCreate from "@/locales/uk/create.json";
+import ukCredits from "@/locales/uk/credits.json";
 import ukDev from "@/locales/uk/dev.json";
 import ukHome from "@/locales/uk/home.json";
 import ukLegal from "@/locales/uk/legal.json";
@@ -58,6 +60,7 @@ void i18n
         settings: enSettings,
         dev: enDev,
         create: enCreate,
+        credits: enCredits,
         room: enRoom,
         legal: enLegal,
         admin: enAdmin,
@@ -69,6 +72,7 @@ void i18n
         settings: ukSettings,
         dev: ukDev,
         create: ukCreate,
+        credits: ukCredits,
         room: ukRoom,
         legal: ukLegal,
         admin: ukAdmin,
@@ -77,7 +81,7 @@ void i18n
     lng: detectInitialLocale(),
     fallbackLng: "en",
     defaultNS: "common",
-    ns: ["common", "brand", "home", "settings", "dev", "create", "room", "legal", "admin"],
+    ns: ["common", "brand", "home", "settings", "dev", "create", "credits", "room", "legal", "admin"],
     interpolation: { escapeValue: false },
     returnNull: false,
   });

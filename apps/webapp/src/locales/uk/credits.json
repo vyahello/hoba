@@ -1,0 +1,17 @@
+{
+  "title": "Подяки",
+  "music": {
+    "heading": "Музика",
+    "intro": "Фонова музика використовується за ліцензією. П’ять треків Kevin MacLeod ліцензовано за Creative Commons Attribution 4.0.",
+    "by": "—",
+    "license_cc_by": "Ліцензія CC BY 4.0",
+    "license_pixabay": "Ліцензія вмісту Pixabay",
+    "view_license": "Переглянути ліцензію",
+    "view_source": "Джерело",
+    "pixabay_track": "Додатковий трек"
+  },
+  "sound": {
+    "heading": "Звукові ефекти",
+    "body": "Усі звукові ефекти в застосунку оригінальні, синтезовані для Хоба!"
+  }
+}

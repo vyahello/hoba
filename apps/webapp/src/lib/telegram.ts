@@ -159,6 +159,24 @@ export function openTelegramLink(url: string): boolean {
 }
 
 /**
+ * Open an external (non-`t.me`) https link — Telegram's in-app browser via
+ * `WebApp.openLink`, falling back to `window.open` outside Telegram. Used for
+ * attribution links (track source, CC-BY license). Returns true on success.
+ */
+export function openExternalLink(url: string): boolean {
+  try {
+    WebApp.openLink(url);
+    return true;
+  } catch {
+    if (typeof window !== "undefined") {
+      window.open(url, "_blank");
+      return true;
+    }
+    return false;
+  }
+}
+
+/**
  * Read `start_param` from the launch surface, with three fallbacks so
  * the share-deep-link lands regardless of which Telegram client + SDK
  * version the recipient is on. See `lib/startParam.ts` for the why.

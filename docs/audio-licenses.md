@@ -52,20 +52,24 @@ sequence** (each streams once via html5, then the next — never the same one
 twice in a row). Only the **host** plays the bed inside a room; guests
 suppress it so co-located players don't stack tracks.
 
-| Filename                  | Source | Author | License | Added |
-|---------------------------|--------|--------|---------|-------|
-| `public/sounds/bg_1.mp3`  | ⚠️ TODO — owner to confirm | | | 2026-06-03 |
-| `public/sounds/bg_2.mp3`  | ⚠️ TODO — owner to confirm | | | 2026-06-03 |
-| `public/sounds/bg_3.mp3`  | ⚠️ TODO — owner to confirm | | | 2026-06-03 |
-| `public/sounds/bg_4.mp3`  | ⚠️ TODO — owner to confirm | | | 2026-06-03 |
-| `public/sounds/bg_5.mp3`  | ⚠️ TODO — owner to confirm | | | 2026-06-03 |
-| `public/sounds/bg_6.mp3`  | ⚠️ TODO — owner to confirm | | | 2026-06-03 |
+| Filename                  | Track | Author | Source | License | Added |
+|---------------------------|-------|--------|--------|---------|-------|
+| `public/sounds/bg_1.mp3`  | Batty McFadden – Slower      | Kevin MacLeod | incompetech.com | **CC-BY 4.0** (attribution required) | 2026-06-03 |
+| `public/sounds/bg_2.mp3`  | Carpe Diem                   | Kevin MacLeod | incompetech.com (ISRC USUAN1600023) | **CC-BY 4.0** (attribution required) | 2026-06-03 |
+| `public/sounds/bg_3.mp3`  | (untagged)                   | — | Pixabay Music | Pixabay Content License (no attribution) | 2026-06-03 |
+| `public/sounds/bg_4.mp3`  | Fig Leaf Rag – distressed    | Kevin MacLeod | incompetech.com | **CC-BY 4.0** (attribution required) | 2026-06-03 |
+| `public/sounds/bg_5.mp3`  | Off to Osaka                 | Kevin MacLeod | incompetech.com | **CC-BY 4.0** (attribution required) | 2026-06-03 |
+| `public/sounds/bg_6.mp3`  | The Path of the Goblin King  | Kevin MacLeod | incompetech.com | **CC-BY 4.0** (attribution required) | 2026-06-03 |
 
-> **⚠️ Before launch:** confirm each track is royalty-free / license-clean for
-> commercial use in an app and fill the Source/Author/License columns. If any
-> track isn't clearly licensed, replace it from Pixabay Music (no-attribution),
-> FreePD (CC0), or a paid library. Re-encode replacements with:
+> **Attribution is mandatory** for the five Kevin MacLeod tracks (CC-BY 4.0) —
+> shown in-app via Settings → Credits (the `credits` i18n namespace). Required
+> credit format: `"<Title>" by Kevin MacLeod (incompetech.com), licensed under
+> Creative Commons: By Attribution 4.0 (creativecommons.org/licenses/by/4.0/)`.
+> The Pixabay track (`bg_3`) needs no attribution but is credited too.
+>
+> Replacing a track? Re-encode with:
 > `ffmpeg -i in.mp3 -ac 2 -ar 44100 -af loudnorm=I=-16:TP=-1.5:LRA=11 -b:a 112k -map_metadata -1 apps/webapp/public/sounds/bg_N.mp3`
+> — then update both this table **and** the `credits` locale files.
 
 ## SFX licensing log
 

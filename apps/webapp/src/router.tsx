@@ -3,6 +3,7 @@ import { createBrowserRouter } from "react-router-dom";
 import { RootLayout } from "@/components/layout/RootLayout";
 import { AdminModerationPage } from "@/pages/AdminModerationPage";
 import { CreatePage } from "@/pages/CreatePage";
+import { CreditsPage } from "@/pages/CreditsPage";
 import { DevDSPage } from "@/pages/DevDSPage";
 import { HomePage } from "@/pages/HomePage";
 import { LegalPage } from "@/pages/LegalPage";
@@ -26,6 +27,7 @@ export const router = createBrowserRouter([
       { path: "/admin/moderation", element: <AdminModerationPage /> },
       { path: "/privacy", element: <LegalPage doc="privacy" /> },
       { path: "/terms", element: <LegalPage doc="terms" /> },
+      { path: "/credits", element: <CreditsPage /> },
       { path: "/dev/ds", element: <DevDSPage /> },
     ],
   },

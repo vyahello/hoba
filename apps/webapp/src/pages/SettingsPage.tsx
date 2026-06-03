@@ -198,6 +198,16 @@ export function SettingsPage(): JSX.Element {
             >
               {t("settings:about.terms")}
             </button>
+            <span aria-hidden className="text-ink-light-2 dark:text-ink-dark-2">·</span>
+            <button
+              type="button"
+              className="text-sm font-semibold text-brand-primary"
+              onClick={() => {
+                navigate("/credits");
+              }}
+            >
+              {t("settings:about.credits")}
+            </button>
           </div>
         </section>
       </div>
