@@ -52,14 +52,24 @@ sequence** (each streams once via html5, then the next — never the same one
 twice in a row). Only the **host** plays the bed inside a room; guests
 suppress it so co-located players don't stack tracks.
 
-| Filename                  | Track | Author | Source | License | Added |
-|---------------------------|-------|--------|--------|---------|-------|
-| `public/sounds/bg_1.mp3`  | Batty McFadden – Slower      | Kevin MacLeod | incompetech.com | **CC-BY 4.0** (attribution required) | 2026-06-03 |
-| `public/sounds/bg_2.mp3`  | Carpe Diem                   | Kevin MacLeod | incompetech.com (ISRC USUAN1600023) | **CC-BY 4.0** (attribution required) | 2026-06-03 |
+Per-track source links deep-link by **ISRC** to incompetech.com (Kevin
+MacLeod's own site — the attribution domain named in the credit format
+below). We use incompetech.com rather than filmmusic.io because the latter
+migrated to ende.app and its per-track pages now 404; the ISRC URLs on
+incompetech.com are the durable source. URL shape:
+`https://incompetech.com/music/royalty-free/index.html?isrc=<ISRC>` (the
+page resolves the track client-side, so it renders in a browser / Telegram
+webview, not in a no-JS fetch). These are the links the in-app Credits
+screen opens.
+
+| Filename                  | Track | Author | Source (ISRC) | License | Added |
+|---------------------------|-------|--------|---------------|---------|-------|
+| `public/sounds/bg_1.mp3`  | Batty McFaddin – Slower      | Kevin MacLeod | incompetech.com — USUAN1200003 | **CC-BY 4.0** (attribution required) | 2026-06-03 |
+| `public/sounds/bg_2.mp3`  | Carpe Diem                   | Kevin MacLeod | incompetech.com — USUAN1600023 | **CC-BY 4.0** (attribution required) | 2026-06-03 |
 | `public/sounds/bg_3.mp3`  | (untagged)                   | — | Pixabay Music | Pixabay Content License (no attribution) | 2026-06-03 |
-| `public/sounds/bg_4.mp3`  | Fig Leaf Rag – distressed    | Kevin MacLeod | incompetech.com | **CC-BY 4.0** (attribution required) | 2026-06-03 |
-| `public/sounds/bg_5.mp3`  | Off to Osaka                 | Kevin MacLeod | incompetech.com | **CC-BY 4.0** (attribution required) | 2026-06-03 |
-| `public/sounds/bg_6.mp3`  | The Path of the Goblin King  | Kevin MacLeod | incompetech.com | **CC-BY 4.0** (attribution required) | 2026-06-03 |
+| `public/sounds/bg_4.mp3`  | Fig Leaf Rag – distressed    | Kevin MacLeod | incompetech.com — USUAN1100702 | **CC-BY 4.0** (attribution required) | 2026-06-03 |
+| `public/sounds/bg_5.mp3`  | Off to Osaka                 | Kevin MacLeod | incompetech.com — USUAN1100128 | **CC-BY 4.0** (attribution required) | 2026-06-03 |
+| `public/sounds/bg_6.mp3`  | The Path of the Goblin King  | Kevin MacLeod | incompetech.com — USUAN1100874 (v2) | **CC-BY 4.0** (attribution required) | 2026-06-03 |
 
 > **Attribution is mandatory** for the five Kevin MacLeod tracks (CC-BY 4.0) —
 > shown in-app via Settings → Credits (the `credits` i18n namespace). Required

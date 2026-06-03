@@ -25,13 +25,20 @@ interface MusicCredit {
 
 // Kevin MacLeod tracks are CC-BY 4.0 → attribution is mandatory (see
 // docs/audio-licenses.md). The Pixabay track needs none but is credited too.
-const INCOMPETECH = "https://incompetech.com/music/royalty-free/";
+//
+// Each track deep-links by ISRC to incompetech.com — Kevin MacLeod's own
+// site and the canonical attribution domain named in the CC-BY credit line.
+// We point here (not filmmusic.io) because filmmusic.io migrated to ende.app
+// and its per-track pages now 404; incompetech.com is the durable source.
+// The ISRCs are recorded in docs/audio-licenses.md.
+const incompetech = (isrc: string): string =>
+  `https://incompetech.com/music/royalty-free/index.html?isrc=${isrc}`;
 const MUSIC_CREDITS: MusicCredit[] = [
-  { title: "Batty McFadden – Slower", author: "Kevin MacLeod", license: "cc_by", sourceUrl: INCOMPETECH },
-  { title: "Carpe Diem", author: "Kevin MacLeod", license: "cc_by", sourceUrl: INCOMPETECH },
-  { title: "Off to Osaka", author: "Kevin MacLeod", license: "cc_by", sourceUrl: INCOMPETECH },
-  { title: "Fig Leaf Rag – distressed", author: "Kevin MacLeod", license: "cc_by", sourceUrl: INCOMPETECH },
-  { title: "The Path of the Goblin King", author: "Kevin MacLeod", license: "cc_by", sourceUrl: INCOMPETECH },
+  { title: "Batty McFaddin – Slower", author: "Kevin MacLeod", license: "cc_by", sourceUrl: incompetech("USUAN1200003") },
+  { title: "Carpe Diem", author: "Kevin MacLeod", license: "cc_by", sourceUrl: incompetech("USUAN1600023") },
+  { title: "Off to Osaka", author: "Kevin MacLeod", license: "cc_by", sourceUrl: incompetech("USUAN1100128") },
+  { title: "Fig Leaf Rag – distressed", author: "Kevin MacLeod", license: "cc_by", sourceUrl: incompetech("USUAN1100702") },
+  { title: "The Path of the Goblin King", author: "Kevin MacLeod", license: "cc_by", sourceUrl: incompetech("USUAN1100874") },
   { title: "", author: null, license: "pixabay", sourceUrl: "https://pixabay.com/music/" },
 ];
 
