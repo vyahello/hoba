@@ -1,7 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { audio } from "@/audio";
 import { IconButton } from "@/components/ds/IconButton";
+import { haptics } from "@/lib/haptics";
 import { safeNavigateBack } from "@/lib/navigation";
 import { openExternalLink } from "@/lib/telegram";
 
@@ -88,6 +90,8 @@ export function CreditsPage(): JSX.Element {
                     type="button"
                     className="text-xs font-semibold text-brand-primary"
                     onClick={() => {
+                      haptics.selection();
+                      audio.play("ui_tap");
                       openExternalLink(c.sourceUrl);
                     }}
                   >
@@ -98,6 +102,8 @@ export function CreditsPage(): JSX.Element {
                       type="button"
                       className="text-xs font-semibold text-brand-primary"
                       onClick={() => {
+                        haptics.selection();
+                        audio.play("ui_tap");
                         openExternalLink(CC_BY_URL);
                       }}
                     >

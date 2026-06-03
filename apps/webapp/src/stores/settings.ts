@@ -1,5 +1,5 @@
 /**
- * User preferences store — Sound, Vibration, and Anonymous-by-default.
+ * User preferences store — Sound and Haptics.
  *
  * Three layers keep these honest:
  *   1. localStorage (via safeStorage) — read synchronously at module load
@@ -10,9 +10,9 @@
  *   3. Side effects — `audio.setEnabled` + `setHapticsEnabled` are applied
  *      on every change so the toggles take effect immediately app-wide.
  *
- * `anonymousDefault` has no client side effect: it's sent to the server as
- * `is_anonymous_default` and applied when a room is created (see the rooms
- * endpoints). We still persist it for an instant-correct Settings UI.
+ * Sound is the single audio switch: it gates SFX *and* the background-music
+ * bed (turning Sound off silences everything). There is no separate music
+ * toggle.
  */
 
 import { create } from "zustand";
@@ -25,7 +25,6 @@ import { safeStorage } from "@/lib/safeStorage";
 
 const KEY_SOUND = "hoba.sound";
 const KEY_HAPTICS = "hoba.haptics";
-const KEY_MUSIC = "hoba.music";
 
 function readBool(key: string, fallback: boolean): boolean {
   const raw = safeStorage.get(key);
@@ -37,13 +36,17 @@ function writeBool(key: string, value: boolean): void {
   safeStorage.set(key, value ? "1" : "0");
 }
 
+/** Sound gates both SFX and the music bed. */
+function applySound(value: boolean): void {
+  audio.setEnabled(value);
+  audio.setMusicEnabled(value);
+}
+
 interface SettingsState {
   sound: boolean;
   haptics: boolean;
-  music: boolean;
   setSound: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
-  setMusic: (value: boolean) => void;
   /** Switch UI language AND persist it server-side so server-rendered text
    *  (e.g. punishment cards) follows the user's choice, not the device. */
   setLanguage: (locale: Locale) => void;
@@ -54,12 +57,10 @@ interface SettingsState {
 // Initial values from localStorage so gating is correct pre-network.
 const initialSound = readBool(KEY_SOUND, true);
 const initialHaptics = readBool(KEY_HAPTICS, true);
-const initialMusic = readBool(KEY_MUSIC, true);
 
 // Apply the persisted gates immediately at module load.
-audio.setEnabled(initialSound);
+applySound(initialSound);
 setHapticsEnabled(initialHaptics);
-audio.setMusicEnabled(initialMusic);
 
 /** Fire-and-forget PATCH /me; failures are non-fatal (local state holds). */
 function persistRemote(patch: Record<string, boolean>): void {
@@ -71,10 +72,9 @@ function persistRemote(patch: Record<string, boolean>): void {
 export const useSettings = create<SettingsState>((set) => ({
   sound: initialSound,
   haptics: initialHaptics,
-  music: initialMusic,
 
   setSound: (value) => {
-    audio.setEnabled(value);
+    applySound(value);
     writeBool(KEY_SOUND, value);
     persistRemote({ sound_enabled: value });
     set({ sound: value });
@@ -85,13 +85,6 @@ export const useSettings = create<SettingsState>((set) => ({
     writeBool(KEY_HAPTICS, value);
     persistRemote({ haptics_enabled: value });
     set({ haptics: value });
-  },
-
-  setMusic: (value) => {
-    audio.setMusicEnabled(value);
-    writeBool(KEY_MUSIC, value);
-    persistRemote({ music_enabled: value });
-    set({ music: value });
   },
 
   setLanguage: (locale) => {
@@ -113,16 +106,13 @@ export const useSettings = create<SettingsState>((set) => ({
         /* offline */
       });
     }
-    audio.setEnabled(me.sound_enabled);
+    applySound(me.sound_enabled);
     setHapticsEnabled(me.haptics_enabled);
-    audio.setMusicEnabled(me.music_enabled);
     writeBool(KEY_SOUND, me.sound_enabled);
     writeBool(KEY_HAPTICS, me.haptics_enabled);
-    writeBool(KEY_MUSIC, me.music_enabled);
     set({
       sound: me.sound_enabled,
       haptics: me.haptics_enabled,
-      music: me.music_enabled,
     });
   },
 }));

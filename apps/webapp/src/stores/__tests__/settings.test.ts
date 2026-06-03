@@ -32,12 +32,13 @@ describe("settings store", () => {
     patchMe.mockClear();
     getMe.mockClear();
     // Reset to defaults between tests.
-    useSettings.setState({ sound: true, haptics: true, music: true });
+    useSettings.setState({ sound: true, haptics: true });
   });
 
-  it("applies + persists the sound toggle to audio and the server", () => {
+  it("sound toggle gates BOTH sfx and music, and persists to the server", () => {
     useSettings.getState().setSound(false);
     expect(audioSetEnabled).toHaveBeenLastCalledWith(false);
+    expect(audioSetMusicEnabled).toHaveBeenLastCalledWith(false);
     expect(patchMe).toHaveBeenCalledWith({ sound_enabled: false });
     expect(useSettings.getState().sound).toBe(false);
   });
@@ -55,19 +56,11 @@ describe("settings store", () => {
     expect(patchMe).toHaveBeenCalledWith({ language_code: "uk" });
   });
 
-  it("applies + persists the music toggle to the audio bed and the server", () => {
-    useSettings.getState().setMusic(false);
-    expect(audioSetMusicEnabled).toHaveBeenLastCalledWith(false);
-    expect(patchMe).toHaveBeenCalledWith({ music_enabled: false });
-    expect(useSettings.getState().music).toBe(false);
-  });
-
-  it("hydrate reconciles sound/haptics/music from the server (server wins)", async () => {
+  it("hydrate reconciles sound/haptics from the server (server wins), sound gating music", async () => {
     getMe.mockResolvedValueOnce({
       language_code: "en",
       sound_enabled: false,
       haptics_enabled: false,
-      music_enabled: false,
     });
     await useSettings.getState().hydrate();
     expect(audioSetEnabled).toHaveBeenLastCalledWith(false);
@@ -76,7 +69,6 @@ describe("settings store", () => {
     expect(useSettings.getState()).toMatchObject({
       sound: false,
       haptics: false,
-      music: false,
     });
   });
 });

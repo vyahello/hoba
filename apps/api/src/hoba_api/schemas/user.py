@@ -24,7 +24,6 @@ class UserMe(BaseModel):
     language_code: Locale
     sound_enabled: bool
     haptics_enabled: bool
-    music_enabled: bool
     created_at: datetime
     last_active_at: datetime
     # True if this user's tg_id is in ADMIN_TG_IDS (gates the moderation UI).
@@ -37,7 +36,6 @@ class UserMeUpdate(BaseModel):
     language_code: Locale | None = None
     sound_enabled: bool | None = None
     haptics_enabled: bool | None = None
-    music_enabled: bool | None = None
 
 
 class UserStats(BaseModel):

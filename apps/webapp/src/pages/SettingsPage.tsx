@@ -2,12 +2,19 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { audio } from "@/audio";
 import { Card } from "@/components/ds/Card";
 import { StubPage } from "@/components/layout/StubPage";
 import { type Locale, SUPPORTED_LOCALES } from "@/i18n";
 import { api } from "@/lib/api";
 import { haptics } from "@/lib/haptics";
 import { useSettings } from "@/stores/settings";
+
+/** Shared tap feedback for the page's plain (non-DS) buttons. */
+function pickFeedback(): void {
+  haptics.selection();
+  audio.play("ui_tap");
+}
 
 interface ToggleRowProps {
   label: string;
@@ -20,7 +27,7 @@ function ToggleRow({ label, on, onToggle }: ToggleRowProps): JSX.Element {
     <button
       type="button"
       onClick={() => {
-        haptics.selection();
+        pickFeedback();
         onToggle();
       }}
       className="ds-tactile w-full flex items-center justify-between px-4 py-3 min-h-[48px] active:bg-surface-light-2 dark:active:bg-surface-dark-2"
@@ -50,10 +57,8 @@ export function SettingsPage(): JSX.Element {
   const currentLocale = (i18n.resolvedLanguage ?? "en") as Locale;
   const sound = useSettings((s) => s.sound);
   const hapticsOn = useSettings((s) => s.haptics);
-  const music = useSettings((s) => s.music);
   const setSound = useSettings((s) => s.setSound);
   const setHaptics = useSettings((s) => s.setHaptics);
-  const setMusic = useSettings((s) => s.setMusic);
   const setLanguage = useSettings((s) => s.setLanguage);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -86,7 +91,7 @@ export function SettingsPage(): JSX.Element {
                   key={locale}
                   type="button"
                   onClick={() => {
-                    haptics.selection();
+                    pickFeedback();
                     setLanguage(locale);
                   }}
                   className={`ds-tactile flex-1 min-h-[48px] font-medium ${
@@ -124,13 +129,6 @@ export function SettingsPage(): JSX.Element {
                 setHaptics(!hapticsOn);
               }}
             />
-            <ToggleRow
-              label={t("settings:music")}
-              on={music}
-              onToggle={() => {
-                setMusic(!music);
-              }}
-            />
           </Card>
         </section>
 
@@ -143,7 +141,7 @@ export function SettingsPage(): JSX.Element {
               <button
                 type="button"
                 onClick={() => {
-                  haptics.selection();
+                  pickFeedback();
                   navigate("/admin/moderation");
                 }}
                 className="ds-tactile w-full flex items-center justify-between px-4 py-3 min-h-[48px] active:bg-surface-light-2 dark:active:bg-surface-dark-2"
@@ -183,6 +181,7 @@ export function SettingsPage(): JSX.Element {
               type="button"
               className="text-sm font-semibold text-brand-primary"
               onClick={() => {
+                pickFeedback();
                 navigate("/privacy");
               }}
             >
@@ -193,6 +192,7 @@ export function SettingsPage(): JSX.Element {
               type="button"
               className="text-sm font-semibold text-brand-primary"
               onClick={() => {
+                pickFeedback();
                 navigate("/terms");
               }}
             >
@@ -203,6 +203,7 @@ export function SettingsPage(): JSX.Element {
               type="button"
               className="text-sm font-semibold text-brand-primary"
               onClick={() => {
+                pickFeedback();
                 navigate("/credits");
               }}
             >

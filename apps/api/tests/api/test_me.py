@@ -75,6 +75,7 @@ def test_patch_me_ignores_unknown_fields(client: TestClient, init_data: str) -> 
     assert body["language_code"] == "uk"
     assert body["sound_enabled"] is True
     assert "is_anonymous_default" not in body  # setting removed
+    assert "music_enabled" not in body  # toggle removed — Sound now gates music
 
 
 def test_patch_me_rejects_unsupported_language(client: TestClient, init_data: str) -> None:

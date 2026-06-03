@@ -31,8 +31,8 @@ interface AudioDef {
 }
 
 export const AUDIO_MANIFEST: Record<AudioName, AudioDef> = {
-  ui_tap: { src: "/sounds/ui_tap.mp3", volume: 0.55 },
-  ui_swipe: { src: "/sounds/ui_swipe.mp3", volume: 0.5 },
+  ui_tap: { src: "/sounds/ui_tap.mp3", volume: 0.9 },
+  ui_swipe: { src: "/sounds/ui_swipe.mp3", volume: 0.7 },
   wheel_tick: { src: "/sounds/wheel_tick.mp3", volume: 0.55 },
   wheel_launch: { src: "/sounds/wheel_launch.mp3", volume: 0.8 },
   result_chime: { src: "/sounds/result_chime.mp3", volume: 0.8 },

@@ -4,6 +4,13 @@
 
 ---
 
+## Post-launch — 2026-06-03 — Settings: Sound gates all audio; louder + wider picker SFX
+
+- **Two toggles, not three** — removed the separate "Background music" toggle. **Sound** is now the single audio switch: it gates SFX *and* the music bed (`applySound` in `stores/settings.ts` calls both `audio.setEnabled` + `audio.setMusicEnabled`). Dropped `setMusic`/`music`/`KEY_MUSIC` from the store, the `Music` row from `SettingsPage`, the `settings:music` locale key (EN+UK), `music_enabled` from `Me`/`UserMe`/`UserMeUpdate`. The `users.music_enabled` **column is kept vestigial** (alongside `is_anonymous_default`) to avoid a SQLite rebuild — `docs/TODO.md` tracks dropping both.
+- **Picker SFX everywhere** — added `audio.play("ui_tap")` to every plain (non-DS) button that lacked it: the language switch, Sound/Haptics toggles, the moderation entry, the Privacy/Terms/Credits links (`SettingsPage` via a shared `pickFeedback()`), and the Credits source/license links. DS `Button`/`IconButton` already played it, so this closes the gaps the owner heard (language, moderation).
+- **Louder taps** — `ui_tap` volume 0.55 → 0.9, `ui_swipe` 0.5 → 0.7 (owner: picker SFX too quiet; bg-music level left as-is).
+- Gates: backend 314 / frontend settings tests 4, mypy --strict · ruff · tsc · eslint · i18n parity · build all green.
+
 ## Post-launch — 2026-06-03 — Real music playlist + host-only in-room bed + bot turn pacing
 
 - **Bot turn pacing** — `BOT_TURN_DELAY_SECONDS` 1.1 → 2.8 so after the host's spin settles there's a readable beat before the bot's wheel goes (owner couldn't see the host's landed option). Covers every bot hand-off (spin-settle, dare-resolve/approve, rejoin-resume).

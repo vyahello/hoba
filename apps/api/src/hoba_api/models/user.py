@@ -29,12 +29,15 @@ class User(Base, TimestampMixin):
     language_code: Mapped[str] = mapped_column(String(2), default="en", nullable=False)
     sound_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     haptics_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Vestigial columns, kept to avoid SQLite drop-column rebuilds (see
+    # docs/TODO.md to drop on the next Postgres consolidation):
+    #  - music_enabled: the separate "Background music" toggle was removed —
+    #    Sound now gates SFX *and* music.
+    #  - is_anonymous_default: the "Anonymous by default" setting was removed —
+    #    anonymity is now a per-room host control.
     music_enabled: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default="1", nullable=False,
     )
-    # Vestigial: the "Anonymous by default" setting was removed (anonymity is
-    # now a per-room host control). Column kept to avoid a SQLite drop-column
-    # rebuild; see docs/TODO.md to drop on the next Postgres consolidation.
     is_anonymous_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     last_active_at: Mapped[datetime] = mapped_column(
