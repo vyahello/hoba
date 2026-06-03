@@ -72,8 +72,9 @@ SPIN_COOLDOWN_MS = 1500
 SPIN_RATE_LIMIT_MAX = 30
 SPIN_RATE_LIMIT_WINDOW_SECONDS = 3600
 # Beat between a turn passing to the solo-play bot and its spin, so the
-# human reads "{bot}'s turn" before the wheel goes.
-BOT_TURN_DELAY_SECONDS = 1.1
+# human reads the previous result on the wheel before it spins again, then
+# registers "{bot}'s turn".
+BOT_TURN_DELAY_SECONDS = 2.8
 
 
 def _spin_cooldown_key(room_id: int) -> str:
