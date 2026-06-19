@@ -477,11 +477,18 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
             it (set imperatively). */}
         {pointerHidden ? null : (
           <g ref={pointerGroupRef}>
+            {/* White halo so the pointer reads clearly ON TOP of the black
+                outer ring instead of blending into it. */}
             <path
-              d={`M ${CX} ${POINTER_TIP_Y + 36} L ${CX + 18} ${POINTER_TIP_Y} L ${CX - 18} ${POINTER_TIP_Y} Z`}
+              d={`M ${CX} ${POINTER_TIP_Y + 46} L ${CX + 23} ${POINTER_TIP_Y - 4} L ${CX - 23} ${POINTER_TIP_Y - 4} Z`}
+              fill="#FFFFFF"
+              strokeLinejoin="round"
+            />
+            <path
+              d={`M ${CX} ${POINTER_TIP_Y + 40} L ${CX + 19} ${POINTER_TIP_Y} L ${CX - 19} ${POINTER_TIP_Y} Z`}
               fill="#FF5C9C"
               stroke={INK}
-              strokeWidth={3}
+              strokeWidth={3.5}
               strokeLinejoin="round"
             />
           </g>
