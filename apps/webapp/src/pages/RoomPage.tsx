@@ -742,10 +742,10 @@ export function RoomPage(): JSX.Element {
         </header>
         <main className="flex-1 px-6 flex flex-col items-center justify-center text-center gap-4">
           <span className="text-6xl animate-pulse" aria-hidden>⏳</span>
-          <h1 className="font-display font-bold text-xl text-ink-light-1 dark:text-ink-dark-1">
+          <h1 className="font-display font-bold text-xl text-ds-text">
             {t("room:approval.waiting_title")}
           </h1>
-          <p className="text-sm text-ink-light-2 dark:text-ink-dark-2 max-w-xs">
+          <p className="text-sm text-ds-text-muted max-w-xs">
             {t("room:approval.waiting_body")}
           </p>
         </main>
@@ -765,12 +765,12 @@ export function RoomPage(): JSX.Element {
           }}
         />
         <div className="flex-1 min-w-0">
-          <h1 className="font-display font-bold text-base truncate text-ink-light-1 dark:text-ink-dark-1">
+          <h1 className="font-display font-bold text-base truncate text-ds-text">
             {snapshot.active_question?.text ?? "—"}
           </h1>
           <div className="flex items-center gap-2 mt-0.5">
             <RealtimeIndicator active={connected} />
-            <span className="text-xs text-ink-light-2 dark:text-ink-dark-2">
+            <span className="text-xs text-ds-text-muted">
               {t("room:header.participants_count", {
                 count: snapshot.participants.length,
               })}
@@ -830,8 +830,8 @@ export function RoomPage(): JSX.Element {
         </div>
         {/* Join-approval: host sees pending requests with inline Approve/Deny. */}
         {callerIsHost && (snapshot.pending_participants ?? []).length > 0 ? (
-          <div className="flex flex-col gap-2 rounded-lg bg-brand-amber-3/15 p-3">
-            <span className="text-sm font-semibold text-brand-amber-3">
+          <div className="flex flex-col gap-2 rounded-lg bg-brand-accent/15 p-3">
+            <span className="text-sm font-semibold text-brand-accent">
               {t("room:approval.requests", {
                 count: (snapshot.pending_participants ?? []).length,
               })}
@@ -840,7 +840,7 @@ export function RoomPage(): JSX.Element {
               const name = p.display_name ?? `#${p.user_id}`;
               return (
                 <div key={p.user_id} className="flex items-center justify-between gap-2">
-                  <span className="truncate text-sm text-ink-light-1 dark:text-ink-dark-1">
+                  <span className="truncate text-sm text-ds-text">
                     {name}
                   </span>
                   <div className="flex gap-2 shrink-0">
@@ -872,12 +872,12 @@ export function RoomPage(): JSX.Element {
             Renders null for classic/rigged, so this line vanishes there. */}
         <GameModeBadge mode={snapshot.room.game_mode} />
         {isElimination ? (
-          <span className="text-sm font-medium text-ink-light-2 dark:text-ink-dark-2">
+          <span className="text-sm font-medium text-ds-text-muted">
             {t("room:elimination.remaining", { count: remaining })}
           </span>
         ) : null}
         {isPunish ? (
-          <span className="text-sm font-medium text-ink-light-2 dark:text-ink-dark-2">
+          <span className="text-sm font-medium text-ds-text-muted">
             {t("room:punishment.my_tally", { count: myDoneCount })}
           </span>
         ) : null}
@@ -885,19 +885,19 @@ export function RoomPage(): JSX.Element {
             it's unmissable (the old bottom line hid near the home indicator).
             Only the turn_based kinds render here; classic is not_turn_based. */}
         {turnState.kind === "my_turn" && !roundOver ? (
-          <div className="rounded-lg bg-brand-amber-3/15 py-2 px-3 text-center text-sm font-semibold text-brand-amber-3">
+          <div className="rounded-lg bg-brand-accent/15 py-2 px-3 text-center text-sm font-semibold text-brand-accent">
             {t("room:turn.my_turn")}
           </div>
         ) : null}
         {turnState.kind === "waiting" && !roundOver ? (
-          <div className="rounded-lg bg-surface-light-2 py-2 px-3 text-center text-sm font-medium text-ink-light-1 dark:bg-surface-dark-2 dark:text-ink-dark-1">
+          <div className="rounded-lg bg-ds-surface-2 border-[3px] border-ds-border py-2 px-3 text-center text-sm font-bold text-ds-text">
             {turnState.whoName !== null
               ? t("room:turn.waiting_named", { name: turnState.whoName })
               : t("room:turn.waiting_unnamed")}
           </div>
         ) : null}
         {turnState.kind === "no_one" && !roundOver ? (
-          <div className="rounded-lg bg-surface-light-2 py-2 px-3 text-center text-sm text-ink-light-2 dark:bg-surface-dark-2 dark:text-ink-dark-2">
+          <div className="rounded-lg bg-ds-surface-2 border-[3px] border-ds-border py-2 px-3 text-center text-sm text-ds-text-muted">
             {t("room:turn.no_one")}
           </div>
         ) : null}
@@ -1016,7 +1016,7 @@ export function RoomPage(): JSX.Element {
         {/* Punishment: betting phase — pick your option (public). */}
         {punishBetting && activeQuestion !== null ? (
           <div className="flex flex-col items-center gap-3">
-            <p className="text-sm font-semibold text-ink-light-1 dark:text-ink-dark-1">
+            <p className="text-sm font-semibold text-ds-text">
               {t("room:punishment.pick_hint")}
             </p>
             <div className="flex flex-wrap gap-2 justify-center px-2">
@@ -1039,12 +1039,12 @@ export function RoomPage(): JSX.Element {
                         placeBet(s.id);
                       }}
                       aria-pressed={picked}
-                      className={`min-h-11 px-4 py-2 rounded-full text-sm font-semibold transition active:scale-[0.97] ${
+                      className={`min-h-11 px-4 py-2 rounded-full text-sm font-bold border-[3px] border-ds-border transition-transform active:scale-[0.97] ${
                         picked
-                          ? "bg-brand-primary text-white shadow-spin"
+                          ? "bg-brand-primary text-white shadow-brutal-sm"
                           : unavailable
-                            ? "bg-surface-light-2 text-ink-light-2 line-through opacity-50 dark:bg-surface-dark-2 dark:text-ink-dark-2"
-                            : "bg-surface-light-2 text-ink-light-1 dark:bg-surface-dark-2 dark:text-ink-dark-1"
+                            ? "bg-ds-surface-2 text-ds-text-muted line-through opacity-50"
+                            : "bg-ds-surface-2 text-ds-text"
                       }`}
                     >
                       {s.emoji ? `${s.emoji} ` : ""}
@@ -1059,7 +1059,7 @@ export function RoomPage(): JSX.Element {
                 })}
             </div>
             {punishBettors.length > 0 ? (
-              <div className="flex flex-col items-center gap-0.5 text-xs text-ink-light-2 dark:text-ink-dark-2">
+              <div className="flex flex-col items-center gap-0.5 text-xs text-ds-text-muted">
                 {punishBettors.map((uid) => (
                   <span key={uid}>
                     {nameFor(uid)} →{" "}
@@ -1068,20 +1068,20 @@ export function RoomPage(): JSX.Element {
                 ))}
               </div>
             ) : null}
-            <p className="text-sm font-semibold text-ink-light-2 dark:text-ink-dark-2">
+            <p className="text-sm font-semibold text-ds-text-muted">
               {t("room:punishment.bet_status", {
                 bet: punishBettors.length,
                 total: presentUserIds.length,
               })}
             </p>
             {punishWaiting.length > 0 ? (
-              <p className="text-xs text-ink-light-2 dark:text-ink-dark-2 text-center px-4">
+              <p className="text-xs text-ds-text-muted text-center px-4">
                 {t("room:punishment.waiting_bets", {
                   names: punishWaiting.map(nameFor).join(", "),
                 })}
               </p>
             ) : !canStartPunish && punishStarter !== null ? (
-              <p className="text-xs text-ink-light-2 dark:text-ink-dark-2">
+              <p className="text-xs text-ds-text-muted">
                 {t("room:punishment.waiting_start", {
                   name: nameFor(punishStarter),
                 })}
@@ -1112,7 +1112,7 @@ export function RoomPage(): JSX.Element {
                     className={`rounded-full px-2.5 py-1 ${
                       isMe
                         ? "bg-brand-primary text-white font-semibold ring-2 ring-brand-primary/40"
-                        : "bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1"
+                        : "bg-ds-surface-2 text-ds-text"
                     }`}
                   >
                     {isMe ? `★ ${t("room:punishment.you")}` : nameFor(uid)}
@@ -1126,10 +1126,10 @@ export function RoomPage(): JSX.Element {
               punishPendingApproval ? (
                 // Dare was performed ("Done"): the dare card is gone; only a
                 // slim approval prompt remains for the chosen approver.
-                <div className="flex flex-col items-center gap-2 rounded-xl bg-surface-light-2 dark:bg-surface-dark-2 px-4 py-3 text-center w-full">
+                <div className="flex flex-col items-center gap-2 rounded-xl bg-ds-surface-2 px-4 py-3 text-center w-full">
                   {mustApprove ? (
                     <>
-                      <p className="text-sm font-semibold text-ink-light-1 dark:text-ink-dark-1">
+                      <p className="text-sm font-semibold text-ds-text">
                         {t("room:punishment.approve_prompt", {
                           name: nameFor(punishPending.spinner_id),
                         })}
@@ -1156,7 +1156,7 @@ export function RoomPage(): JSX.Element {
                       </div>
                     </>
                   ) : (
-                    <p className="text-sm text-ink-light-2 dark:text-ink-dark-2">
+                    <p className="text-sm text-ds-text-muted">
                       {t("room:punishment.waiting_approval", {
                         name: nameFor(punishApproverUserId ?? 0),
                       })}
@@ -1164,7 +1164,7 @@ export function RoomPage(): JSX.Element {
                   )}
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-2 rounded-xl bg-gradient-to-br from-brand-primary to-brand-amber-3 p-4 text-center text-white shadow-spin">
+                <div className="flex flex-col items-center gap-2 rounded-xl bg-brand-primary border-[3px] border-ds-border p-4 text-center text-white shadow-brutal">
                   <p className="text-base font-display font-bold leading-snug">
                     {t("room:punishment.must_do", {
                       name: nameFor(punishPending.spinner_id),
@@ -1198,9 +1198,9 @@ export function RoomPage(): JSX.Element {
                 </div>
               )
             ) : punishOutcome?.kind === "lucky" ? (
-              <div className="flex flex-col items-center gap-1 rounded-xl bg-brand-amber-3/15 px-4 py-3 text-center">
+              <div className="flex flex-col items-center gap-1 rounded-xl bg-brand-accent/15 px-4 py-3 text-center">
                 <HobaWord sizeClass="text-4xl" />
-                <p className="text-sm font-semibold text-ink-light-1 dark:text-ink-dark-1">
+                <p className="text-sm font-semibold text-ds-text">
                   <span className="font-display font-bold text-brand-violet-2">
                     {punishOutcome.spinner_id === snapshot.me_user_id
                       ? t("room:punishment.lucky_you")
@@ -1217,7 +1217,7 @@ export function RoomPage(): JSX.Element {
 
         {isBon ? (
           <div className="flex flex-col items-center gap-1.5">
-            <span className="text-sm font-semibold text-ink-light-2 dark:text-ink-dark-2">
+            <span className="text-sm font-semibold text-ds-text-muted">
               {t("room:best_of_n.attempt", {
                 k: Math.min(bonAttempts, bonTarget),
                 n: bonTarget,
@@ -1232,7 +1232,7 @@ export function RoomPage(): JSX.Element {
                   return (
                     <span
                       key={segId}
-                      className="text-xs font-semibold px-2 py-1 rounded-full bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1"
+                      className="text-xs font-semibold px-2 py-1 rounded-full bg-ds-surface-2 text-ds-text"
                     >
                       {seg?.emoji ? `${seg.emoji} ` : ""}{seg?.label ?? segId} · {count}
                     </span>
@@ -1248,7 +1248,7 @@ export function RoomPage(): JSX.Element {
             {eliminatedSegments(activeQuestion).map((s) => (
               <span
                 key={s.id}
-                className="text-xs px-2 py-1 rounded-full grayscale opacity-60 bg-surface-light-2 dark:bg-surface-dark-2 line-through"
+                className="text-xs px-2 py-1 rounded-full grayscale opacity-60 bg-ds-surface-2 line-through"
               >
                 {s.emoji ? `${s.emoji} ` : ""}{s.label}
               </span>
@@ -1263,7 +1263,7 @@ export function RoomPage(): JSX.Element {
           {/* Classic host_only guests get the "host spins" hint here.
               turn_based "whose turn" now shows as a banner up top. */}
           {!isRace && !canSpin && idleish && turnState.kind === "not_turn_based" && !roundOver ? (
-            <p className="text-center text-sm text-ink-light-2 dark:text-ink-dark-2 py-3">
+            <p className="text-center text-sm text-ds-text-muted py-3">
               {t("room:spin.host_only_hint")}
             </p>
           ) : null}
@@ -1342,7 +1342,7 @@ export function RoomPage(): JSX.Element {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.12 }}
               transition={{ type: "spring", damping: 14, stiffness: 220 }}
-              className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 px-6 text-center bg-bg-light/95 dark:bg-bg-dark/95 pointer-events-none"
+              className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 px-6 text-center bg-ds-bg pointer-events-none"
               aria-live="assertive"
               role="status"
             >
@@ -1352,14 +1352,14 @@ export function RoomPage(): JSX.Element {
                 // WHICH swapped (the on-wheel swap alone reads as invisible).
                 <div className="relative h-20 w-64 mt-1" aria-hidden>
                   <motion.span
-                    className="absolute top-6 left-0 max-w-[45%] truncate text-base font-bold px-3 py-1 rounded-full bg-surface-light-2 dark:bg-surface-dark-2"
+                    className="absolute top-6 left-0 max-w-[45%] truncate text-base font-bold px-3 py-1 rounded-full bg-ds-surface-2"
                     animate={{ x: [0, 0, 150, 150], y: [0, -24, -24, 0] }}
                     transition={{ duration: 1.1, times: [0, 0.25, 0.75, 1], ease: "easeInOut", repeat: Infinity, repeatType: "reverse" }}
                   >
                     {segLabel(currentSpin?.mode_effects?.swap_pair?.[0] ?? -1) || "🔀"}
                   </motion.span>
                   <motion.span
-                    className="absolute top-6 right-0 max-w-[45%] truncate text-base font-bold px-3 py-1 rounded-full bg-surface-light-2 dark:bg-surface-dark-2"
+                    className="absolute top-6 right-0 max-w-[45%] truncate text-base font-bold px-3 py-1 rounded-full bg-ds-surface-2"
                     animate={{ x: [0, 0, -150, -150], y: [0, 24, 24, 0] }}
                     transition={{ duration: 1.1, times: [0, 0.25, 0.75, 1], ease: "easeInOut", repeat: Infinity, repeatType: "reverse" }}
                   >
@@ -1378,7 +1378,7 @@ export function RoomPage(): JSX.Element {
               <p className="font-display font-extrabold text-2xl text-brand-pink">
                 {t(`room:chaos.events.${chaosAnnounce.startsWith("nudge") ? "nudge" : chaosAnnounce}.title`)}
               </p>
-              <p className="text-sm text-ink-light-2 dark:text-ink-dark-2">
+              <p className="text-sm text-ds-text-muted">
                 {t(`room:chaos.events.${chaosAnnounce.startsWith("nudge") ? "nudge" : chaosAnnounce}.desc`)}
               </p>
             </motion.div>
@@ -1400,7 +1400,7 @@ export function RoomPage(): JSX.Element {
                 onClick={() => {
                   setRevealed(false);
                 }}
-                className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-bg-light/95 dark:bg-bg-dark/95 cursor-pointer"
+                className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-ds-bg cursor-pointer"
                 aria-live="polite"
                 role="status"
               >
@@ -1415,7 +1415,7 @@ export function RoomPage(): JSX.Element {
                   <span className="text-6xl leading-none grayscale" aria-hidden>
                     {winningSegment.emoji ?? "💥"}
                   </span>
-                  <p className="font-display font-bold text-2xl text-center px-6 text-ink-light-1 dark:text-ink-dark-1">
+                  <p className="font-display font-bold text-2xl text-center px-6 text-ds-text">
                     {t("room:elimination.eliminated_result", { label: winningSegment.label })}
                   </p>
                 </motion.div>
@@ -1430,7 +1430,7 @@ export function RoomPage(): JSX.Element {
                 onClick={() => {
                   setRevealed(false);
                 }}
-                className="absolute inset-0 z-30 px-4 pt-3 pb-6 flex flex-col items-center justify-center bg-bg-light/95 dark:bg-bg-dark/95 cursor-pointer"
+                className="absolute inset-0 z-30 px-4 pt-3 pb-6 flex flex-col items-center justify-center bg-ds-bg cursor-pointer"
                 aria-live="polite"
                 role="status"
               >
@@ -1467,7 +1467,7 @@ export function RoomPage(): JSX.Element {
                   onClick={() => {
                     setRigRevealShown(false);
                   }}
-                  className="fixed inset-0 z-50 px-5 py-6 flex flex-col items-center justify-center gap-3 bg-bg-light dark:bg-bg-dark cursor-pointer"
+                  className="fixed inset-0 z-50 px-5 py-6 flex flex-col items-center justify-center gap-3 bg-ds-bg cursor-pointer"
                   aria-live="assertive"
                   role="status"
                 >
@@ -1487,10 +1487,10 @@ export function RoomPage(): JSX.Element {
                       const pct = Math.round((s.weight / total) * 100);
                       return (
                         <div key={s.id} className="flex items-center gap-2 text-sm">
-                          <span className="w-24 shrink-0 truncate text-right text-ink-light-1 dark:text-ink-dark-1">
+                          <span className="w-24 shrink-0 truncate text-right text-ds-text">
                             {s.emoji ? `${s.emoji} ` : ""}{s.label}
                           </span>
-                          <div className="flex-1 h-5 rounded-full bg-surface-light-2 dark:bg-surface-dark-2 overflow-hidden">
+                          <div className="flex-1 h-5 rounded-full bg-ds-surface-2 overflow-hidden">
                             <motion.div
                               className="h-full rounded-full bg-brand-primary"
                               initial={{ width: 0 }}
@@ -1498,7 +1498,7 @@ export function RoomPage(): JSX.Element {
                               transition={{ delay: 0.3 + i * 0.12, duration: 0.7, ease: "easeOut" }}
                             />
                           </div>
-                          <span className="w-9 shrink-0 tabular-nums text-ink-light-2 dark:text-ink-dark-2">
+                          <span className="w-9 shrink-0 tabular-nums text-ds-text-muted">
                             {pct}%
                           </span>
                         </div>
@@ -1506,7 +1506,7 @@ export function RoomPage(): JSX.Element {
                     })}
                   </div>
                   {rigCount > 0 ? (
-                    <p className="text-sm text-ink-light-2 dark:text-ink-dark-2 mt-1">
+                    <p className="text-sm text-ds-text-muted mt-1">
                       {t("room:rig.revealed_count", { count: rigCount })}
                     </p>
                   ) : null}

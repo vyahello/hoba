@@ -59,7 +59,7 @@ export function WinnerOverlay({
       >
         {emoji ? `${emoji} ` : ""}🏆
       </motion.span>
-      <h2 className="font-display font-extrabold text-3xl text-brand-amber-3 px-4">
+      <h2 className="font-display font-extrabold text-3xl text-brand-accent px-4">
         {title}
       </h2>
       {isHost ? (

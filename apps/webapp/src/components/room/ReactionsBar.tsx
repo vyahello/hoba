@@ -12,7 +12,7 @@ export function ReactionsBar({ className }: { className?: string }): JSX.Element
     <div
       className={cn(
         "flex items-center justify-center gap-2 rounded-pill",
-        "bg-surface-light-2 dark:bg-surface-dark-2 p-1.5",
+        "bg-ds-surface-2 p-1.5",
         className,
       )}
     >

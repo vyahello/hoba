@@ -62,7 +62,7 @@ export function RigEditorSheet({ open, onClose, snapshot }: RigEditorSheetProps)
 
   return (
     <Sheet open={open} onClose={onClose} title={t("room:rig.title")}>
-      <p className="text-sm text-ink-light-2 dark:text-ink-dark-2 mb-3">
+      <p className="text-sm text-ds-text-muted mb-3">
         {t("room:rig.hint")}
       </p>
       <div className="flex flex-col gap-3">
@@ -70,11 +70,11 @@ export function RigEditorSheet({ open, onClose, snapshot }: RigEditorSheetProps)
           const value = weights[s.id] ?? s.weight;
           return (
             <div key={s.id} className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-sm font-medium text-ink-light-1 dark:text-ink-dark-1">
+              <div className="flex items-center justify-between text-sm font-medium text-ds-text">
                 <span className="truncate">
                   {s.emoji ? `${s.emoji} ` : ""}{s.label}
                 </span>
-                <span className="tabular-nums text-ink-light-2 dark:text-ink-dark-2">
+                <span className="tabular-nums text-ds-text-muted">
                   {value}
                 </span>
               </div>
@@ -101,7 +101,7 @@ export function RigEditorSheet({ open, onClose, snapshot }: RigEditorSheetProps)
           );
         })}
       </div>
-      <p className="text-xs text-ink-light-2 dark:text-ink-dark-2 mt-3">
+      <p className="text-xs text-ds-text-muted mt-3">
         {t("room:rig.footer")}
       </p>
       {isRigged && !revealed ? (

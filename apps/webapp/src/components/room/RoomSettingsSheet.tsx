@@ -94,7 +94,7 @@ export function RoomSettingsSheet({
       <div className="flex flex-col gap-6">
         {showSpinPolicy ? (
           <section className="flex flex-col gap-3">
-            <h3 className="text-sm font-semibold uppercase tracking-widest text-ink-light-2 dark:text-ink-dark-2">
+            <h3 className="text-sm font-semibold uppercase tracking-widest text-ds-text-muted">
               {t("room:settings.spin_policy.label")}
             </h3>
             <div className="flex flex-col gap-2">
@@ -155,7 +155,7 @@ export function RoomSettingsSheet({
           if (guests.length === 0) return null;
           return (
             <section className="flex flex-col gap-2">
-              <h3 className="text-sm font-semibold uppercase tracking-widest text-ink-light-2 dark:text-ink-dark-2">
+              <h3 className="text-sm font-semibold uppercase tracking-widest text-ds-text-muted">
                 {t("room:settings.players")}
               </h3>
               {guests.map((p) => {
@@ -163,9 +163,9 @@ export function RoomSettingsSheet({
                 return (
                   <div
                     key={p.user_id}
-                    className="flex items-center justify-between gap-3 min-h-[44px] px-4 py-2 rounded-md bg-surface-light-2 dark:bg-surface-dark-2"
+                    className="flex items-center justify-between gap-3 min-h-[44px] px-4 py-2 rounded-md bg-ds-surface-2"
                   >
-                    <span className="truncate text-base text-ink-light-1 dark:text-ink-dark-1">
+                    <span className="truncate text-base text-ds-text">
                       {name}
                     </span>
                     <button
@@ -235,7 +235,7 @@ function PolicyOption({
       className={`ds-tactile w-full flex items-center justify-between min-h-[48px] px-4 py-3 rounded-md text-left text-base font-medium ${
         selected
           ? "bg-brand-primary text-white"
-          : "bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1 active:bg-surface-light dark:active:bg-surface-dark"
+          : "bg-ds-surface-2 text-ds-text active:bg-surface-light dark:active:bg-surface-dark"
       } disabled:opacity-60`}
     >
       <span>{label}</span>
@@ -267,20 +267,20 @@ function ToggleRow({ label, hint, on, saving, onToggle }: ToggleRowProps): JSX.E
       aria-checked={on}
       disabled={saving}
       onClick={onToggle}
-      className="ds-tactile w-full flex items-center justify-between gap-3 min-h-[48px] px-4 py-3 rounded-md text-left bg-surface-light-2 dark:bg-surface-dark-2 disabled:opacity-60"
+      className="ds-tactile w-full flex items-center justify-between gap-3 min-h-[48px] px-4 py-3 rounded-md text-left bg-ds-surface-2 disabled:opacity-60"
     >
       <span className="min-w-0">
-        <span className="block text-base font-medium text-ink-light-1 dark:text-ink-dark-1">
+        <span className="block text-base font-medium text-ds-text">
           {label}
         </span>
-        <span className="block text-xs text-ink-light-2 dark:text-ink-dark-2">
+        <span className="block text-xs text-ds-text-muted">
           {hint}
         </span>
       </span>
       <span
         aria-hidden
         className={`shrink-0 w-11 h-6 rounded-full p-0.5 transition-colors ${
-          on ? "bg-brand-primary" : "bg-surface-light dark:bg-surface-dark"
+          on ? "bg-brand-primary" : "bg-ds-surface"
         }`}
       >
         <span
