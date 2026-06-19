@@ -77,10 +77,10 @@ export function RoomModePickerSheet({
                 audio.play("ui_tap");
                 setSelected(meta.id);
               }}
-              className={`ds-tactile w-full flex items-start gap-3 min-h-[56px] px-4 py-3 rounded-md text-left ${
+              className={`ds-tactile w-full flex items-start gap-3 min-h-[56px] px-4 py-3 rounded-md text-left border-[3px] border-ds-border ${
                 isSelected
-                  ? "bg-brand-primary text-white"
-                  : "bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1 active:bg-surface-light dark:active:bg-surface-dark"
+                  ? "bg-brand-primary text-white shadow-brutal-sm"
+                  : "bg-ds-surface-2 text-ds-text active:bg-surface-light dark:active:bg-surface-dark"
               } disabled:opacity-60`}
             >
               <span aria-hidden className="text-2xl shrink-0 mt-0.5">
@@ -94,7 +94,7 @@ export function RoomModePickerSheet({
                   className={`text-sm ${
                     isSelected
                       ? "text-white/85"
-                      : "text-ink-light-2 dark:text-ink-dark-2"
+                      : "text-ds-text-muted"
                   }`}
                 >
                   {t(`room:${meta.i18nKey}.tagline`)}
@@ -108,7 +108,7 @@ export function RoomModePickerSheet({
       {selected === "punishment" ? (
         <>
           <div className="mt-3">
-            <p className="text-sm font-medium text-ink-light-2 dark:text-ink-dark-2 mb-2">
+            <p className="text-sm font-medium text-ds-text-muted mb-2">
               {t("room:mode_picker.deck_title")}
             </p>
             <div className="flex gap-2">
@@ -126,10 +126,10 @@ export function RoomModePickerSheet({
                       audio.play("ui_tap");
                       setDeck(d.id);
                     }}
-                    className={`ds-tactile grow min-h-[44px] px-3 py-2 rounded-md text-sm font-semibold ${
+                    className={`ds-tactile grow min-h-[44px] px-3 py-2 rounded-md text-sm font-bold border-[3px] border-ds-border ${
                       active
-                        ? "bg-brand-primary text-white"
-                        : "bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1"
+                        ? "bg-brand-primary text-white shadow-brutal-sm"
+                        : "bg-ds-surface-2 text-ds-text"
                     } disabled:opacity-60`}
                   >
                     <span aria-hidden className="mr-1">{d.emoji}</span>
@@ -141,7 +141,7 @@ export function RoomModePickerSheet({
           </div>
 
           <div className="mt-3">
-            <p className="text-sm font-medium text-ink-light-2 dark:text-ink-dark-2 mb-2">
+            <p className="text-sm font-medium text-ds-text-muted mb-2">
               {t("room:punishment.spin_count_label")}
             </p>
             <div className="flex gap-2">
@@ -159,10 +159,10 @@ export function RoomModePickerSheet({
                       audio.play("ui_tap");
                       setPunishSpinCount(n);
                     }}
-                    className={`ds-tactile grow min-h-[44px] px-3 py-2 rounded-md text-sm font-semibold ${
+                    className={`ds-tactile grow min-h-[44px] px-3 py-2 rounded-md text-sm font-bold border-[3px] border-ds-border ${
                       active
-                        ? "bg-brand-primary text-white"
-                        : "bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1"
+                        ? "bg-brand-primary text-white shadow-brutal-sm"
+                        : "bg-ds-surface-2 text-ds-text"
                     } disabled:opacity-60`}
                   >
                     {n}
@@ -176,7 +176,7 @@ export function RoomModePickerSheet({
 
       {selected === "classic" ? (
         <div className="mt-3">
-          <p className="text-sm font-medium text-ink-light-2 dark:text-ink-dark-2 mb-2">
+          <p className="text-sm font-medium text-ds-text-muted mb-2">
             {t("room:spin_count.label")}
           </p>
           <div className="flex gap-2">
@@ -194,10 +194,10 @@ export function RoomModePickerSheet({
                     audio.play("ui_tap");
                     setSpinCount(n);
                   }}
-                  className={`ds-tactile grow min-h-[44px] px-3 py-2 rounded-md text-sm font-semibold ${
+                  className={`ds-tactile grow min-h-[44px] px-3 py-2 rounded-md text-sm font-bold border-[3px] border-ds-border ${
                     active
-                      ? "bg-brand-primary text-white"
-                      : "bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1"
+                      ? "bg-brand-primary text-white shadow-brutal-sm"
+                      : "bg-ds-surface-2 text-ds-text"
                   } disabled:opacity-60`}
                 >
                   {n}
@@ -210,7 +210,7 @@ export function RoomModePickerSheet({
 
       {selected === "chaos" ? (
         <div className="mt-3">
-          <p className="text-sm font-medium text-ink-light-2 dark:text-ink-dark-2 mb-2">
+          <p className="text-sm font-medium text-ds-text-muted mb-2">
             {t("room:punishment.spin_count_label")}
           </p>
           <div className="flex gap-2">
@@ -228,10 +228,10 @@ export function RoomModePickerSheet({
                     audio.play("ui_tap");
                     setChaosSpinCount(n);
                   }}
-                  className={`ds-tactile grow min-h-[44px] px-3 py-2 rounded-md text-sm font-semibold ${
+                  className={`ds-tactile grow min-h-[44px] px-3 py-2 rounded-md text-sm font-bold border-[3px] border-ds-border ${
                     active
-                      ? "bg-brand-primary text-white"
-                      : "bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1"
+                      ? "bg-brand-primary text-white shadow-brutal-sm"
+                      : "bg-ds-surface-2 text-ds-text"
                   } disabled:opacity-60`}
                 >
                   {n}

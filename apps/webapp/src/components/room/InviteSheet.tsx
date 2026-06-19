@@ -60,14 +60,14 @@ function InviteRow({
     <button
       type="button"
       onClick={onClick}
-      className="ds-tactile flex w-full items-center gap-4 rounded-xl bg-surface-light-2 px-4 py-4 text-left active:brightness-95 dark:bg-surface-dark-2"
+      className="ds-tactile flex w-full items-center gap-4 rounded-xl bg-ds-surface-2 border-[3px] border-ds-border shadow-brutal active:shadow-brutal-sm px-4 py-4 text-left"
     >
       <span aria-hidden className="text-2xl">{emoji}</span>
       <span className="min-w-0">
-        <span className="block font-semibold text-base text-ink-light-1 dark:text-ink-dark-1">
+        <span className="block font-display font-bold text-base text-ds-text">
           {label}
         </span>
-        <span className="block text-sm text-ink-light-2 dark:text-ink-dark-2">
+        <span className="block text-sm text-ds-text-muted">
           {hint}
         </span>
       </span>
