@@ -169,14 +169,18 @@ function SegmentVisual({ segment, index, total }: SegmentVisualProps): JSX.Eleme
         y={labelPos.y}
         fontSize={14}
         fontWeight={800}
-        fill="#FFFFFF"
+        // Black text on every segment: clears WCAG AA (>=4.8:1) on the whole
+        // wheel palette, lightest (amber/cyan) to darkest (purple/blue). The
+        // white outline (paint-order stroke) adds the neubrutalist pop and
+        // extra legibility on the darker wedges. Consistent across all.
+        fill={INK}
         textAnchor="middle"
         dominantBaseline="central"
         transform={`rotate(${labelRot} ${labelPos.x} ${labelPos.y})`}
         style={{
           paintOrder: "stroke",
-          stroke: INK,
-          strokeWidth: 3,
+          stroke: "#FFFFFF",
+          strokeWidth: 3.5,
           userSelect: "none",
         }}
       >
