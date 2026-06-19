@@ -61,6 +61,29 @@ export function RoomModePickerSheet({
       onClose={onClose}
       dismissable={!loading}
       title={t("room:mode_picker.title")}
+      footer={
+        <Button
+          variant="accent"
+          size="xl"
+          fullWidth
+          loading={loading}
+          onClick={() => {
+            onCreate(
+              selected,
+              selected === "punishment" ? deck : undefined,
+              selected === "classic"
+                ? spinCount
+                : selected === "punishment"
+                  ? punishSpinCount
+                  : selected === "chaos"
+                    ? chaosSpinCount
+                    : undefined,
+            );
+          }}
+        >
+          {t("room:mode_picker.create")}
+        </Button>
+      }
     >
       <div className="flex flex-col gap-2">
         {PICKABLE_GAME_MODES.map((meta) => {
@@ -242,29 +265,6 @@ export function RoomModePickerSheet({
         </div>
       ) : null}
 
-      <div className="mt-5">
-        <Button
-          variant="accent"
-          size="xl"
-          fullWidth
-          loading={loading}
-          onClick={() => {
-            onCreate(
-              selected,
-              selected === "punishment" ? deck : undefined,
-              selected === "classic"
-                ? spinCount
-                : selected === "punishment"
-                  ? punishSpinCount
-                  : selected === "chaos"
-                    ? chaosSpinCount
-                    : undefined,
-            );
-          }}
-        >
-          {t("room:mode_picker.create")}
-        </Button>
-      </div>
     </Sheet>
   );
 }

@@ -13,6 +13,9 @@ export interface SheetProps {
   dismissable?: boolean;
   /** Optional title rendered as the sheet header. */
   title?: string;
+  /** Optional pinned footer — stays visible below the scrollable body (e.g. a
+   *  primary CTA that must not require scrolling to reach). */
+  footer?: ReactNode;
   className?: string;
 }
 
@@ -29,6 +32,7 @@ export function Sheet({
   children,
   dismissable = true,
   title,
+  footer,
   className,
 }: SheetProps): JSX.Element | null {
   useEffect(() => {
@@ -94,6 +98,11 @@ export function Sheet({
               </h2>
             ) : null}
             <div className="overflow-y-auto px-6 pb-6 grow">{children}</div>
+            {footer ? (
+              <div className="shrink-0 px-6 pt-3 pb-2 border-t-[3px] border-ds-border bg-ds-surface">
+                {footer}
+              </div>
+            ) : null}
           </motion.div>
         </>
       ) : null}
