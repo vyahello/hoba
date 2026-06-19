@@ -32,13 +32,13 @@ function ToggleRow({ label, on, onToggle }: ToggleRowProps): JSX.Element {
       }}
       className="ds-tactile w-full flex items-center justify-between px-4 py-3 min-h-[48px] active:bg-surface-light-2 dark:active:bg-surface-dark-2"
     >
-      <span className="font-medium text-base text-ink-light-1 dark:text-ink-dark-1">
+      <span className="font-medium text-base text-ds-text">
         {label}
       </span>
       <span
         aria-hidden
         className={`w-11 h-6 rounded-pill p-0.5 transition-colors duration-medium ${
-          on ? "bg-brand-primary" : "bg-surface-light-2 dark:bg-surface-dark-2"
+          on ? "bg-brand-primary" : "bg-ds-surface-2"
         }`}
       >
         <span
@@ -81,7 +81,7 @@ export function SettingsPage(): JSX.Element {
     <StubPage title={t("settings:title")} phase={11}>
       <div className="flex flex-col gap-5 pt-2">
         <section>
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-ink-light-2 dark:text-ink-dark-2 mb-2 px-1">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-ds-text-muted mb-2 px-1">
             {t("settings:language.title")}
           </h2>
           <Card padding="none" className="overflow-hidden">
@@ -97,7 +97,7 @@ export function SettingsPage(): JSX.Element {
                   className={`ds-tactile flex-1 min-h-[48px] font-medium ${
                     locale === currentLocale
                       ? "bg-brand-primary text-white"
-                      : "bg-transparent text-ink-light-1 dark:text-ink-dark-1"
+                      : "bg-transparent text-ds-text"
                   }`}
                 >
                   {t(`settings:language.${locale}`)}
@@ -108,12 +108,12 @@ export function SettingsPage(): JSX.Element {
         </section>
 
         <section>
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-ink-light-2 dark:text-ink-dark-2 mb-2 px-1">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-ds-text-muted mb-2 px-1">
             {t("common:nav.settings")}
           </h2>
           <Card
             padding="none"
-            className="overflow-hidden divide-y divide-ink-light-2/10 dark:divide-ink-dark-2/10"
+            className="overflow-hidden divide-y-2 divide-ds-border"
           >
             <ToggleRow
               label={t("settings:sound")}
@@ -134,7 +134,7 @@ export function SettingsPage(): JSX.Element {
 
         {isAdmin ? (
           <section>
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-ink-light-2 dark:text-ink-dark-2 mb-2 px-1">
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-ds-text-muted mb-2 px-1">
               {t("admin:moderation.title")}
             </h2>
             <Card padding="none" className="overflow-hidden">
@@ -146,33 +146,33 @@ export function SettingsPage(): JSX.Element {
                 }}
                 className="ds-tactile w-full flex items-center justify-between px-4 py-3 min-h-[48px] active:bg-surface-light-2 dark:active:bg-surface-dark-2"
               >
-                <span className="font-medium text-base text-ink-light-1 dark:text-ink-dark-1">
+                <span className="font-medium text-base text-ds-text">
                   {t("admin:moderation.entry")}
                 </span>
-                <span aria-hidden className="text-ink-light-2 dark:text-ink-dark-2">→</span>
+                <span aria-hidden className="text-ds-text-muted">→</span>
               </button>
             </Card>
           </section>
         ) : null}
 
         <section className="pt-2">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-ink-light-2 dark:text-ink-dark-2 mb-2 px-1">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-ds-text-muted mb-2 px-1">
             {t("settings:about.title")}
           </h2>
           <Card padding="md" className="text-center">
             <p className="font-display font-bold text-lg text-brand-accent">
               {t("brand:exclamation")}
             </p>
-            <p className="text-sm text-ink-light-2 dark:text-ink-dark-2 mt-1 italic">
+            <p className="text-sm text-ds-text-muted mt-1 italic">
               {t("settings:about.tagline")}
             </p>
-            <p className="text-base text-ink-light-1 dark:text-ink-dark-1 mt-3">
+            <p className="text-base text-ds-text mt-3">
               {t("settings:about.built_by")}{" "}
               <span className="font-semibold">
                 {t("settings:about.author")}
               </span>
             </p>
-            <p className="text-xs text-ink-light-2 dark:text-ink-dark-2 mt-2 opacity-70">
+            <p className="text-xs text-ds-text-muted mt-2 opacity-70">
               {t("settings:about.copyright")}
             </p>
           </Card>
@@ -187,7 +187,7 @@ export function SettingsPage(): JSX.Element {
             >
               {t("settings:about.privacy")}
             </button>
-            <span aria-hidden className="text-ink-light-2 dark:text-ink-dark-2">·</span>
+            <span aria-hidden className="text-ds-text-muted">·</span>
             <button
               type="button"
               className="text-sm font-semibold text-brand-primary"
@@ -198,7 +198,7 @@ export function SettingsPage(): JSX.Element {
             >
               {t("settings:about.terms")}
             </button>
-            <span aria-hidden className="text-ink-light-2 dark:text-ink-dark-2">·</span>
+            <span aria-hidden className="text-ds-text-muted">·</span>
             <button
               type="button"
               className="text-sm font-semibold text-brand-primary"
