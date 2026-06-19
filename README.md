@@ -113,8 +113,9 @@ The whole loop in under a minute:
 On the server, from the repo root (shared-VPS profile):
 
 ```bash
-./scripts/deploy.sh          # git pull --ff-only + build + up + health check
+./scripts/deploy.sh             # git pull --ff-only + build + up + health check
 ./scripts/deploy.sh --no-pull   # rebuild the current tree without pulling
+./scripts/deploy.sh --only webapp   # rebuild + restart one service only (--no-deps)
 ```
 
 The script rebuilds the containers, lets the API run migrations on start (`AUTO_MIGRATE`), and polls `/health`. Full topology, TLS, and troubleshooting recipes are in [`docs/deployment.md`](docs/deployment.md).

@@ -7,29 +7,48 @@
 # start), and prints a smoke summary. Idempotent + safe to re-run.
 #
 # Usage:
-#   ./scripts/deploy.sh                 # pull + build + up
+#   ./scripts/deploy.sh                 # pull + build + up (all services)
 #   ./scripts/deploy.sh --no-pull       # skip git pull (deploy current tree)
+#   ./scripts/deploy.sh --only webapp   # rebuild + restart ONE service only
+#                                       # (--no-deps; leaves api/bot/redis up)
 #
 # Prereqs: docker compose, a populated .env, the shared-VPS compose file.
 set -euo pipefail
 
-COMPOSE_FILE="${HOBA_COMPOSE_FILE:-compose.shared.yaml}"
+# compose.shared.yaml is an OVERRIDE — it carries only the shared-VPS
+# deltas (loopback port binds, prod webapp target, Caddy disabled) and
+# relies on the base file for the actual service definitions. It MUST be
+# layered on top of the base; used alone, `docker compose` sees no api/bot
+# image and the deploy is silently wrong. This mirrors how the running
+# stack was composed (verify with `docker compose ls`).
+BASE_FILE="${HOBA_BASE_COMPOSE_FILE:-docker-compose.yml}"
+OVERRIDE_FILE="${HOBA_COMPOSE_FILE:-compose.shared.yaml}"
 DO_PULL=1
-for arg in "$@"; do
-  case "$arg" in
+ONLY=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
     --no-pull) DO_PULL=0 ;;
-    *) echo "unknown arg: $arg" >&2; exit 2 ;;
+    --only)
+      shift
+      [[ $# -gt 0 ]] || { echo "✗ --only needs a service name (e.g. webapp)" >&2; exit 2; }
+      ONLY="$1"
+      ;;
+    *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
+  shift
 done
 
-compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
+compose() { docker compose -f "$BASE_FILE" -f "$OVERRIDE_FILE" "$@"; }
 
-echo "▶ Hoba! deploy — compose file: $COMPOSE_FILE"
+echo "▶ Hoba! deploy — compose files: $BASE_FILE + $OVERRIDE_FILE${ONLY:+ (only: $ONLY)}"
 
-if [[ ! -f "$COMPOSE_FILE" ]]; then
-  echo "✗ $COMPOSE_FILE not found — run this from the repo root on the server." >&2
-  exit 1
-fi
+for f in "$BASE_FILE" "$OVERRIDE_FILE"; do
+  if [[ ! -f "$f" ]]; then
+    echo "✗ $f not found — run this from the repo root on the server." >&2
+    exit 1
+  fi
+done
 if [[ ! -f .env ]]; then
   echo "✗ .env not found — copy .env.example and fill TELEGRAM_BOT_TOKEN etc." >&2
   exit 1
@@ -40,8 +59,13 @@ if [[ "$DO_PULL" == "1" ]]; then
   git pull --ff-only
 fi
 
-echo "▶ Building + starting containers"
-compose up -d --build
+if [[ -n "$ONLY" ]]; then
+  echo "▶ Building + restarting only: $ONLY (--no-deps)"
+  compose up -d --build --no-deps "$ONLY"
+else
+  echo "▶ Building + starting containers"
+  compose up -d --build
+fi
 
 echo "▶ Waiting for the API to report healthy…"
 api_ok=0
