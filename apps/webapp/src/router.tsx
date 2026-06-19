@@ -1,17 +1,25 @@
+import { lazy } from "react";
 import { createBrowserRouter } from "react-router-dom";
 
 import { RootLayout } from "@/components/layout/RootLayout";
-import { AdminModerationPage } from "@/pages/AdminModerationPage";
-import { CreatePage } from "@/pages/CreatePage";
-import { CreditsPage } from "@/pages/CreditsPage";
-import { DevDSPage } from "@/pages/DevDSPage";
-import { HomePage } from "@/pages/HomePage";
-import { LegalPage } from "@/pages/LegalPage";
-import { LibraryPage } from "@/pages/LibraryPage";
-import { RoomPage } from "@/pages/RoomPage";
-import { SettingsPage } from "@/pages/SettingsPage";
-import { SpinPage } from "@/pages/SpinPage";
-import { TrendingPage } from "@/pages/TrendingPage";
+
+// Routes are code-split (PERF_AUDIT S1): only the matched screen's chunk
+// loads, keeping the first-paint bundle small. The shell (RootLayout) stays
+// eager; the Suspense boundary lives there, around <Outlet />. Pages are
+// named exports, so map them to the default export React.lazy expects.
+const HomePage = lazy(() => import("@/pages/HomePage").then((m) => ({ default: m.HomePage })));
+const SpinPage = lazy(() => import("@/pages/SpinPage").then((m) => ({ default: m.SpinPage })));
+const CreatePage = lazy(() => import("@/pages/CreatePage").then((m) => ({ default: m.CreatePage })));
+const RoomPage = lazy(() => import("@/pages/RoomPage").then((m) => ({ default: m.RoomPage })));
+const LibraryPage = lazy(() => import("@/pages/LibraryPage").then((m) => ({ default: m.LibraryPage })));
+const TrendingPage = lazy(() => import("@/pages/TrendingPage").then((m) => ({ default: m.TrendingPage })));
+const SettingsPage = lazy(() => import("@/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
+const AdminModerationPage = lazy(() =>
+  import("@/pages/AdminModerationPage").then((m) => ({ default: m.AdminModerationPage })),
+);
+const LegalPage = lazy(() => import("@/pages/LegalPage").then((m) => ({ default: m.LegalPage })));
+const CreditsPage = lazy(() => import("@/pages/CreditsPage").then((m) => ({ default: m.CreditsPage })));
+const DevDSPage = lazy(() => import("@/pages/DevDSPage").then((m) => ({ default: m.DevDSPage })));
 
 export const router = createBrowserRouter([
   {

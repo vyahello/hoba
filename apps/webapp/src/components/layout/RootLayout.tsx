@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { audio } from "@/audio";
@@ -73,7 +73,12 @@ export function RootLayout(): JSX.Element {
   return (
     <div className="min-h-[var(--app-height)] flex flex-col">
       <AuroraBackground />
-      <Outlet />
+      {/* One Suspense boundary for all lazy route chunks. Fallback is empty
+          space (the static backdrop shows through) — no spinner/animation so
+          nothing runs while a chunk loads. */}
+      <Suspense fallback={<div className="flex-1" aria-busy />}>
+        <Outlet />
+      </Suspense>
       <Toaster />
     </div>
   );
