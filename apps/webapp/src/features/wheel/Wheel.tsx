@@ -455,10 +455,11 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
           {segments.map((s, i) => (
             <SegmentVisual key={s.id} segment={s} index={i} total={segmentCount} />
           ))}
-          <circle cx={CX} cy={CY} r={SEGMENT_R} fill="none" stroke={INK} strokeWidth={3} />
           {/* Landed-segment highlight: a STATIC bright overlay on the winning
               wedge (no pulse loop) — the "this one!" cue for modes without a
-              per-spin overlay (Chaos, Punishment). Rotates with the wheel. */}
+              per-spin overlay (Chaos, Punishment). Rotates with the wheel.
+              Drawn UNDER the boundary ring (below) and with no white stroke so
+              it never paints over the wheel's dark separators/ring. */}
           {state === "settled" && highlightIndex >= 0 ? (
             <path
               d={arcPath(
@@ -469,13 +470,15 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
                 highlightIndex * (360 / segmentCount) + 360 / segmentCount,
               )}
               fill="#FFFFFF"
-              fillOpacity={0.45}
-              stroke="#FFFFFF"
-              strokeWidth={3}
-              strokeLinejoin="round"
+              fillOpacity={0.4}
+              stroke="none"
               pointerEvents="none"
             />
           ) : null}
+          {/* Bold dark boundary ring around the colored area — always drawn
+              last so it stays a crisp, even, full dark circle (never erased by
+              the highlight or covered by a wedge). */}
+          <circle cx={CX} cy={CY} r={SEGMENT_R} fill="none" stroke={INK} strokeWidth={5} />
         </g>
 
         {/* Pointer. Normally fixed at the top; Chaos blind/roaming pointer move
