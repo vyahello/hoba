@@ -163,9 +163,9 @@ export function RoomSettingsSheet({
                 return (
                   <div
                     key={p.user_id}
-                    className="flex items-center justify-between gap-3 min-h-[44px] px-4 py-2 rounded-md bg-ds-surface-2"
+                    className="flex items-center justify-between gap-3 min-h-[44px] px-4 py-2 rounded-md bg-ds-surface-2 border-[3px] border-ds-border"
                   >
-                    <span className="truncate text-base text-ds-text">
+                    <span className="truncate text-base font-bold text-ds-text">
                       {name}
                     </span>
                     <button
@@ -199,7 +199,7 @@ export function RoomSettingsSheet({
           <Button
             variant="ghost"
             fullWidth
-            className="text-state-danger"
+            className="text-state-danger border-[3px] border-state-danger"
             onClick={() => {
               onClose();
               onCloseRoom();
@@ -232,10 +232,8 @@ function PolicyOption({
       disabled={saving}
       aria-pressed={selected}
       onClick={onSelect}
-      className={`ds-tactile w-full flex items-center justify-between min-h-[48px] px-4 py-3 rounded-md text-left text-base font-medium ${
-        selected
-          ? "bg-brand-primary text-white"
-          : "bg-ds-surface-2 text-ds-text active:bg-surface-light dark:active:bg-surface-dark"
+      className={`ds-tactile w-full flex items-center justify-between min-h-[48px] px-4 py-3 rounded-md text-left text-base font-bold border-[3px] border-ds-border ${
+        selected ? "bg-brand-primary text-white shadow-brutal-sm" : "bg-ds-surface-2 text-ds-text"
       } disabled:opacity-60`}
     >
       <span>{label}</span>
@@ -267,10 +265,10 @@ function ToggleRow({ label, hint, on, saving, onToggle }: ToggleRowProps): JSX.E
       aria-checked={on}
       disabled={saving}
       onClick={onToggle}
-      className="ds-tactile w-full flex items-center justify-between gap-3 min-h-[48px] px-4 py-3 rounded-md text-left bg-ds-surface-2 disabled:opacity-60"
+      className="ds-tactile w-full flex items-center justify-between gap-3 min-h-[48px] px-4 py-3 rounded-md text-left bg-ds-surface-2 border-[3px] border-ds-border disabled:opacity-60"
     >
       <span className="min-w-0">
-        <span className="block text-base font-medium text-ds-text">
+        <span className="block text-base font-bold text-ds-text">
           {label}
         </span>
         <span className="block text-xs text-ds-text-muted">
@@ -279,12 +277,12 @@ function ToggleRow({ label, hint, on, saving, onToggle }: ToggleRowProps): JSX.E
       </span>
       <span
         aria-hidden
-        className={`shrink-0 w-11 h-6 rounded-full p-0.5 transition-colors ${
+        className={`shrink-0 w-12 h-7 rounded-full p-0.5 border-2 border-ds-border transition-colors ${
           on ? "bg-brand-primary" : "bg-ds-surface"
         }`}
       >
         <span
-          className={`block w-5 h-5 rounded-full bg-white shadow transition-transform ${
+          className={`block w-5 h-5 rounded-full bg-white border-2 border-ds-border transition-transform ${
             on ? "translate-x-5" : ""
           }`}
         />
