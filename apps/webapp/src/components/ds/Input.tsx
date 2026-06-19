@@ -27,11 +27,11 @@ export interface TextareaProps
 
 function fieldClasses(error: string | undefined): string {
   return cn(
-    "w-full rounded-md bg-surface-light-2 dark:bg-surface-dark-2",
+    "w-full rounded-md bg-ds-surface-2",
     "px-4 py-3 text-base font-ui",
-    "text-ink-light-1 dark:text-ink-dark-1",
-    "placeholder:text-ink-light-2 dark:placeholder:text-ink-dark-2",
-    "border-2 border-transparent",
+    "text-ds-text",
+    "placeholder:text-ds-text-muted",
+    "border-[3px] border-ds-border",
     "focus:border-brand-primary focus:outline-none",
     error && "border-state-danger",
   );
@@ -52,7 +52,7 @@ function HeaderRow({
     <div className="flex items-baseline justify-between mb-1.5">
       <label
         htmlFor={htmlFor}
-        className="text-sm font-medium text-ink-light-2 dark:text-ink-dark-2"
+        className="text-sm font-medium text-ds-text-muted"
       >
         {label}
       </label>
@@ -60,7 +60,7 @@ function HeaderRow({
         <span
           className={cn(
             "text-xs font-mono tabular-nums",
-            current > counter ? "text-state-danger" : "text-ink-light-2 dark:text-ink-dark-2",
+            current > counter ? "text-state-danger" : "text-ds-text-muted",
           )}
         >
           {current}/{counter}
@@ -78,7 +78,7 @@ function Footer({ error, hint }: { error?: string; hint?: string }): JSX.Element
         "mt-1.5 text-xs",
         error !== undefined
           ? "text-state-danger"
-          : "text-ink-light-2 dark:text-ink-dark-2",
+          : "text-ds-text-muted",
       )}
       role={error !== undefined ? "alert" : undefined}
     >

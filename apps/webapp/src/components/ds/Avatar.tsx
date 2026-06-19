@@ -42,7 +42,7 @@ export function Avatar({
           alt={fallback}
           className={cn(
             s.ring,
-            "rounded-full object-cover bg-surface-light-2 dark:bg-surface-dark-2",
+            "rounded-full object-cover bg-ds-surface-2",
           )}
         />
       ) : (
@@ -51,8 +51,8 @@ export function Avatar({
           className={cn(
             s.ring,
             s.text,
-            "rounded-full inline-flex items-center justify-center font-semibold",
-            "bg-gradient-to-br from-brand-primary to-brand-pink text-white",
+            "rounded-full inline-flex items-center justify-center font-display font-bold",
+            "bg-brand-primary text-white border-2 border-ds-border",
           )}
         >
           {initialsOf(fallback)}
@@ -64,8 +64,8 @@ export function Avatar({
           className={cn(
             "absolute right-0 bottom-0 rounded-full",
             s.dot,
-            "border-surface-light dark:border-surface-dark",
-            status === "online" ? "bg-state-success" : "bg-ink-light-2",
+            "border-ds-surface",
+            status === "online" ? "bg-state-success" : "bg-ds-text-muted",
           )}
         />
       ) : null}

@@ -5,10 +5,10 @@ import { cn } from "@/lib/cn";
 import { type ToastIntent, useToastStore } from "@/stores/toast";
 
 const INTENT_STYLES: Record<ToastIntent, string> = {
-  info: "bg-surface-light dark:bg-surface-dark border-brand-primary/30",
-  success: "bg-surface-light dark:bg-surface-dark border-state-success/40",
-  warning: "bg-surface-light dark:bg-surface-dark border-state-warning/40",
-  error: "bg-surface-light dark:bg-surface-dark border-state-danger/40",
+  info: "bg-ds-surface border-brand-primary",
+  success: "bg-ds-surface border-state-success",
+  warning: "bg-ds-surface border-state-warning",
+  error: "bg-ds-surface border-state-danger",
 };
 
 const INTENT_DOTS: Record<ToastIntent, string> = {
@@ -40,8 +40,8 @@ export function Toaster(): JSX.Element | null {
             exit={{ y: -32, opacity: 0 }}
             transition={{ type: "spring", damping: 30, stiffness: 360 }}
             className={cn(
-              "pointer-events-auto mt-3 w-full max-w-sm rounded-lg shadow-card",
-              "border-2 px-4 py-3 flex items-start gap-3",
+              "pointer-events-auto mt-3 w-full max-w-sm rounded-lg shadow-brutal",
+              "border-[3px] px-4 py-3 flex items-start gap-3",
               INTENT_STYLES[t.intent],
             )}
             role="status"
@@ -53,11 +53,11 @@ export function Toaster(): JSX.Element | null {
               className={cn("mt-1.5 w-2 h-2 rounded-full shrink-0", INTENT_DOTS[t.intent])}
             />
             <div className="grow">
-              <p className="font-medium text-ink-light-1 dark:text-ink-dark-1">
+              <p className="font-medium text-ds-text">
                 {t.title}
               </p>
               {t.description ? (
-                <p className="text-sm text-ink-light-2 dark:text-ink-dark-2 mt-0.5">
+                <p className="text-sm text-ds-text-muted mt-0.5">
                   {t.description}
                 </p>
               ) : null}

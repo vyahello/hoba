@@ -15,7 +15,7 @@ export function StubPage({ title, phase, children }: StubPageProps): JSX.Element
   return (
     <>
       <header className="ds-glass-header px-4 py-3 pt-safe">
-        <h1 className="font-display font-bold text-xl text-ink-light-1 dark:text-ink-dark-1">
+        <h1 className="font-display font-bold text-xl text-ds-text">
           {title}
         </h1>
       </header>

@@ -44,8 +44,11 @@ export function RoomCodePill({
         "ds-tactile inline-flex items-center justify-center",
         "font-mono font-bold text-2xl tracking-[0.3em] uppercase",
         "px-6 py-3 rounded-lg",
-        "bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1",
-        "ring-2 ring-brand-primary/60 motion-safe:animate-code-pulse",
+        "bg-ds-surface-2 text-ds-text",
+        // Static neubrutalist pill — was an infinite box-shadow `code-pulse`
+        // loop (PERF_AUDIT R6: animated box-shadow + always-on). Bold border
+        // + hard shadow reads as "shareable" without a loop.
+        "border-[3px] border-ds-border shadow-brutal active:shadow-brutal-sm",
         className,
       )}
     >

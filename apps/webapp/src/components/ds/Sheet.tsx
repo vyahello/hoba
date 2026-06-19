@@ -55,7 +55,7 @@ export function Sheet({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={dismissable ? onClose : undefined}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-40 bg-black/60"
           />
           <motion.div
             initial={{ y: "100%" }}
@@ -78,14 +78,14 @@ export function Sheet({
             aria-label={title}
             className={cn(
               "fixed inset-x-0 bottom-0 z-50 max-h-[90dvh]",
-              "rounded-t-xl bg-surface-light dark:bg-surface-dark",
-              "shadow-spin pb-safe flex flex-col",
+              "rounded-t-xl bg-ds-surface border-t-[3px] border-x-[3px] border-ds-border",
+              "pb-safe flex flex-col",
               className,
             )}
           >
             {dismissable ? (
               <div className="flex justify-center pt-3 pb-1 shrink-0">
-                <div className="w-10 h-1 rounded-full bg-ink-light-2/30 dark:bg-ink-dark-2/30" />
+                <div className="w-10 h-1.5 rounded-full bg-ds-text-muted" />
               </div>
             ) : null}
             {title ? (

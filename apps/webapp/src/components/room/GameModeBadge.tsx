@@ -31,8 +31,8 @@ export function GameModeBadge({
       className={cn(
         "inline-flex items-center gap-1.5",
         "px-2.5 py-1 rounded-full",
-        "bg-surface-light-2 dark:bg-surface-dark-2",
-        "text-sm font-medium text-ink-light-1 dark:text-ink-dark-1",
+        "bg-ds-surface-2",
+        "text-sm font-medium text-ds-text",
         className,
       )}
     >

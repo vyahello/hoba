@@ -11,12 +11,12 @@ import { HobaWord } from "@/components/ds/HobaWord";
 export function CrashScreen({ error }: { error: Error }): JSX.Element {
   const { t } = useTranslation("common");
   return (
-    <div className="min-h-[100dvh] bg-bg-light dark:bg-bg-dark text-ink-light-1 dark:text-ink-dark-1 px-6 py-10 flex flex-col items-center text-center gap-4">
+    <div className="min-h-[100dvh] bg-ds-bg text-ds-text px-6 py-10 flex flex-col items-center text-center gap-4">
       <HobaWord trigger />
       <h1 className="font-display font-bold text-2xl mt-4">
         {t("crash.title")}
       </h1>
-      <p className="text-ink-light-2 dark:text-ink-dark-2 text-base max-w-sm">
+      <p className="text-ds-text-muted text-base max-w-sm">
         {t("crash.description")}
       </p>
       <button
@@ -24,15 +24,15 @@ export function CrashScreen({ error }: { error: Error }): JSX.Element {
         onClick={() => {
           window.location.reload();
         }}
-        className="ds-tactile bg-brand-primary text-white px-6 py-3 min-h-[48px] rounded-md font-medium active:bg-brand-primary-strong"
+        className="ds-tactile bg-brand-primary text-white border-[3px] border-ds-border shadow-brutal active:shadow-brutal-sm px-6 py-3 min-h-[48px] rounded-md font-display font-bold"
       >
         {t("crash.reload")}
       </button>
       <details className="mt-4 max-w-full self-stretch">
-        <summary className="cursor-pointer text-sm text-ink-light-2 dark:text-ink-dark-2">
+        <summary className="cursor-pointer text-sm text-ds-text-muted">
           {t("crash.details_label")}
         </summary>
-        <pre className="mt-2 text-xs text-state-danger whitespace-pre-wrap break-words bg-surface-light-2 dark:bg-surface-dark-2 p-3 rounded-md overflow-auto text-left">
+        <pre className="mt-2 text-xs text-state-danger whitespace-pre-wrap break-words bg-ds-surface-2 p-3 rounded-md overflow-auto text-left">
           {error.name}: {error.message}
           {"\n\n"}
           {error.stack ?? "(no stack)"}

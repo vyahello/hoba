@@ -42,7 +42,7 @@ export function SegmentChip({
     <div
       className={cn(
         "inline-flex items-center gap-2 pl-2 pr-3 py-2 rounded-pill",
-        "bg-surface-light-2 dark:bg-surface-dark-2",
+        "bg-ds-surface-2",
         "border-l-4 min-h-[44px]",
         className,
       )}
@@ -56,7 +56,7 @@ export function SegmentChip({
       {emoji !== undefined ? (
         <span className="text-lg leading-none">{emoji}</span>
       ) : null}
-      <span className="font-medium text-ink-light-1 dark:text-ink-dark-1 truncate max-w-[16ch]">
+      <span className="font-medium text-ds-text truncate max-w-[16ch]">
         {label}
       </span>
       {editable ? (
@@ -65,7 +65,7 @@ export function SegmentChip({
             type="button"
             aria-label={`Edit ${label}`}
             onClick={handleEdit}
-            className="ds-tactile w-7 h-7 rounded-full inline-flex items-center justify-center text-ink-light-2 dark:text-ink-dark-2 active:bg-surface-light dark:active:bg-surface-dark"
+            className="ds-tactile w-7 h-7 rounded-full inline-flex items-center justify-center text-ds-text-muted active:bg-surface-light dark:active:bg-surface-dark"
           >
             ✏️
           </button>

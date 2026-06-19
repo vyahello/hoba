@@ -40,7 +40,7 @@ export function AvatarStack({
         <span
           key={`${user.fallback}-${index}`}
           className={cn(
-            "ring-surface-light dark:ring-surface-dark rounded-full",
+            "ring-ds-bg rounded-full",
             RING_STYLES[size],
             index > 0 && OVERLAP_STYLES[size],
           )}
@@ -53,8 +53,8 @@ export function AvatarStack({
         <span
           className={cn(
             "rounded-full inline-flex items-center justify-center font-semibold",
-            "bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1",
-            "ring-surface-light dark:ring-surface-dark",
+            "bg-ds-surface-2 text-ds-text",
+            "ring-ds-bg",
             RING_STYLES[size],
             OVERLAP_STYLES[size],
             COUNTER_SIZES[size],

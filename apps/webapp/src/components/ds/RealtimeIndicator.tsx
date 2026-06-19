@@ -12,21 +12,23 @@ export function RealtimeIndicator({
   className,
   active = true,
 }: RealtimeIndicatorProps): JSX.Element {
-  const dotColor = active ? "bg-state-success" : "bg-ink-light-2 dark:bg-ink-dark-2";
+  const dotColor = active ? "bg-state-success" : "bg-ds-text-muted";
   return (
     <span
       className={cn(
         "inline-flex items-center gap-2 text-xs font-mono uppercase tracking-wider",
-        active ? "text-state-success" : "text-ink-light-2 dark:text-ink-dark-2",
+        active ? "text-state-success" : "text-ds-text-muted",
         className,
       )}
     >
-      <span className="relative inline-flex w-2 h-2">
-        {active ? (
-          <span className="absolute inset-0 rounded-full bg-state-success animate-live-pulse" />
-        ) : null}
-        <span className={cn("relative inline-flex w-2 h-2 rounded-full", dotColor)} />
-      </span>
+      {/* Static dot — the old `live-pulse` was an always-on infinite loop
+          (thermal budget). A solid bordered dot conveys connected/live. */}
+      <span
+        className={cn(
+          "inline-flex w-2.5 h-2.5 rounded-full border border-ds-border",
+          dotColor,
+        )}
+      />
       {label}
     </span>
   );
