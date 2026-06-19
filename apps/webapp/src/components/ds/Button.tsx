@@ -17,26 +17,23 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean;
 }
 
+// Neubrutalist: solid fills, bold border, hard offset shadow (static, no
+// blur). `brutal` variants sink into the shadow on press via .ds-brutal.
+const BRUTAL = "border-[3px] border-ds-border shadow-brutal active:shadow-brutal-sm";
 const VARIANT_STYLES: Record<Variant, string> = {
-  primary:
-    "bg-brand-primary text-white shadow-card active:bg-brand-primary-strong",
-  accent:
-    "bg-brand-accent text-ink-light-1 shadow-glow active:bg-brand-accent-strong",
-  secondary:
-    "bg-surface-light-2 text-ink-light-1 dark:bg-surface-dark-2 dark:text-ink-dark-1 " +
-    "active:bg-surface-light dark:active:bg-surface-dark",
-  ghost:
-    "bg-transparent text-ink-light-1 dark:text-ink-dark-1 " +
-    "active:bg-surface-light-2 dark:active:bg-surface-dark-2",
-  destructive:
-    "bg-state-danger text-white shadow-card active:brightness-90",
+  primary: `bg-brand-primary text-white ${BRUTAL}`,
+  accent: `bg-brand-accent text-[#14101f] ${BRUTAL}`,
+  secondary: `bg-ds-surface text-ds-text ${BRUTAL}`,
+  // Ghost is a borderless text button — no shadow to sink into.
+  ghost: "bg-transparent text-ds-text active:bg-ds-surface-2",
+  destructive: `bg-state-danger text-white ${BRUTAL}`,
 };
 
 const SIZE_STYLES: Record<Size, string> = {
   sm: "text-sm px-4 min-h-[44px] gap-1.5 rounded-md",
-  md: "text-base px-5 min-h-[48px] gap-2 rounded-md font-medium",
-  lg: "text-base px-6 min-h-[56px] gap-2 rounded-lg font-semibold",
-  xl: "text-lg px-8 min-h-[64px] gap-2.5 rounded-lg font-semibold",
+  md: "text-base px-5 min-h-[48px] gap-2 rounded-md",
+  lg: "text-base px-6 min-h-[56px] gap-2 rounded-lg",
+  xl: "text-lg px-8 min-h-[64px] gap-2.5 rounded-lg",
 };
 
 const DEFAULT_HAPTIC: Record<Variant, HapticIntent> = {
@@ -84,8 +81,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       onClick={handleClick}
       className={cn(
         "inline-flex items-center justify-center select-none whitespace-nowrap",
-        "ds-tactile",
-        "disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed",
+        "font-display font-bold ds-tactile",
+        "disabled:opacity-50 disabled:active:translate-x-0 disabled:active:translate-y-0 disabled:cursor-not-allowed",
         VARIANT_STYLES[variant],
         SIZE_STYLES[size],
         fullWidth && "w-full",

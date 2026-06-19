@@ -22,14 +22,13 @@ const SIZE_STYLES: Record<Size, string> = {
   lg: "w-14 h-14 rounded-lg",
 };
 
+// Neubrutalist: filled/tonal get the bold border + hard shadow; ghost stays
+// borderless for header/back affordances.
+const BRUTAL = "border-[3px] border-ds-border shadow-brutal active:shadow-brutal-sm";
 const VARIANT_STYLES: Record<Variant, string> = {
-  filled: "bg-brand-primary text-white shadow-card active:bg-brand-primary-strong",
-  tonal:
-    "bg-surface-light-2 text-ink-light-1 dark:bg-surface-dark-2 dark:text-ink-dark-1 " +
-    "active:bg-surface-light dark:active:bg-surface-dark",
-  ghost:
-    "bg-transparent text-ink-light-1 dark:text-ink-dark-1 " +
-    "active:bg-surface-light-2 dark:active:bg-surface-dark-2",
+  filled: `bg-brand-primary text-white ${BRUTAL}`,
+  tonal: `bg-ds-surface text-ds-text ${BRUTAL}`,
+  ghost: "bg-transparent text-ds-text active:bg-ds-surface-2",
 };
 
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(

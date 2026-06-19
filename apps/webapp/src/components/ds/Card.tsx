@@ -38,10 +38,11 @@ const PADDING_STYLES: Record<Padding, string> = {
  */
 export const Card = forwardRef<HTMLElement, CardProps>(function Card(props, ref) {
   const { padding = "md", glow = false, className, children } = props;
+  // Neubrutalist surface: theme-following fill, bold border, hard offset
+  // shadow (static, no blur). `glow` bumps to the larger hard shadow.
   const surfaceClasses = cn(
-    "rounded-lg bg-surface-light dark:bg-surface-dark",
-    "shadow-card",
-    glow && "shadow-spin",
+    "rounded-lg bg-ds-surface text-ds-text border-[3px] border-ds-border",
+    glow ? "shadow-brutal-lg" : "shadow-brutal",
     PADDING_STYLES[padding],
     className,
   );
@@ -61,7 +62,7 @@ export const Card = forwardRef<HTMLElement, CardProps>(function Card(props, ref)
       <button
         ref={ref as React.Ref<HTMLButtonElement>}
         type={type}
-        className={cn(surfaceClasses, "ds-tactile text-left w-full")}
+        className={cn(surfaceClasses, "ds-tactile active:shadow-brutal-sm text-left w-full")}
         onClick={(event) => {
           haptics.light();
           onClick?.(event);

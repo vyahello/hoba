@@ -12,6 +12,10 @@ export interface SkeletonProps {
 /**
  * Loading placeholder. Mobile-native: never use spinners outside of
  * loading buttons — skeleton everything else.
+ *
+ * Static fill (no shimmer): an infinite background-position keyframe is a
+ * per-frame paint and an always-on loop (PERF_AUDIT). A flat themed block
+ * communicates "loading" without burning GPU while a screen waits.
  */
 export function Skeleton({
   className,
@@ -25,9 +29,7 @@ export function Skeleton({
       aria-busy
       aria-live="polite"
       className={cn(
-        "bg-[linear-gradient(110deg,theme(colors.surface.light-2)_8%,theme(colors.surface.light)_18%,theme(colors.surface.light-2)_33%)]",
-        "dark:bg-[linear-gradient(110deg,theme(colors.surface.dark-2)_8%,theme(colors.surface.dark)_18%,theme(colors.surface.dark-2)_33%)]",
-        "bg-[length:200%_100%] animate-skeleton-shimmer",
+        "bg-ds-surface-2",
         radius === "sm" && "rounded-sm",
         radius === "md" && "rounded-md",
         radius === "pill" && "rounded-pill",

@@ -65,6 +65,18 @@ export default {
           hint: "var(--tg-hint, #4A4560)",
           link: "var(--tg-link, #7C5CFF)",
         },
+        // Semantic design tokens — chrome that follows the Telegram client
+        // theme (via the --ds-* vars in index.css, which bridge themeParams).
+        // Prefer these for surfaces/text/borders so light/dark tracks the
+        // client; reserve brand.* for the playful accent pop.
+        ds: {
+          bg: "var(--ds-bg)",
+          surface: "var(--ds-surface)",
+          "surface-2": "var(--ds-surface-2)",
+          text: "var(--ds-text)",
+          "text-muted": "var(--ds-text-muted)",
+          border: "var(--ds-border)",
+        },
         wheel: Object.fromEntries(
           WHEEL_PALETTE.map((color, i) => [i, color]),
         ),
@@ -86,6 +98,12 @@ export default {
         spin: "0 16px 48px -8px rgba(124, 92, 255, 0.55)",
         glow: "0 0 32px rgba(255, 184, 77, 0.55)",
         hoba: "0 12px 60px -8px rgba(255, 184, 77, 0.75)",
+        // Neubrutalist hard offset shadows — zero blur (GPU-cheap), color
+        // adapts to light/dark via --ds-shadow. Static surfaces only; never
+        // animate these on a moving element (PERF_AUDIT).
+        "brutal-sm": "2px 2px 0 0 var(--ds-shadow)",
+        brutal: "4px 4px 0 0 var(--ds-shadow)",
+        "brutal-lg": "6px 6px 0 0 var(--ds-shadow)",
       },
       transitionTimingFunction: {
         spring: "cubic-bezier(0.34, 1.56, 0.64, 1)",

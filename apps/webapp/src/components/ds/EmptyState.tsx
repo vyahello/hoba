@@ -29,16 +29,16 @@ export function EmptyState({
       {illustration ?? (
         <div
           aria-hidden
-          className="w-20 h-20 rounded-full bg-gradient-to-br from-brand-primary/20 to-brand-accent/20 flex items-center justify-center text-3xl"
+          className="w-20 h-20 rounded-lg bg-brand-accent border-[3px] border-ds-border shadow-brutal flex items-center justify-center text-3xl"
         >
           ✨
         </div>
       )}
-      <h3 className="font-display font-bold text-xl text-ink-light-1 dark:text-ink-dark-1">
+      <h3 className="font-display font-extrabold text-xl text-ds-text">
         {title}
       </h3>
       {description !== undefined ? (
-        <p className="text-base text-ink-light-2 dark:text-ink-dark-2 max-w-xs">
+        <p className="text-base text-ds-text-muted max-w-xs">
           {description}
         </p>
       ) : null}

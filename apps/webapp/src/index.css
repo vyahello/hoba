@@ -1,4 +1,6 @@
-/* Fonts — load Latin + Cyrillic subsets only (no extended Latin / Vietnamese). */
+/* Fonts — load Latin + Cyrillic subsets only (no extended Latin / Vietnamese).
+   Local @fontsource (NOT external Google Fonts) so first paint isn't blocked
+   on a third-party request and Ukrainian (Cyrillic) always has glyphs. */
 @import "@fontsource/inter/cyrillic-400.css";
 @import "@fontsource/inter/cyrillic-500.css";
 @import "@fontsource/inter/cyrillic-600.css";
@@ -25,20 +27,47 @@
 @layer base {
   :root {
     color-scheme: light;
-    --tg-bg: #FBFAFF;
-    --tg-secondary-bg: #F4F2FB;
-    --tg-text: #0E0B1A;
-    --tg-hint: #4A4560;
-    --tg-link: #7C5CFF;
+    /* Telegram themeParams bridge — set live by ThemeProvider from the
+       client's theme. These make light/dark + exact shades follow the
+       user's Telegram client. */
+    --tg-bg: #fbfaff;
+    --tg-secondary-bg: #f4f2fb;
+    --tg-text: #0e0b1a;
+    --tg-hint: #4a4560;
+    --tg-link: #7c5cff;
+
+    /* Semantic design tokens — chrome (surface/text) follows the Telegram
+       theme via the vars above, with brand-tuned fallbacks for non-Telegram
+       dev. Brand accent colors (tailwind brand.*) stay constant — they are
+       the playful pop, not chrome. */
+    --ds-bg: var(--tg-bg);
+    --ds-surface: #ffffff;
+    --ds-surface-2: var(--tg-secondary-bg);
+    --ds-text: var(--tg-text);
+    --ds-text-muted: var(--tg-hint);
+
+    /* Neubrutalist outline + hard offset shadow. Adapts to light/dark
+       (which follows the client colorScheme via the `dark` class). Hard
+       (zero-blur) shadow = GPU-cheap; only applied to static surfaces. */
+    --ds-border: #14101f;
+    --ds-shadow: #14101f;
+
+    /* Stable app height — wired to Telegram viewportStableHeight by
+       ThemeProvider; falls back to the dynamic viewport unit. */
+    --app-height: 100dvh;
   }
 
   html.dark {
     color-scheme: dark;
-    --tg-bg: #0E0B1A;
-    --tg-secondary-bg: #241D3F;
-    --tg-text: #FFFFFF;
-    --tg-hint: #B8B2D6;
-    --tg-link: #FFB84D;
+    --tg-bg: #0e0b1a;
+    --tg-secondary-bg: #241d3f;
+    --tg-text: #ffffff;
+    --tg-hint: #b8b2d6;
+    --tg-link: #ffb84d;
+
+    --ds-surface: #241d3f;
+    --ds-border: #f4f2fb;
+    --ds-shadow: #000000;
   }
 
   html,
@@ -48,46 +77,76 @@
   }
 
   body {
-    @apply font-ui antialiased bg-bg-light text-ink-light-1;
-    @apply dark:bg-bg-dark dark:text-ink-dark-1;
+    @apply font-ui antialiased;
+    background: var(--ds-bg);
+    color: var(--ds-text);
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
     text-rendering: optimizeLegibility;
   }
 
-  /* Mobile-native: no hover states allowed. We only style :active / focus-visible. */
+  /* Mobile-native: no hover states. We only style :active / focus-visible. */
   @media (hover: hover) {
     *:hover {
       transition: none;
     }
   }
 
-  /* Focus rings respect brand color and are visible only on keyboard. */
+  /* Focus rings track the Telegram link color and show only on keyboard. */
   *:focus-visible {
-    outline: 2px solid theme("colors.brand.accent");
+    outline: 3px solid var(--tg-link);
     outline-offset: 2px;
     border-radius: theme("borderRadius.sm");
   }
 
-  /* Selection picks up the brand accent regardless of theme. */
   ::selection {
     background: theme("colors.brand.accent");
-    color: theme("colors.ink.light-1");
+    color: #14101f;
+  }
+
+  /* Respect prefers-reduced-motion: drop to minimal animation everywhere.
+     Covers CSS keyframes + transitions; Framer Motion reads the same pref. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
 @layer components {
-  /* Sticky glass header used by every top-level page. */
+  /* Sticky solid header. Was backdrop-blur — removed: blur on a large sticky
+     surface is a real mobile-GPU cost (PERF_AUDIT). Follows the theme bg. */
   .ds-glass-header {
-    @apply sticky top-0 z-30;
-    @apply backdrop-blur-2xl bg-bg-light/70 dark:bg-bg-dark/70;
-    @apply border-b border-ink-light-2/10 dark:border-ink-dark-2/10;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: var(--ds-bg);
+    border-bottom: 3px solid var(--ds-border);
   }
 
-  /* Tactile button-press base — combine with `active:scale-95`. */
+  /* Tactile press — transform ONLY (GPU-composited). Neubrutalist "press
+     into the shadow": shift down-right on tap. Pairs with .ds-brutal. */
   .ds-tactile {
-    @apply transition-transform duration-fast ease-spring;
-    @apply active:scale-95;
+    transition: transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .ds-tactile:active {
+    transform: translate(2px, 2px);
+  }
+
+  /* Neubrutalist surface: bold border + hard offset shadow (static, no blur).
+     On press the element sinks into its shadow — the shadow swaps instantly
+     (no transitioned/animated box-shadow), only transform is animated. */
+  .ds-brutal {
+    border: 3px solid var(--ds-border);
+    box-shadow: 4px 4px 0 0 var(--ds-shadow);
+  }
+  .ds-brutal:active {
+    box-shadow: 2px 2px 0 0 var(--ds-shadow);
   }
 
   /* 44×44 minimum tap-target guard. Apply to icon-only controls. */
