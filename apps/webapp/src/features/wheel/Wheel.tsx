@@ -14,7 +14,7 @@ const CX = 200;
 const CY = 200;
 const OUTER_R = 195;
 const SEGMENT_R = 180;
-const HUB_R = 46;
+const HUB_R = 54;
 const POINTER_TIP_Y = 4;
 const MAX_LABEL_CHARS = 12;
 /** Decelerate phase begins at this fraction of total spin duration. */
@@ -494,9 +494,10 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
           {canSpin ? (
             <text
               x={CX}
-              y={CY + 7}
-              fontSize={20}
+              y={CY + 5}
+              fontSize={15}
               fontWeight={800}
+              letterSpacing={-0.5}
               fill="#5B3DF5"
               textAnchor="middle"
               fontFamily="Manrope, sans-serif"
@@ -547,7 +548,7 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
           aria-label={t("actions.spin")}
           style={{ WebkitUserSelect: "none", WebkitTouchCallout: "none" }}
           className={cn(
-            "absolute left-1/2 top-1/2 h-[23%] w-[23%]",
+            "absolute left-1/2 top-1/2 h-[27%] w-[27%]",
             "-translate-x-1/2 -translate-y-1/2 rounded-full",
             "select-none touch-manipulation",
             "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-primary/70",
