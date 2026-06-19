@@ -704,7 +704,7 @@ export function RoomPage(): JSX.Element {
   if (snapshot === null) {
     return (
       <>
-        <header className="ds-glass-header px-4 py-3 pt-safe flex items-center gap-3">
+        <header className="ds-glass-header pl-4 pr-5 py-3 pt-safe flex items-center gap-3">
           <IconButton
             aria-label={t("common:actions.back")}
             variant="ghost"
@@ -729,7 +729,7 @@ export function RoomPage(): JSX.Element {
   if (snapshot.me_pending === true) {
     return (
       <>
-        <header className="ds-glass-header px-4 py-3 pt-safe flex items-center gap-3">
+        <header className="ds-glass-header pl-4 pr-5 py-3 pt-safe flex items-center gap-3">
           <IconButton
             aria-label={t("common:actions.back")}
             variant="ghost"
@@ -756,7 +756,7 @@ export function RoomPage(): JSX.Element {
 
   return (
     <>
-      <header className="ds-glass-header px-4 py-3 pt-safe flex items-center gap-3">
+      <header className="ds-glass-header pl-4 pr-5 py-3 pt-safe flex items-center gap-3">
         <IconButton
           aria-label={t("common:actions.back")}
           variant="ghost"
@@ -784,6 +784,7 @@ export function RoomPage(): JSX.Element {
           }))}
           max={3}
           size="sm"
+          className="shrink-0"
         />
       </header>
 
@@ -904,7 +905,7 @@ export function RoomPage(): JSX.Element {
         ) : null}
       </section>
 
-      <main className="flex-1 px-4 pt-3 pb-6 flex flex-col gap-4 relative">
+      <main className="flex-1 px-4 pt-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))] flex flex-col gap-4 relative">
         {roundOver && spinLanded ? (
           // Joyful finish — the lone survivor, as a centered popup so the
           // result is unmissable without scrolling. Gated on spinLanded so it
