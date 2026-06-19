@@ -1,6 +1,21 @@
 import { type ReactNode, useEffect } from "react";
 
-import { onThemeChanged, readTheme } from "@/lib/telegram";
+import {
+  onThemeChanged,
+  onViewportChanged,
+  readTheme,
+  readViewportStableHeight,
+} from "@/lib/telegram";
+
+/** Mirror Telegram's stable viewport height into `--app-height` (px) so the
+ *  layout can size to the real visible area; CSS keeps a `100dvh` fallback
+ *  when not in Telegram (height 0). */
+function applyViewportHeight(): void {
+  const h = readViewportStableHeight();
+  if (h > 0) {
+    document.documentElement.style.setProperty("--app-height", `${h}px`);
+  }
+}
 
 function applyTheme(): void {
   const t = readTheme();
@@ -26,6 +41,11 @@ export function ThemeProvider({ children }: { children: ReactNode }): JSX.Elemen
   useEffect(() => {
     applyTheme();
     return onThemeChanged(applyTheme);
+  }, []);
+
+  useEffect(() => {
+    applyViewportHeight();
+    return onViewportChanged(applyViewportHeight);
   }, []);
 
   return <>{children}</>;

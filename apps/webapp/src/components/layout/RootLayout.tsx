@@ -71,7 +71,7 @@ export function RootLayout(): JSX.Element {
   }, []);
 
   return (
-    <div className="min-h-[100dvh] flex flex-col">
+    <div className="min-h-[var(--app-height)] flex flex-col">
       <AuroraBackground />
       <Outlet />
       <Toaster />

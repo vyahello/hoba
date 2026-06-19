@@ -142,6 +142,34 @@ export function onThemeChanged(handler: () => void): () => void {
 }
 
 /**
+ * Telegram's stable viewport height in px (the visible area excluding the
+ * expandable/transient region). Drives the `--app-height` CSS var so the
+ * spin screen can be exactly one viewport tall without scroll. Returns 0
+ * outside Telegram, where callers fall back to the CSS `100dvh` default.
+ */
+export function readViewportStableHeight(): number {
+  try {
+    return WebApp.viewportStableHeight ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** Subscribe to Telegram's `viewportChanged` event; returns an unsubscriber. */
+export function onViewportChanged(handler: () => void): () => void {
+  try {
+    WebApp.onEvent("viewportChanged", handler);
+    return () => {
+      WebApp.offEvent("viewportChanged", handler);
+    };
+  } catch {
+    return () => {
+      /* noop */
+    };
+  }
+}
+
+/**
  * Open a `t.me/...` link via Telegram's native handler. Falls back to
  * `window.open` outside Telegram. Returns true on success.
  */
