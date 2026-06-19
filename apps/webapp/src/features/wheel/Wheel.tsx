@@ -442,12 +442,10 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
       style={{ WebkitTouchCallout: "none" }}
     >
       <svg viewBox="0 0 400 400" role="img" aria-label={ariaLabel} className="w-full h-full">
-        {/* Static hard offset shadow (neubrutalist) — a solid ink disc behind
-            the rim, never animated. Gives the round wheel its "lifted" look
-            without a blurred box-shadow. */}
-        <circle cx={CX + 5} cy={CY + 7} r={OUTER_R} fill={INK} opacity={0.92} />
-
-        {/* Static rim: thick ink ring + accent inner ring. Does NOT rotate. */}
+        {/* Static rim: thick ink ring + concentric amber accent ring. Does NOT
+            rotate. The offset shadow disc was dropped — on a circle it read as
+            an uneven (thicker-at-bottom) rim; concentric rings stay even all
+            the way around. */}
         <circle cx={CX} cy={CY} r={OUTER_R} fill="#FFFFFF" stroke={INK} strokeWidth={6} />
         <circle cx={CX} cy={CY} r={OUTER_R - 7} fill="none" stroke="#FFB84D" strokeWidth={6} />
 
