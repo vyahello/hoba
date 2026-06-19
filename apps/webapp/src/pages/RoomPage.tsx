@@ -161,6 +161,9 @@ export function RoomPage(): JSX.Element {
   // SpinResult that overrides the server one while the sequence plays.
   const [phaseSpin, setPhaseSpin] = useState<SpinResult | null>(null);
   const wheelRef = useRef<WheelHandle>(null);
+  // The active dare card — scrolled into view when a dare is dealt so the
+  // punished player doesn't have to hunt for it below the fold.
+  const dareCardRef = useRef<HTMLDivElement>(null);
   // Latest rendered segments, read inside the spin choreography without making
   // it a hook dep (which would restart the animation when segments change).
   const segmentsRef = useRef<SegmentDef[]>([]);
@@ -256,6 +259,17 @@ export function RoomPage(): JSX.Element {
   const mustResolveMyPunish = isMyPunishment(snapshot);
   const punishPendingApproval = pendingApproval(snapshot);
   const punishApproverUserId = approverUserId(snapshot);
+  // Auto-scroll the dare card into view once per distinct dare (the task +
+  // Done button otherwise sit below the wheel/standings — see IMG_2276).
+  const dareKey =
+    spinLanded && punishPending !== null && !punishPendingApproval
+      ? `${punishPending.spinner_id}:${punishPending.result_segment_id}`
+      : null;
+  useEffect(() => {
+    if (dareKey !== null) {
+      dareCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [dareKey]);
   const mustApprove = isMyApproval(snapshot);
   const punishWinnerId = winnerUserId(snapshot);
   const myMatchCount =
@@ -1166,7 +1180,10 @@ export function RoomPage(): JSX.Element {
                   )}
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-2 rounded-xl bg-brand-primary border-[3px] border-ds-border p-4 text-center text-white shadow-brutal">
+                <div
+                  ref={dareCardRef}
+                  className="flex flex-col items-center gap-2 rounded-xl bg-brand-primary border-[3px] border-ds-border p-4 text-center text-white shadow-brutal scroll-mt-24"
+                >
                   <p className="text-base font-display font-bold leading-snug">
                     {t("room:punishment.must_do", {
                       name: nameFor(punishPending.spinner_id),
