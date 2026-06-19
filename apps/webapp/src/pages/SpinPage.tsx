@@ -23,6 +23,7 @@ import {
 import { api, ApiError, type GameMode, type PunishmentDeck } from "@/lib/api";
 import { haptics } from "@/lib/haptics";
 import { safeNavigateBack } from "@/lib/navigation";
+import { disableVerticalSwipes, enableVerticalSwipes } from "@/lib/telegram";
 import { useCustomWheel, useSpinHistory } from "@/stores/spinHistory";
 import { toast } from "@/stores/toast";
 import { WHEEL_PALETTE } from "../../tailwind.config";
@@ -67,6 +68,16 @@ export function SpinPage(): JSX.Element {
   const [modePickerOpen, setModePickerOpen] = useState(false);
   const [resultRevealed, setResultRevealed] = useState(false);
   const wheelRef = useRef<WheelHandle>(null);
+
+  // Spin screen: block Telegram's vertical swipe-to-close + overscroll so a
+  // stray downward drag mid-spin can't pull the Mini App shut. Restored on
+  // leave. (Paired with `overscroll-none` on the scroll container below.)
+  useEffect(() => {
+    disableVerticalSwipes();
+    return () => {
+      enableVerticalSwipes();
+    };
+  }, []);
 
   const result = useMemo(() => {
     if (!resultRevealed || spin === undefined || wheel === undefined) return undefined;
@@ -238,12 +249,12 @@ export function SpinPage(): JSX.Element {
             safeNavigateBack(navigate);
           }}
         />
-        <h1 className="font-display font-bold text-lg flex-1 min-w-0 truncate text-ink-light-1 dark:text-ink-dark-1">
+        <h1 className="font-display font-bold text-lg flex-1 min-w-0 truncate text-ds-text">
           {wheel.questionText}
         </h1>
       </header>
 
-      <main className="flex-1 px-4 pt-3 pb-6 flex flex-col gap-5 relative">
+      <main className="flex-1 px-4 pt-3 pb-6 flex flex-col gap-5 relative overscroll-none">
         <Wheel
           ref={wheelRef}
           segments={wheel.segments as SegmentDef[]}
@@ -282,7 +293,7 @@ export function SpinPage(): JSX.Element {
                 setResultRevealed(false);
                 setState("settled");
               }}
-              className="absolute inset-0 z-10 px-4 pt-3 pb-6 flex flex-col items-center justify-center bg-bg-light/95 dark:bg-bg-dark/95 cursor-pointer"
+              className="absolute inset-0 z-10 px-4 pt-3 pb-6 flex flex-col items-center justify-center bg-ds-bg cursor-pointer"
               aria-live="polite"
               role="status"
             >

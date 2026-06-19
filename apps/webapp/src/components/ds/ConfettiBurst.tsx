@@ -3,6 +3,15 @@ import { useEffect } from "react";
 
 const BRAND_COLORS = ["#7C5CFF", "#FFB84D", "#FF5C9C", "#5CE5FF"];
 
+// Kill any in-flight burst the instant the app is backgrounded — canvas-
+// confetti runs its own rAF, and nothing decorative may keep animating while
+// hidden (thermal budget). `reset()` stops the loop and clears the canvas.
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) confetti.reset();
+  });
+}
+
 export interface ConfettiOptions {
   particleCount?: number;
   origin?: { x: number; y: number };
@@ -24,6 +33,8 @@ export function fireConfetti(opts: ConfettiOptions = {}): void {
     colors: opts.colors ?? BRAND_COLORS,
     ticks: 220,
     zIndex: 70,
+    // Honor prefers-reduced-motion natively (no burst when reduced).
+    disableForReducedMotion: true,
   });
 }
 

@@ -170,6 +170,27 @@ export function onViewportChanged(handler: () => void): () => void {
 }
 
 /**
+ * Disable / re-enable Telegram's vertical swipe-to-close + overscroll. Used on
+ * the spin screen so a stray downward drag during a spin can't pull the Mini
+ * App closed. No-ops on older clients/SDKs that lack the API.
+ */
+export function disableVerticalSwipes(): void {
+  try {
+    (WebApp as unknown as { disableVerticalSwipes?: () => void }).disableVerticalSwipes?.();
+  } catch {
+    /* unsupported client/SDK */
+  }
+}
+
+export function enableVerticalSwipes(): void {
+  try {
+    (WebApp as unknown as { enableVerticalSwipes?: () => void }).enableVerticalSwipes?.();
+  } catch {
+    /* unsupported client/SDK */
+  }
+}
+
+/**
  * Open a `t.me/...` link via Telegram's native handler. Falls back to
  * `window.open` outside Telegram. Returns true on success.
  */
