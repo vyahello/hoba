@@ -357,8 +357,12 @@ sudo python3 scripts/visitors.py --nginx-log /var/log/nginx/access.log
 
 Sections: **[1]** registered users (tg_id, name, lang, first/last seen;
 `Probe` test rows auto-flagged), **[2]** websocket connections per user,
-**[3]** client devices/OS (bots & scanners excluded), **[4]** per-IP ×
-device (only with `--nginx-log`).
+**[3]** real app renders — clients that actually pulled the JS bundle
+(`/assets/`) or a sound, the only trustworthy signal: this count matches
+the §1 users table, while raw distinct-UA totals are dominated by scanners
+that spoof browser User-Agents and a faked `hobagame` referer but never
+load the app (reported as "ambiguous"/"noise", not as real), **[4]**
+per-IP × device (only with `--nginx-log`).
 
 Two limits to know:
 

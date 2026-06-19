@@ -191,9 +191,28 @@ class Client:
     browser: str
     hits: int = 0
     app_hits: int = 0  # requests with a hobagame referer = real in-app loads
+    asset_hits: int = 0  # requests for /assets/ or /sounds/ = the SPA rendered
     first: datetime | None = None
     last: datetime | None = None
     ips: set[str] = field(default_factory=set)
+
+    @property
+    def engaged(self) -> bool:
+        """True iff this client provably rendered the app — it pulled a bundle
+        asset (/assets/) or a sound. This is the trustworthy signal: a
+        spoofed-browser scanner can fake a `hobagame` referer (and many do),
+        but it won't fetch the JS bundle. This matches the §1 users table;
+        distinct-UA counts — and even the referer — do not.
+        """
+        return self.asset_hits > 0
+
+    @property
+    def ambiguous(self) -> bool:
+        """Arrived with an in-app referer but never loaded an asset — either a
+        returning user whose bundle was cache-hit, or a referer-spoofing
+        scanner. Reported separately, not counted as a confirmed render.
+        """
+        return self.asset_hits == 0 and self.app_hits > 0
 
 
 def parse_access_log(lines: list[str], since: datetime | None) -> tuple[dict[str, Client], int, int]:
@@ -222,6 +241,9 @@ def parse_access_log(lines: list[str], since: datetime | None) -> tuple[dict[str
         c.hits += 1
         if "hobagame" in m.group("referer"):
             c.app_hits += 1
+        path = m.group("path")
+        if path.startswith("/assets/") or path.startswith("/sounds/"):
+            c.asset_hits += 1
         c.ips.add(m.group("ip"))
         if ts:
             c.first = ts if c.first is None or ts < c.first else c.first
@@ -284,16 +306,32 @@ def main() -> None:
     # ── §3 devices / OS ────────────────────────────────────────────────
     raw = _run(["docker", "logs", args.webapp_container]).splitlines()
     clients, bot_hits, bot_uas = parse_access_log(raw, since)
-    _hdr("[3] CLIENT DEVICES / OS — from webapp nginx log (humans only; bots excluded)")
-    if not clients:
-        print("  (no human requests in the buffer)")
+    # "Real" = clients that actually rendered the app (fetched a bundle asset
+    # or arrived with an in-app referer). A spoofed-browser UA passes the bot
+    # filter but never loads /assets/ — so distinct-UA counts are dominated by
+    # scanners and mean nothing. Engagement is the signal that matches `users`.
+    real = [c for c in clients.values() if c.engaged]
+    ambiguous = [c for c in clients.values() if c.ambiguous]
+    noise = [c for c in clients.values() if not c.engaged and not c.ambiguous]
+    noise_hits = sum(c.hits for c in noise)
+    _hdr("[3] REAL APP RENDERS — webapp nginx log (clients that pulled /assets/ or /sounds/)")
+    if not real:
+        print("  (no client provably rendered the app in the buffer)")
     else:
-        print(f"  {'OS':<16} {'device':<10} {'browser':<18} {'hits':<6} {'in-app':<7} {'first':<17} last")
-        for c in sorted(clients.values(), key=lambda x: x.hits, reverse=True):
+        print(f"  {'OS':<16} {'device':<10} {'browser':<18} {'hits':<6} {'assets':<7} {'in-app':<7} {'first':<17} last")
+        for c in sorted(real, key=lambda x: x.asset_hits, reverse=True):
             f = c.first.strftime("%m-%d %H:%M") if c.first else "-"
             l = c.last.strftime("%m-%d %H:%M") if c.last else "-"
-            print(f"  {c.os:<16} {c.device:<10} {c.browser:<18} {c.hits:<6} {c.app_hits:<7} {f:<17} {l}")
-    print(f"  ({len(clients)} distinct human UA(s); excluded {bot_hits} bot/scanner hits from {bot_uas} bot UA(s))")
+            print(f"  {c.os:<16} {c.device:<10} {c.browser:<18} {c.hits:<6} {c.asset_hits:<7} {c.app_hits:<7} {f:<17} {l}")
+    print(f"  {len(real)} confirmed real client(s) (loaded the bundle) — cross-check against §1 users.")
+    print(
+        f"  {len(ambiguous)} ambiguous (in-app referer, no asset — cached returning user OR referer-spoofing scanner)."
+    )
+    print(
+        f"  noise: {len(noise)} UA(s)/{noise_hits} hits never touched the app"
+        f" + {bot_hits} hits from {bot_uas} self-identified bot UA(s)."
+    )
+    print("  → distinct-UA totals are meaningless here; trust 'confirmed real' and the §1 users table.")
 
     # ── §4 real client IPs (optional, host nginx log) ──────────────────
     if args.nginx_log:
