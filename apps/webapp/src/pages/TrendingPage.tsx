@@ -119,7 +119,7 @@ export function TrendingPage(): JSX.Element {
             safeNavigateBack(navigate);
           }}
         />
-        <h1 className="font-display font-bold text-xl flex-1 truncate text-ink-light-1 dark:text-ink-dark-1">
+        <h1 className="font-display font-bold text-xl flex-1 truncate text-ds-text">
           {t("home:trending.title")}
         </h1>
       </header>
@@ -158,7 +158,7 @@ export function TrendingPage(): JSX.Element {
 
         {failed ? (
           <div className="flex flex-col items-center gap-3 py-10 text-center">
-            <p className="text-sm text-ink-light-2 dark:text-ink-dark-2">
+            <p className="text-sm text-ds-text-muted">
               {t("home:trending.load_failed")}
             </p>
           </div>
@@ -171,7 +171,7 @@ export function TrendingPage(): JSX.Element {
         ) : wheels.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-12 text-center">
             <span className="text-5xl" aria-hidden>🌶️</span>
-            <p className="text-sm text-ink-light-2 dark:text-ink-dark-2 px-6">
+            <p className="text-sm text-ds-text-muted px-6">
               {t("home:trending.empty")}
             </p>
           </div>
@@ -230,7 +230,7 @@ function CategoryChip({
         "shrink-0 px-3 py-1.5 rounded-full text-sm font-semibold transition-colors",
         active
           ? "bg-brand-primary text-white"
-          : "bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1",
+          : "bg-ds-surface-2 text-ds-text",
       )}
     >
       {label}
