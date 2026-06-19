@@ -281,7 +281,6 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
   // spin so a previous roam doesn't leave it stuck.
   useEffect(() => {
     setPointerAngle(pointerDeg);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pointerDeg, spin?.seed]);
 
   useImperativeHandle(
@@ -414,7 +413,6 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
       window.removeEventListener("blur", pause);
       window.removeEventListener("focus", resume);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, spin?.seed]);
 
   // Belt-and-suspenders: cancel any loop if the component unmounts mid-spin.
