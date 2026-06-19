@@ -41,20 +41,20 @@ export function LegalPage({ doc }: LegalPageProps): JSX.Element {
             safeNavigateBack(navigate);
           }}
         />
-        <h1 className="font-display font-bold text-xl flex-1 truncate text-ink-light-1 dark:text-ink-dark-1">
+        <h1 className="font-display font-bold text-xl flex-1 truncate text-ds-text">
           {title}
         </h1>
       </header>
 
       <main className="flex-1 px-4 pt-3 pb-10 flex flex-col gap-6">
-        <p className="text-xs text-ink-light-2 dark:text-ink-dark-2">{updated}</p>
+        <p className="text-xs text-ds-text-muted">{updated}</p>
         {sections.map((section, i) => (
           <section key={i} className="flex flex-col gap-2">
-            <h2 className="font-display font-bold text-base text-ink-light-1 dark:text-ink-dark-1">
+            <h2 className="font-display font-bold text-base text-ds-text">
               {section.heading}
             </h2>
             {section.body.map((para, j) => (
-              <p key={j} className="text-sm leading-relaxed text-ink-light-2 dark:text-ink-dark-2">
+              <p key={j} className="text-sm leading-relaxed text-ds-text-muted">
                 {para}
               </p>
             ))}

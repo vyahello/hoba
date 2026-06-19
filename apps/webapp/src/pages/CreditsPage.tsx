@@ -59,35 +59,35 @@ export function CreditsPage(): JSX.Element {
             safeNavigateBack(navigate);
           }}
         />
-        <h1 className="font-display font-bold text-xl flex-1 truncate text-ink-light-1 dark:text-ink-dark-1">
+        <h1 className="font-display font-bold text-xl flex-1 truncate text-ds-text">
           {t("credits:title")}
         </h1>
       </header>
 
       <main className="flex-1 px-4 pt-3 pb-10 flex flex-col gap-6">
         <section className="flex flex-col gap-3">
-          <h2 className="font-display font-bold text-base text-ink-light-1 dark:text-ink-dark-1">
+          <h2 className="font-display font-bold text-base text-ds-text">
             {t("credits:music.heading")}
           </h2>
-          <p className="text-sm leading-relaxed text-ink-light-2 dark:text-ink-dark-2">
+          <p className="text-sm leading-relaxed text-ds-text-muted">
             {t("credits:music.intro")}
           </p>
           <ul className="flex flex-col gap-3">
             {MUSIC_CREDITS.map((c, i) => (
               <li
                 key={i}
-                className="rounded-2xl bg-surface-light-2 dark:bg-surface-dark-2 px-4 py-3 flex flex-col gap-1"
+                className="rounded-2xl bg-ds-surface-2 px-4 py-3 flex flex-col gap-1"
               >
-                <p className="text-sm font-semibold text-ink-light-1 dark:text-ink-dark-1">
+                <p className="text-sm font-semibold text-ds-text">
                   {c.title !== "" ? c.title : t("credits:music.pixabay_track")}
                   {c.author !== null && (
-                    <span className="font-normal text-ink-light-2 dark:text-ink-dark-2">
+                    <span className="font-normal text-ds-text-muted">
                       {" "}
                       {t("credits:music.by")} {c.author}
                     </span>
                   )}
                 </p>
-                <p className="text-xs text-ink-light-2 dark:text-ink-dark-2 opacity-80">
+                <p className="text-xs text-ds-text-muted opacity-80">
                   {c.license === "cc_by"
                     ? t("credits:music.license_cc_by")
                     : t("credits:music.license_pixabay")}
@@ -124,10 +124,10 @@ export function CreditsPage(): JSX.Element {
         </section>
 
         <section className="flex flex-col gap-2">
-          <h2 className="font-display font-bold text-base text-ink-light-1 dark:text-ink-dark-1">
+          <h2 className="font-display font-bold text-base text-ds-text">
             {t("credits:sound.heading")}
           </h2>
-          <p className="text-sm leading-relaxed text-ink-light-2 dark:text-ink-dark-2">
+          <p className="text-sm leading-relaxed text-ds-text-muted">
             {t("credits:sound.body")}
           </p>
         </section>
