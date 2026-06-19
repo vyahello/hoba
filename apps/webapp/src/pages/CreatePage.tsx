@@ -157,7 +157,7 @@ export function CreatePage(): JSX.Element {
             safeNavigateBack(navigate);
           }}
         />
-        <h1 className="font-display font-bold text-xl flex-1 truncate text-ink-light-1 dark:text-ink-dark-1">
+        <h1 className="font-display font-bold text-xl flex-1 truncate text-ds-text">
           {editId !== null ? t("create:edit_title") : t("create:title")}
         </h1>
       </header>
@@ -177,10 +177,10 @@ export function CreatePage(): JSX.Element {
 
         <section className="flex flex-col gap-3">
           <div className="flex items-baseline justify-between">
-            <h2 className="font-display font-bold text-lg text-ink-light-1 dark:text-ink-dark-1">
+            <h2 className="font-display font-bold text-lg text-ds-text">
               {t("create:segments_label")}
             </h2>
-            <span className="text-xs font-mono tabular-nums text-ink-light-2 dark:text-ink-dark-2">
+            <span className="text-xs font-mono tabular-nums text-ds-text-muted">
               {segments.length}/{MAX_SEGMENTS}
             </span>
           </div>
@@ -232,7 +232,7 @@ export function CreatePage(): JSX.Element {
               {t("create:add_segment")}
             </Button>
           ) : (
-            <p className="text-xs text-ink-light-2 dark:text-ink-dark-2 text-center">
+            <p className="text-xs text-ds-text-muted text-center">
               {t("create:too_many")}
             </p>
           )}
@@ -261,7 +261,7 @@ export function CreatePage(): JSX.Element {
             {editId !== null ? t("create:save_changes") : t("create:save_to_library")}
           </Button>
           {!ready && nonEmptyCount < MIN_SEGMENTS ? (
-            <p className="text-xs text-ink-light-2 dark:text-ink-dark-2 text-center">
+            <p className="text-xs text-ds-text-muted text-center">
               {t("create:too_few")}
             </p>
           ) : null}
