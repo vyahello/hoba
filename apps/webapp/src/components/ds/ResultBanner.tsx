@@ -33,31 +33,41 @@ export function ResultBanner({
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: "spring", damping: 26, stiffness: 260, delay: 0.4 }}
       className={cn(
-        "rounded-xl p-6 shadow-spin relative overflow-hidden text-white",
+        // Neubrutalist: themed surface card (contrast-safe on any palette
+        // color), bold ink border + hard shadow. The segment color is the
+        // bold accent chip, not a full-bleed fill — so text stays legible.
+        "rounded-xl p-6 border-[3px] border-ds-border shadow-brutal-lg",
+        "bg-ds-surface text-ds-text relative overflow-hidden",
         className,
       )}
-      style={{
-        background:
-          `linear-gradient(135deg, ${segmentColor} 0%, ${segmentColor}cc 60%, #0E0B1Aaa 130%)`,
-      }}
     >
-      <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full bg-white/15 blur-2xl pointer-events-none" />
-      <div className="relative flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
         {triggeredByName !== undefined ? (
-          <p className="text-xs uppercase tracking-widest opacity-80">
+          <p className="text-xs uppercase tracking-widest text-ds-text-muted">
             {triggeredByName} spun it
           </p>
         ) : null}
-        <div className="flex items-baseline gap-3">
+        <div className="flex items-center gap-3">
           {segmentEmoji !== undefined ? (
-            <span className="text-5xl leading-none">{segmentEmoji}</span>
-          ) : null}
-          <h2 className="font-display font-extrabold text-4xl leading-tight">
+            <span
+              className="text-4xl leading-none rounded-lg border-[3px] border-ds-border w-16 h-16 flex items-center justify-center shrink-0"
+              style={{ backgroundColor: segmentColor }}
+            >
+              {segmentEmoji}
+            </span>
+          ) : (
+            <span
+              aria-hidden
+              className="rounded-md border-[3px] border-ds-border w-3 self-stretch shrink-0"
+              style={{ backgroundColor: segmentColor }}
+            />
+          )}
+          <h2 className="font-display font-extrabold text-4xl leading-tight min-w-0 break-words">
             {segmentLabel}
           </h2>
         </div>
         {modeEffects !== undefined ? (
-          <div className="mt-3">{modeEffects}</div>
+          <div className="mt-1">{modeEffects}</div>
         ) : null}
       </div>
     </motion.section>

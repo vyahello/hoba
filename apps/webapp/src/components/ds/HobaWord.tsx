@@ -40,9 +40,9 @@ export function HobaWord({
       className={cn(
         "inline-block font-display font-extrabold leading-none select-none",
         "text-brand-accent",
-        // Smaller glow blur — a 60px drop-shadow is a heavy filter on
-        // iOS Safari (A11) and this renders right at the result reveal.
-        "drop-shadow-[0_8px_28px_rgba(255,184,77,0.7)]",
+        // Neubrutalist: crisp HARD ink shadow (zero blur) instead of the old
+        // blurred glow drop-shadow filter (cheaper on mobile, on-style).
+        "[text-shadow:4px_4px_0_#14101F]",
         sizeClass,
         className,
       )}
