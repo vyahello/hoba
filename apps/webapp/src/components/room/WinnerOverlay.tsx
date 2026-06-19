@@ -37,7 +37,7 @@ export function WinnerOverlay({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.25 }}
-      className="absolute inset-0 z-30 px-4 pt-3 pb-6 flex flex-col items-center justify-center gap-4 bg-bg-light/95 dark:bg-bg-dark/95 text-center"
+      className="absolute inset-0 z-30 px-4 pt-3 pb-6 flex flex-col items-center justify-center gap-4 bg-ds-bg text-center"
       aria-live="assertive"
       role="status"
     >
@@ -67,7 +67,7 @@ export function WinnerOverlay({
           {actionLabel}
         </Button>
       ) : (
-        <p className="text-sm text-ink-light-2 dark:text-ink-dark-2">{waitingLabel}</p>
+        <p className="text-sm text-ds-text-muted">{waitingLabel}</p>
       )}
     </motion.div>
   );
