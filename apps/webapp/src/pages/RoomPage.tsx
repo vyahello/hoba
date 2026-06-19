@@ -9,6 +9,7 @@ import { Button } from "@/components/ds/Button";
 import { fireConfetti } from "@/components/ds/ConfettiBurst";
 import { HobaWord } from "@/components/ds/HobaWord";
 import { IconButton } from "@/components/ds/IconButton";
+import { IconSave, IconSettings, IconShare } from "@/components/ds/icons";
 import { RealtimeIndicator } from "@/components/ds/RealtimeIndicator";
 import { ResultBanner } from "@/components/ds/ResultBanner";
 import { RoomCodePill } from "@/components/ds/RoomCodePill";
@@ -797,7 +798,7 @@ export function RoomPage(): JSX.Element {
               aria-label={t("room:actions.invite")}
               variant="filled"
               size="md"
-              icon={<span aria-hidden>📤</span>}
+              icon={<IconShare />}
               onClick={() => {
                 haptics.selection();
                 setInviteOpen(true);
@@ -809,7 +810,7 @@ export function RoomPage(): JSX.Element {
                 variant="tonal"
                 size="md"
                 disabled={savingWheel}
-                icon={<span aria-hidden>💾</span>}
+                icon={<IconSave />}
                 onClick={() => {
                   void handleSaveWheel();
                 }}
@@ -820,7 +821,7 @@ export function RoomPage(): JSX.Element {
                 aria-label={t("room:settings.open_aria")}
                 variant="tonal"
                 size="md"
-                icon={<span aria-hidden>⚙️</span>}
+                icon={<IconSettings />}
                 onClick={() => {
                   setSettingsOpen(true);
                 }}

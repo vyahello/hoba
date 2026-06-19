@@ -6,6 +6,7 @@ import { Button } from "@/components/ds/Button";
 import { Card } from "@/components/ds/Card";
 import { EmptyState } from "@/components/ds/EmptyState";
 import { IconButton } from "@/components/ds/IconButton";
+import { IconSettings } from "@/components/ds/icons";
 import { QuickWheelCard } from "@/components/ds/QuickWheelCard";
 import { Skeleton } from "@/components/ds/Skeleton";
 import { type SavedWheel, type Template, api } from "@/lib/api";
@@ -85,7 +86,7 @@ export function HomePage(): JSX.Element {
         </span>
         <IconButton
           aria-label={t("home:header.settings_aria")}
-          icon={<span aria-hidden>⚙️</span>}
+          icon={<IconSettings />}
           onClick={() => {
             navigate("/settings");
           }}
