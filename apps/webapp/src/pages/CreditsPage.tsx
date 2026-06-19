@@ -76,9 +76,9 @@ export function CreditsPage(): JSX.Element {
             {MUSIC_CREDITS.map((c, i) => (
               <li
                 key={i}
-                className="rounded-2xl bg-ds-surface-2 px-4 py-3 flex flex-col gap-1"
+                className="rounded-lg bg-ds-surface-2 border-[3px] border-ds-border px-4 py-3 flex flex-col gap-1.5"
               >
-                <p className="text-sm font-semibold text-ds-text">
+                <p className="text-base font-display font-bold text-ds-text">
                   {c.title !== "" ? c.title : t("credits:music.pixabay_track")}
                   {c.author !== null && (
                     <span className="font-normal text-ds-text-muted">
@@ -95,7 +95,7 @@ export function CreditsPage(): JSX.Element {
                 <div className="flex items-center gap-4 mt-1">
                   <button
                     type="button"
-                    className="text-xs font-semibold text-brand-primary"
+                    className="text-xs font-bold text-brand-primary border-2 border-ds-border rounded-md px-2.5 py-1 active:translate-x-[1px] active:translate-y-[1px]"
                     onClick={() => {
                       haptics.selection();
                       audio.play("ui_tap");
@@ -107,7 +107,7 @@ export function CreditsPage(): JSX.Element {
                   {c.license === "cc_by" && (
                     <button
                       type="button"
-                      className="text-xs font-semibold text-brand-primary"
+                      className="text-xs font-bold text-brand-primary border-2 border-ds-border rounded-md px-2.5 py-1 active:translate-x-[1px] active:translate-y-[1px]"
                       onClick={() => {
                         haptics.selection();
                         audio.play("ui_tap");

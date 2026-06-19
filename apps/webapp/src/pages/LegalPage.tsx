@@ -47,10 +47,15 @@ export function LegalPage({ doc }: LegalPageProps): JSX.Element {
       </header>
 
       <main className="flex-1 px-4 pt-3 pb-10 flex flex-col gap-6">
-        <p className="text-xs text-ds-text-muted">{updated}</p>
+        <p className="self-start text-xs font-bold text-ds-text-muted bg-ds-surface-2 border-2 border-ds-border rounded-md px-2.5 py-1">
+          {updated}
+        </p>
         {sections.map((section, i) => (
-          <section key={i} className="flex flex-col gap-2">
-            <h2 className="font-display font-bold text-base text-ds-text">
+          <section
+            key={i}
+            className="flex flex-col gap-2 bg-ds-surface border-[3px] border-ds-border rounded-lg p-4"
+          >
+            <h2 className="font-display font-extrabold text-lg text-ds-text">
               {section.heading}
             </h2>
             {section.body.map((para, j) => (
