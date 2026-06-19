@@ -39,9 +39,28 @@ from hoba_api.models.participant import Participant
 from hoba_api.models.question import Question
 from hoba_api.models.room import Room
 from hoba_api.models.segment import Segment
-from hoba_api.modes.punishment_decks import CARDS_PER_DECK, deck_cards
-from hoba_api.redis_client import presence_user_ids
+from hoba_api.modes.punishment_decks import deck_cards
+from hoba_api.redis_client import (
+    presence_user_ids,
+    punishment_mark_card,
+    punishment_reset_cards,
+    punishment_used_card_indices,
+)
 from hoba_api.services.rooms import RoomServiceError
+
+
+async def _draw_card_index(room_id: int, deck: str, total: int) -> int:
+    """Pick a dare-card index WITHOUT replacement: skip indices already dealt
+    in this room+deck until the whole deck has been shown, then start a fresh
+    pass. This is the no-repeat-until-exhausted draw."""
+    used = await punishment_used_card_indices(room_id, deck)
+    remaining = [i for i in range(total) if i not in used]
+    if not remaining:
+        await punishment_reset_cards(room_id, deck)
+        remaining = list(range(total))
+    idx = remaining[secrets.randbelow(len(remaining))]
+    await punishment_mark_card(room_id, deck, idx)
+    return idx
 
 
 async def _active_segment_ids(session: AsyncSession, room: Room) -> set[int]:
@@ -243,9 +262,10 @@ async def resolve_turn(
     else:
         deck = room.punishment_deck or "mild"
         lang = host_lang or "en"
-        idx = secrets.randbelow(CARDS_PER_DECK)
+        cards = deck_cards(deck, lang)
+        idx = await _draw_card_index(room.id, deck, len(cards))
         card = {
-            "text": deck_cards(deck, lang)[idx],
+            "text": cards[idx],
             "deck": deck,
             "card_index": idx,
         }
@@ -398,4 +418,6 @@ async def reset_game(session: AsyncSession, room: Room) -> None:
     room.punishment_last_outcome = None
     room.current_turn_user_id = None
     room.status = "lobby"
+    # Fresh card pass for the new game (no-repeat starts over).
+    await punishment_reset_cards(room.id, room.punishment_deck or "mild")
     await session.commit()

@@ -101,6 +101,46 @@ async def presence_user_ids(room_id: int) -> set[int]:
     return ids
 
 
+# --- Punishment: no-repeat card dealing ---------------------------------
+#
+# Dare cards are dealt WITHOUT replacement: each dealt index is recorded in a
+# per-room+deck set so a deck never repeats a card until every card has been
+# shown. When the set fills, it's cleared and a fresh pass begins. Indices
+# align across languages (same card count per deck), so tracking by index is
+# locale-independent. TTL-bounded so abandoned rooms don't accumulate keys.
+
+_PUNISH_CARDS_TTL_SECONDS = 24 * 60 * 60
+
+
+def _punish_cards_key(room_id: int, deck: str) -> str:
+    return f"punish:cards:{room_id}:{deck}"
+
+
+async def punishment_used_card_indices(room_id: int, deck: str) -> set[int]:
+    """Card indices already dealt in this room+deck during the current pass."""
+    raw = await get_redis().smembers(_punish_cards_key(room_id, deck))
+    out: set[int] = set()
+    for value in raw:
+        try:
+            out.add(int(value))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+async def punishment_mark_card(room_id: int, deck: str, index: int) -> None:
+    """Record a dealt card index and refresh the set's TTL."""
+    key = _punish_cards_key(room_id, deck)
+    r = get_redis()
+    await r.sadd(key, str(index))
+    await r.expire(key, _PUNISH_CARDS_TTL_SECONDS)
+
+
+async def punishment_reset_cards(room_id: int, deck: str) -> None:
+    """Clear the dealt-cards set (deck exhausted, or a new game starts)."""
+    await get_redis().delete(_punish_cards_key(room_id, deck))
+
+
 # --- Rate limit ----------------------------------------------------------
 
 

@@ -482,3 +482,24 @@ async def test_bot_lucky_scores_and_wins(db: AsyncSession) -> None:
     assert outcome["kind"] == "lucky"
     assert room.punishment_match_counts[str(BOT_USER_ID)] == 1
     assert room.punishment_winner_user_id == BOT_USER_ID
+
+
+async def test_draw_card_index_no_repeat_until_exhausted() -> None:
+    """Dare cards are dealt WITHOUT replacement: a full pass yields every index
+    exactly once before any repeat, then a fresh pass begins. Tracking is
+    per room+deck (independent across rooms)."""
+    total = 6
+    first_pass = [
+        await punishment._draw_card_index(4242, "mild", total) for _ in range(total)
+    ]
+    assert sorted(first_pass) == list(range(total))  # whole deck, no repeats
+
+    # Deck exhausted → the next draw opens a fresh pass (valid index again).
+    nxt = await punishment._draw_card_index(4242, "mild", total)
+    assert 0 <= nxt < total
+
+    # A different room tracks its own pass independently.
+    other_room = [
+        await punishment._draw_card_index(4243, "mild", total) for _ in range(total)
+    ]
+    assert sorted(other_room) == list(range(total))
