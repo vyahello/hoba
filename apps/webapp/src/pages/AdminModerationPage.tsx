@@ -70,10 +70,10 @@ export function AdminModerationPage(): JSX.Element {
           }}
         />
         <div className="flex-1 min-w-0">
-          <h1 className="font-display font-bold text-xl truncate text-ink-light-1 dark:text-ink-dark-1">
+          <h1 className="font-display font-bold text-xl truncate text-ds-text">
             {t("admin:moderation.title")}
           </h1>
-          <p className="text-xs text-ink-light-2 dark:text-ink-dark-2 truncate">
+          <p className="text-xs text-ds-text-muted truncate">
             {t("admin:moderation.subtitle")}
           </p>
         </div>
@@ -118,7 +118,7 @@ function EmptyState({ emoji, text }: { emoji: string; text: string }): JSX.Eleme
   return (
     <div className="flex flex-col items-center gap-3 py-12 text-center">
       <span className="text-5xl" aria-hidden>{emoji}</span>
-      <p className="text-sm text-ink-light-2 dark:text-ink-dark-2 px-6">{text}</p>
+      <p className="text-sm text-ds-text-muted px-6">{text}</p>
     </div>
   );
 }
@@ -139,10 +139,10 @@ function ReportCard({
     <Card padding="md" className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="font-display font-bold text-lg truncate text-ink-light-1 dark:text-ink-dark-1">
+          <h2 className="font-display font-bold text-lg truncate text-ds-text">
             {wheel.title}
           </h2>
-          <p className="text-xs text-ink-light-2 dark:text-ink-dark-2">
+          <p className="text-xs text-ds-text-muted">
             {t("admin:moderation.owner", { id: wheel.owner_id })}
           </p>
         </div>
@@ -163,7 +163,7 @@ function ReportCard({
         {wheel.segments.map((s) => (
           <span
             key={s.id}
-            className="px-2 py-0.5 rounded-md text-xs bg-surface-light-2 dark:bg-surface-dark-2 text-ink-light-1 dark:text-ink-dark-1"
+            className="px-2 py-0.5 rounded-md text-xs bg-ds-surface-2 text-ds-text"
           >
             {s.emoji ? `${s.emoji} ` : ""}
             {s.label}
@@ -171,16 +171,16 @@ function ReportCard({
         ))}
       </div>
 
-      <div className="flex flex-col gap-1.5 border-t border-ink-light-2/10 dark:border-ink-dark-2/10 pt-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-ink-light-2 dark:text-ink-dark-2">
+      <div className="flex flex-col gap-1.5 border-t-2 border-ds-border pt-2">
+        <p className="text-xs font-semibold uppercase tracking-wider text-ds-text-muted">
           {t("admin:moderation.reports_count", { count: wheel.report_count })}
         </p>
         {wheel.reports.map((r, i) => (
           <p
             key={`${r.reporter_id}-${i}`}
-            className="text-sm text-ink-light-1 dark:text-ink-dark-1"
+            className="text-sm text-ds-text"
           >
-            <span className="text-ink-light-2 dark:text-ink-dark-2">
+            <span className="text-ds-text-muted">
               {r.reporter_name}:
             </span>{" "}
             {r.reason ?? <em className="opacity-60">{t("admin:moderation.no_reason")}</em>}
