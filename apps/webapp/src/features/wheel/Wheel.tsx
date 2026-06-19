@@ -132,6 +132,9 @@ function SegmentVisual({ segment, index, total }: SegmentVisualProps): JSX.Eleme
   const startDeg = index * sectorDeg;
   const endDeg = startDeg + sectorDeg;
   const midDeg = startDeg + sectorDeg / 2;
+  // Flip labels in the bottom hemisphere 180° so every segment's text stays
+  // upright/readable instead of rendering upside-down at the bottom.
+  const labelRot = midDeg > 90 && midDeg < 270 ? midDeg + 180 : midDeg;
   const color = WHEEL_PALETTE[segment.colorSeed % WHEEL_PALETTE.length] ?? "#7C5CFF";
 
   const labelR = segment.emoji !== undefined ? SEGMENT_R * 0.7 : SEGMENT_R * 0.6;
@@ -169,7 +172,7 @@ function SegmentVisual({ segment, index, total }: SegmentVisualProps): JSX.Eleme
         fill="#FFFFFF"
         textAnchor="middle"
         dominantBaseline="central"
-        transform={`rotate(${midDeg} ${labelPos.x} ${labelPos.y})`}
+        transform={`rotate(${labelRot} ${labelPos.x} ${labelPos.y})`}
         style={{
           paintOrder: "stroke",
           stroke: INK,
