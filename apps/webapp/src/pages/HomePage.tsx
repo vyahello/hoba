@@ -80,7 +80,7 @@ export function HomePage(): JSX.Element {
   return (
     <>
       <header className="ds-glass-header px-4 py-3 pt-safe flex items-center justify-between">
-        <span className="font-display font-extrabold text-2xl text-brand-primary">
+        <span className="font-display font-extrabold text-xl text-[#14101f] bg-brand-accent border-[3px] border-ds-border shadow-brutal-sm rounded-md px-3 py-1 -rotate-2">
           {t("home:header.app_name")}
         </span>
         <IconButton
@@ -94,12 +94,12 @@ export function HomePage(): JSX.Element {
 
       <main className="flex-1 px-4 pt-3 pb-10 flex flex-col gap-7">
         <section>
-          <h2 className="font-display font-bold text-xl mb-3 text-ink-light-1 dark:text-ink-dark-1">
+          <h2 className="font-display font-extrabold text-xl mb-3 text-ds-text">
             {t("home:quick_decide")}
           </h2>
           {templatesFailed ? (
             <Card padding="lg" className="flex flex-col items-center gap-3 text-center">
-              <p className="text-sm text-ink-light-2 dark:text-ink-dark-2">
+              <p className="text-sm text-ds-text-muted">
                 {t("home:templates.load_failed")}
               </p>
               <Button
@@ -146,7 +146,7 @@ export function HomePage(): JSX.Element {
           >
             <span
               aria-hidden
-              className="w-14 h-14 rounded-md bg-gradient-to-br from-brand-primary/20 to-brand-accent/20 inline-flex items-center justify-center text-3xl shrink-0"
+              className="w-14 h-14 rounded-md bg-brand-primary border-[3px] border-ds-border shadow-brutal-sm inline-flex items-center justify-center text-3xl shrink-0"
             >
               ➕
             </span>
@@ -154,7 +154,7 @@ export function HomePage(): JSX.Element {
               <h3 className="font-display font-bold text-lg mb-0.5 truncate">
                 {t("home:create_custom.title")}
               </h3>
-              <p className="text-sm text-ink-light-2 dark:text-ink-dark-2 line-clamp-2">
+              <p className="text-sm text-ds-text-muted line-clamp-2">
                 {t("home:create_custom.subtitle")}
               </p>
             </div>
@@ -163,7 +163,7 @@ export function HomePage(): JSX.Element {
 
         <section>
           <div className="flex items-baseline justify-between mb-3">
-            <h2 className="font-display font-bold text-xl text-ink-light-1 dark:text-ink-dark-1">
+            <h2 className="font-display font-extrabold text-xl text-ds-text">
               {t("home:my_wheels.title")}
             </h2>
             {wheels !== null && wheels.length > 0 ? (
@@ -197,10 +197,10 @@ export function HomePage(): JSX.Element {
                   }}
                   className="flex items-center justify-between gap-3"
                 >
-                  <span className="font-display font-semibold text-base truncate text-ink-light-1 dark:text-ink-dark-1">
+                  <span className="font-display font-semibold text-base truncate text-ds-text">
                     {w.title}
                   </span>
-                  <span className="shrink-0 text-xs text-ink-light-2 dark:text-ink-dark-2 tabular-nums">
+                  <span className="shrink-0 text-xs text-ds-text-muted tabular-nums">
                     {w.segments.length}
                   </span>
                 </Card>
@@ -212,7 +212,7 @@ export function HomePage(): JSX.Element {
         {trending !== null && trending.length > 0 ? (
           <section>
             <div className="flex items-baseline justify-between mb-3">
-              <h2 className="font-display font-bold text-xl text-ink-light-1 dark:text-ink-dark-1">
+              <h2 className="font-display font-extrabold text-xl text-ds-text">
                 {t("home:trending.title")}
               </h2>
               <button
@@ -236,10 +236,10 @@ export function HomePage(): JSX.Element {
                   }}
                   className="shrink-0 w-40 flex flex-col gap-2"
                 >
-                  <span className="font-display font-semibold text-base line-clamp-2 text-ink-light-1 dark:text-ink-dark-1">
+                  <span className="font-display font-semibold text-base line-clamp-2 text-ds-text">
                     {w.title}
                   </span>
-                  <span className="text-xs text-ink-light-2 dark:text-ink-dark-2 tabular-nums">
+                  <span className="text-xs text-ds-text-muted tabular-nums">
                     ❤️ {w.like_count}
                   </span>
                 </Card>
