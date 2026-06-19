@@ -196,7 +196,7 @@ export function CreatePage(): JSX.Element {
                   onChange={(e) => {
                     updateSegmentEmoji(segment.id, e.target.value);
                   }}
-                  className="w-16 shrink-0 text-center text-xl"
+                  className="w-16 shrink-0 text-center text-2xl caret-transparent"
                 />
                 <Input
                   label={t("create:segment_placeholder", { index: index + 1 })}
