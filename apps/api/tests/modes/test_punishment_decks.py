@@ -1,4 +1,5 @@
-"""Punishment deck integrity — 3 decks × 2 langs × 30 unique non-empty cards."""
+"""Punishment deck integrity — 3 decks × 2 langs × CARDS_PER_DECK unique
+non-empty cards."""
 
 from __future__ import annotations
 
@@ -15,7 +16,7 @@ from hoba_api.modes.punishment_decks import (
 
 @pytest.mark.parametrize("deck", DECK_IDS)
 @pytest.mark.parametrize("lang", DECK_LANGS)
-def test_each_deck_lang_has_30_unique_nonempty(deck: str, lang: str) -> None:
+def test_each_deck_lang_has_expected_unique_nonempty(deck: str, lang: str) -> None:
     cards = DECKS[deck][lang]
     assert len(cards) == CARDS_PER_DECK
     assert all(c.strip() for c in cards)
