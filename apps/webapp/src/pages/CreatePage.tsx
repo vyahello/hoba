@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ds/Button";
 import { IconButton } from "@/components/ds/IconButton";
 import { Input, Textarea } from "@/components/ds/Input";
-import { splitEmoji } from "@/features/wheel/emoji";
+import { lastEmoji, splitEmoji } from "@/features/wheel/emoji";
 import { type SavedWheel, api } from "@/lib/api";
 import { haptics } from "@/lib/haptics";
 import { safeNavigateBack } from "@/lib/navigation";
@@ -82,10 +82,13 @@ export function CreatePage(): JSX.Element {
     setSegments((prev) => prev.map((s) => (s.id === id ? { ...s, label } : s)));
   }
 
-  function updateSegmentEmoji(id: string, emoji: string): void {
-    const trimmed = emoji.trim();
+  function updateSegmentEmoji(id: string, raw: string): void {
+    // Single-emoji slot: keep only the most-recently chosen emoji (so a new
+    // pick REPLACES the previous one instead of appending), and reject any
+    // plain text typed into the field. Custom ZWJ / skin-toned emojis stay whole.
+    const next = lastEmoji(raw);
     setSegments((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, emoji: trimmed === "" ? undefined : trimmed } : s)),
+      prev.map((s) => (s.id === id ? { ...s, emoji: next } : s)),
     );
   }
 

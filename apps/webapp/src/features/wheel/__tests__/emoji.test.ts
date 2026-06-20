@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isSingleEmoji, splitEmoji } from "@/features/wheel/emoji";
+import { isSingleEmoji, lastEmoji, splitEmoji } from "@/features/wheel/emoji";
 
 describe("splitEmoji", () => {
   it("lifts a leading emoji out of the label", () => {
@@ -49,5 +49,33 @@ describe("isSingleEmoji", () => {
     expect(isSingleEmoji("pizza")).toBe(false);
     expect(isSingleEmoji("")).toBe(false);
     expect(isSingleEmoji("🍕 x")).toBe(false);
+  });
+
+  it("accepts a skin-toned emoji", () => {
+    expect(isSingleEmoji("👍🏽")).toBe(true);
+  });
+});
+
+describe("lastEmoji", () => {
+  it("returns the most recent emoji (replace, not append)", () => {
+    expect(lastEmoji("🙂😘")).toBe("😘");
+  });
+
+  it("keeps a skin-tone modifier whole", () => {
+    expect(lastEmoji("👍🏽")).toBe("👍🏽");
+  });
+
+  it("keeps a flag and a ZWJ emoji whole", () => {
+    expect(lastEmoji("🇺🇦")).toBe("🇺🇦");
+    expect(lastEmoji("😶‍🌫️")).toBe("😶‍🌫️");
+  });
+
+  it("ignores plain text in the slot", () => {
+    expect(lastEmoji("d")).toBeUndefined();
+    expect(lastEmoji("🍕 x")).toBe("🍕");
+  });
+
+  it("is undefined for empty input", () => {
+    expect(lastEmoji("")).toBeUndefined();
   });
 });
