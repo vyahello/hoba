@@ -34,4 +34,5 @@ class RoomFromTemplateIn(BaseModel):
     locale: str = "en"
     game_mode: GameMode = "classic"
     punishment_deck: PunishmentDeck | None = None
+    punishment_wild_spins: bool = False
     spin_count: int = 1

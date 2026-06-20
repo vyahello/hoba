@@ -199,7 +199,7 @@ export function SpinPage(): JSX.Element {
   }
 
   async function handleCreateRoom(
-    mode: GameMode, deck?: PunishmentDeck, spinCount?: number,
+    mode: GameMode, deck?: PunishmentDeck, spinCount?: number, wildSpins?: boolean,
   ): Promise<void> {
     if (wheel === undefined || inviteLoading) return;
     setInviteLoading(true);
@@ -213,6 +213,7 @@ export function SpinPage(): JSX.Element {
               locale: i18n.language,
               game_mode: mode,
               ...(deck !== undefined ? { punishment_deck: deck } : {}),
+              ...(wildSpins ? { punishment_wild_spins: true } : {}),
               ...(spinCount !== undefined ? { spin_count: spinCount } : {}),
             })
           : await api.createRoom({
@@ -225,6 +226,7 @@ export function SpinPage(): JSX.Element {
               })),
               game_mode: mode,
               ...(deck !== undefined ? { punishment_deck: deck } : {}),
+              ...(wildSpins ? { punishment_wild_spins: true } : {}),
               ...(spinCount !== undefined ? { spin_count: spinCount } : {}),
             });
       navigate(`/room/${state.room.code}`);
@@ -315,8 +317,8 @@ export function SpinPage(): JSX.Element {
         onClose={() => {
           setModePickerOpen(false);
         }}
-        onCreate={(mode, deck, spinCount) => {
-          void handleCreateRoom(mode, deck, spinCount);
+        onCreate={(mode, deck, spinCount, wildSpins) => {
+          void handleCreateRoom(mode, deck, spinCount, wildSpins);
         }}
       />
     </>

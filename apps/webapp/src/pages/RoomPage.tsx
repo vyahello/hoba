@@ -673,7 +673,7 @@ export function RoomPage(): JSX.Element {
   }
 
   async function handleApplyMode(
-    mode: GameMode, deck?: PunishmentDeck, spinCount?: number,
+    mode: GameMode, deck?: PunishmentDeck, spinCount?: number, wildSpins?: boolean,
   ): Promise<void> {
     if (snapshot === null) return;
     setModePickerOpen(false);
@@ -681,6 +681,7 @@ export function RoomPage(): JSX.Element {
       const updated = await api.patchRoom(snapshot.room.code, {
         game_mode: mode,
         ...(deck !== undefined ? { punishment_deck: deck } : {}),
+        ...(mode === "punishment" ? { punishment_wild_spins: Boolean(wildSpins) } : {}),
         ...(spinCount !== undefined ? { spin_count: spinCount } : {}),
       });
       useRoomStore.getState().setSnapshot(updated);
@@ -1348,8 +1349,8 @@ export function RoomPage(): JSX.Element {
             onClose={() => {
               setModePickerOpen(false);
             }}
-            onCreate={(mode, deck, spinCount) => {
-              void handleApplyMode(mode, deck, spinCount);
+            onCreate={(mode, deck, spinCount, wildSpins) => {
+              void handleApplyMode(mode, deck, spinCount, wildSpins);
             }}
           />
         ) : null}

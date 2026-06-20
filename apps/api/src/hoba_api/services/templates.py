@@ -55,6 +55,7 @@ async def create_room_from_template(
     locale: str = "en",
     game_mode: str = "classic",
     punishment_deck: str | None = None,
+    punishment_wild_spins: bool = False,
     spin_count: int = 1,
     is_anonymous: bool = False,
 ) -> Room:
@@ -79,6 +80,7 @@ async def create_room_from_template(
         segments=drafts,
         game_mode=game_mode,
         punishment_deck=punishment_deck,
+        punishment_wild_spins=punishment_wild_spins,
         spin_count=spin_count,
         is_anonymous=is_anonymous,
     )

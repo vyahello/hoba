@@ -107,6 +107,7 @@ async def create_room(
     suggestion_policy: str = "off",
     game_mode: str = "classic",
     punishment_deck: str | None = None,
+    punishment_wild_spins: bool = False,
     spin_count: int = 1,
     is_anonymous: bool = False,
     requires_approval: bool = True,
@@ -149,6 +150,8 @@ async def create_room(
         # fallback to duplicates only when players outnumber segments). No
         # per-room toggle.
         punishment_unique_bets=(game_mode in ("punishment", "chaos")),
+        # Wild spins is a Punishment-only modifier (no-op in other modes).
+        punishment_wild_spins=(punishment_wild_spins and game_mode == "punishment"),
         spin_count=spin_count,
         is_anonymous=is_anonymous,
         requires_approval=requires_approval,
@@ -231,6 +234,7 @@ async def update_room(
         "requires_approval",
         "game_mode",
         "punishment_deck",
+        "punishment_wild_spins",
         "spin_count",
     }
     new_spin_policy = patch.get("spin_policy") if "spin_policy" in patch else None
@@ -249,6 +253,9 @@ async def update_room(
         room.punishment_deck = (
             (room.punishment_deck or "mild") if room.game_mode == "punishment" else None
         )
+        # Wild spins only applies to Punishment — drop it on any other mode.
+        if room.game_mode != "punishment":
+            room.punishment_wild_spins = False
         _reset_round_state(room)
 
     # Changing the attempts target resets any in-progress best-of-N round.

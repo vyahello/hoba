@@ -129,6 +129,13 @@ class Room(Base, TimestampMixin):
         Boolean, default=False, nullable=False, server_default="0",
     )
 
+    # "Шалені оберти" (wild spins): Punishment rooms with this on layer Chaos's
+    # chaotic spin antics (swap/reverse/nudge/…) on top of the dare flow. The
+    # standalone Chaos mode is unaffected; this is a Punishment-only modifier.
+    punishment_wild_spins: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="0",
+    )
+
     # Best-of-N (Classic): number of MANUAL spin attempts per round.
     # 1 = single spin (current behavior).
     spin_count: Mapped[int] = mapped_column(

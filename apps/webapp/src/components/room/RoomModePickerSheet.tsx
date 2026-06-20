@@ -21,7 +21,12 @@ export interface RoomModePickerSheetProps {
   open: boolean;
   loading: boolean;
   onClose: () => void;
-  onCreate: (mode: GameMode, deck?: PunishmentDeck, spinCount?: number) => void;
+  onCreate: (
+    mode: GameMode,
+    deck?: PunishmentDeck,
+    spinCount?: number,
+    wildSpins?: boolean,
+  ) => void;
 }
 
 /**
@@ -43,6 +48,8 @@ export function RoomModePickerSheet({
   const [spinCount, setSpinCount] = useState<number>(DEFAULT_SPIN_COUNT);
   const [punishSpinCount, setPunishSpinCount] = useState<number>(DEFAULT_PUNISHMENT_SPIN_COUNT);
   const [chaosSpinCount, setChaosSpinCount] = useState<number>(DEFAULT_CHAOS_SPIN_COUNT);
+  // "Шалені оберти" — Punishment-only modifier (chaotic spins + dares).
+  const [wildSpins, setWildSpins] = useState(false);
 
   // Reset to Classic + defaults each time the sheet re-opens.
   useEffect(() => {
@@ -52,6 +59,7 @@ export function RoomModePickerSheet({
       setSpinCount(DEFAULT_SPIN_COUNT);
       setPunishSpinCount(DEFAULT_PUNISHMENT_SPIN_COUNT);
       setChaosSpinCount(DEFAULT_CHAOS_SPIN_COUNT);
+      setWildSpins(false);
     }
   }, [open]);
 
@@ -78,6 +86,7 @@ export function RoomModePickerSheet({
                   : selected === "chaos"
                     ? chaosSpinCount
                     : undefined,
+              selected === "punishment" ? wildSpins : undefined,
             );
           }}
         >
@@ -194,6 +203,41 @@ export function RoomModePickerSheet({
               })}
             </div>
           </div>
+
+          <button
+            type="button"
+            role="switch"
+            aria-checked={wildSpins}
+            disabled={loading}
+            onClick={() => {
+              if (loading) return;
+              haptics.selection();
+              audio.play("ui_tap");
+              setWildSpins((v) => !v);
+            }}
+            className="ds-tactile mt-3 w-full flex items-center justify-between gap-3 min-h-[48px] px-4 py-3 rounded-md text-left bg-ds-surface-2 border-[3px] border-ds-border disabled:opacity-60"
+          >
+            <span className="min-w-0">
+              <span className="block text-base font-bold text-ds-text">
+                {t("room:wild_spins.label")}
+              </span>
+              <span className="block text-xs text-ds-text-muted">
+                {t("room:wild_spins.hint")}
+              </span>
+            </span>
+            <span
+              aria-hidden
+              className={`shrink-0 w-12 h-7 rounded-full p-0.5 border-2 border-ds-border transition-colors ${
+                wildSpins ? "bg-brand-primary" : "bg-ds-surface"
+              }`}
+            >
+              <span
+                className={`block w-5 h-5 rounded-full bg-white border-2 border-ds-border transition-transform ${
+                  wildSpins ? "translate-x-5" : ""
+                }`}
+              />
+            </span>
+          </button>
         </>
       ) : null}
 

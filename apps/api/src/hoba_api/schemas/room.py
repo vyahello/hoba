@@ -104,6 +104,7 @@ class RoomOut(BaseModel):
     punishment_done_count: int
     punishment_done_counts: dict[str, int] | None = None
     punishment_unique_bets: bool = False
+    punishment_wild_spins: bool = False
     # Punishment v3 (turn-based personal-bet race). Bets are PUBLIC (anti-cheat):
     # everyone sees who bet on what. match_counts, winner, and last_outcome are
     # all shared to every player.
@@ -152,6 +153,8 @@ class RoomCreateIn(BaseModel):
     suggestion_policy: SuggestionPolicy = "off"
     game_mode: GameMode = "classic"
     punishment_deck: PunishmentDeck | None = Field(default=None)
+    # "Шалені оберти" — Punishment-only modifier (Chaos antics + dares).
+    punishment_wild_spins: bool = Field(default=False)
     spin_count: int = Field(default=1)
     # Anonymity is a per-room host control (no "anonymous by default" setting).
     # Defaults off; a client may still request an anonymous room at creation.
@@ -173,6 +176,7 @@ class RoomUpdateIn(BaseModel):
     requires_approval: bool | None = None
     game_mode: GameMode | None = None
     punishment_deck: PunishmentDeck | None = None
+    punishment_wild_spins: bool | None = None
     spin_count: int | None = None
 
 

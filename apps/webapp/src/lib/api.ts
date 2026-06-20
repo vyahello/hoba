@@ -137,6 +137,7 @@ export interface ServerRoom {
   punishment_done_count: number;
   punishment_done_counts?: Record<string, number> | null;
   punishment_unique_bets?: boolean;
+  punishment_wild_spins?: boolean;
   // Punishment v3 (turn-based personal-bet race). All PUBLIC (anti-cheat).
   punishment_bets: Record<string, number> | null;
   punishment_match_counts: Record<string, number> | null;
@@ -193,6 +194,7 @@ export interface RoomCreatePayload {
   suggestion_policy?: SuggestionPolicy;
   game_mode?: GameMode;
   punishment_deck?: PunishmentDeck;
+  punishment_wild_spins?: boolean;
   spin_count?: number;
 }
 
@@ -276,6 +278,7 @@ export interface WheelSavePayload {
 export interface WheelUsePayload {
   game_mode?: GameMode;
   punishment_deck?: PunishmentDeck;
+  punishment_wild_spins?: boolean;
   spin_count?: number;
 }
 
@@ -302,6 +305,7 @@ export interface RoomFromTemplatePayload {
   locale?: string;
   game_mode?: GameMode;
   punishment_deck?: PunishmentDeck;
+  punishment_wild_spins?: boolean;
   spin_count?: number;
 }
 
@@ -314,6 +318,7 @@ export interface RoomPatchPayload {
   requires_approval?: boolean;
   game_mode?: GameMode;
   punishment_deck?: PunishmentDeck;
+  punishment_wild_spins?: boolean;
   spin_count?: number;
 }
 

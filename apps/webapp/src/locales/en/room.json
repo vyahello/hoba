@@ -219,6 +219,10 @@
   "spin_count": {
     "label": "Matches to win"
   },
+  "wild_spins": {
+    "label": "Wild spins 🌀",
+    "hint": "Chaotic wheel antics — swaps, reversals, nudges — on top of the dares"
+  },
   "best_of_n": {
     "attempt": "Attempt {k}/{n}",
     "winner": "{label} wins!",

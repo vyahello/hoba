@@ -101,6 +101,7 @@ async def create_room_endpoint(
             suggestion_policy=payload.suggestion_policy,
             game_mode=payload.game_mode,
             punishment_deck=payload.punishment_deck,
+            punishment_wild_spins=payload.punishment_wild_spins,
             spin_count=payload.spin_count,
             is_anonymous=bool(payload.is_anonymous),
         )
@@ -135,6 +136,7 @@ async def create_room_from_template_endpoint(
             locale=payload.locale,
             game_mode=payload.game_mode,
             punishment_deck=payload.punishment_deck,
+            punishment_wild_spins=payload.punishment_wild_spins,
             spin_count=payload.spin_count,
         )
     except RoomServiceError as exc:

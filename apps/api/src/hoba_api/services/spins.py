@@ -17,7 +17,7 @@ from hoba_api.models.segment import Segment
 from hoba_api.models.spin import Spin
 from hoba_api.modes import engine_for
 from hoba_api.modes.base import SpinContext
-from hoba_api.modes.chaos import SLOW_BURN_TURNS
+from hoba_api.modes.chaos import SLOW_BURN_TURNS, ChaosEngine
 from hoba_api.redis_client import presence_user_ids
 from hoba_api.services.rooms import RoomServiceError
 from hoba_api.wheel.spin_math import MIN_FULL_ROTATIONS, compute_spin
@@ -100,6 +100,13 @@ async def trigger_spin(
             last_chaos_event = prev if isinstance(prev, str) else None
 
     engine = engine_for(room.game_mode)
+    # "Шалені оберти": a Punishment room with wild spins on rolls its spin
+    # through the Chaos engine, so the wheel gets Chaos's antics (swap / reverse
+    # / nudge / …). The dare flow (services.punishment.resolve_turn) is unchanged
+    # — game_mode stays "punishment", so a miss still deals a card. The result
+    # the Chaos event lands on is what the punishment race scores.
+    if room.game_mode == "punishment" and room.punishment_wild_spins:
+        engine = ChaosEngine()
     ctx = SpinContext(
         room=room,
         question=question,
