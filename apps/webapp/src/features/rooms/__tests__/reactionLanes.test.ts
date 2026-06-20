@@ -15,12 +15,16 @@ describe("reactionLaneFor", () => {
     expect(reactionLaneFor("🎉")).toBe(0.81);
   });
 
-  it("falls back to centre (0.5) for unknown emojis", () => {
-    // Server contract allows up to 16-char emoji strings, but the bar
-    // only sends the five canonical ones. A future reaction from a
-    // newer client should still render somewhere sensible.
-    expect(reactionLaneFor("🦄")).toBe(0.5);
-    expect(reactionLaneFor("")).toBe(0.5);
+  it("gives custom (unknown) emojis a stable hashed lane in [0.15, 0.85]", () => {
+    // Custom reactions (the ＋ picker) aren't in the bar's five, so they get a
+    // deterministic hashed lane — spread across the bar (not all stacked at
+    // centre), and the SAME emoji always flies in the same lane.
+    const a = reactionLaneFor("🦄");
+    expect(a).toBe(reactionLaneFor("🦄")); // stable
+    expect(a).toBeGreaterThanOrEqual(0.15);
+    expect(a).toBeLessThanOrEqual(0.85);
+    // Different customs generally land in different lanes (not all centre).
+    expect(reactionLaneFor("🦄")).not.toBe(reactionLaneFor("🌈"));
   });
 
   it("applies caller-supplied jitter on top of the base lane", () => {
