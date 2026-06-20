@@ -133,6 +133,10 @@
       "fake_out": {
         "title": "Fake-out",
         "desc": "It 'stops' on one — then sneaks on to another."
+      },
+      "glitch": {
+        "title": "Broken wheel",
+        "desc": "The wheel glitches and stutters… then pulls itself together."
       }
     }
   },

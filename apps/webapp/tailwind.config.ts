@@ -142,6 +142,32 @@ export default {
           "0%": { backgroundPosition: "200% 0" },
           "100%": { backgroundPosition: "-200% 0" },
         },
+        // Chaos earthquake: a hard, decaying screen shake on the room content.
+        "screen-quake": {
+          "0%, 100%": { transform: "translate3d(0, 0, 0)" },
+          "10%": { transform: "translate3d(-7px, 4px, 0)" },
+          "20%": { transform: "translate3d(8px, -5px, 0)" },
+          "30%": { transform: "translate3d(-9px, 6px, 0)" },
+          "40%": { transform: "translate3d(7px, -4px, 0)" },
+          "50%": { transform: "translate3d(-6px, 5px, 0)" },
+          "60%": { transform: "translate3d(8px, -6px, 0)" },
+          "70%": { transform: "translate3d(-6px, 4px, 0)" },
+          "80%": { transform: "translate3d(4px, -3px, 0)" },
+          "90%": { transform: "translate3d(-3px, 2px, 0)" },
+        },
+        // Chaos glitch: a jittery RGB-split flicker on the broken-wheel overlay.
+        "glitch-jitter": {
+          "0%, 100%": { transform: "translate3d(0, 0, 0)", opacity: "0.85" },
+          "20%": { transform: "translate3d(-5px, 2px, 0)", opacity: "0.55" },
+          "40%": { transform: "translate3d(6px, -3px, 0)", opacity: "0.9" },
+          "60%": { transform: "translate3d(-4px, -2px, 0)", opacity: "0.45" },
+          "80%": { transform: "translate3d(5px, 3px, 0)", opacity: "0.8" },
+        },
+        // Chaos glitch: horizontal scanlines crawling down the overlay.
+        "glitch-scan": {
+          "0%": { backgroundPosition: "0 0" },
+          "100%": { backgroundPosition: "0 16px" },
+        },
       },
       animation: {
         "aurora-drift": "aurora-drift 30s ease-in-out infinite",
@@ -150,6 +176,9 @@ export default {
         "code-pulse": "code-pulse 2.4s ease-out infinite",
         "spinner-breath": "spinner-breath 2.2s ease-in-out infinite",
         "skeleton-shimmer": "skeleton-shimmer 1.6s linear infinite",
+        "screen-quake": "screen-quake 950ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both",
+        "glitch-jitter": "glitch-jitter 320ms steps(2, end) infinite",
+        "glitch-scan": "glitch-scan 220ms linear infinite",
       },
       backgroundImage: {
         "aurora-light":

@@ -226,6 +226,13 @@ export interface WheelProps {
    * Punishment). Undefined = no highlight.
    */
   highlightSegmentId?: string;
+  /**
+   * Segment id to pulse-highlight RIGHT NOW, even while spinning — the Chaos
+   * `fake_out` "fake win" cue (the wheel pretends this one won, then creeps
+   * off it). Brighter + pulsing so it reads as a celebration, not the calm
+   * settle highlight. Undefined = none.
+   */
+  flashSegmentId?: string;
 }
 
 export interface WheelHandle {
@@ -246,6 +253,7 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
     pointerDeg = 0,
     pointerHidden = false,
     highlightSegmentId,
+    flashSegmentId,
     onHubLongPress,
   },
   ref,
@@ -430,6 +438,10 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
     highlightSegmentId !== undefined
       ? segments.findIndex((s) => s.id === highlightSegmentId)
       : -1;
+  const flashIndex =
+    flashSegmentId !== undefined
+      ? segments.findIndex((s) => s.id === flashSegmentId)
+      : -1;
   const canSpin = isHubInteractive({
     state,
     segmentCount,
@@ -473,7 +485,41 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
               fillOpacity={0.4}
               stroke="none"
               pointerEvents="none"
-            />
+            >
+              {/* Gentle celebratory breathing on the landed wedge. */}
+              <animate
+                attributeName="fill-opacity"
+                values="0.28;0.5;0.28"
+                dur="1.1s"
+                repeatCount="indefinite"
+              />
+            </path>
+          ) : null}
+          {/* fake_out "fake win": a brighter, faster pulse on the decoy wedge
+              while the wheel is still — it looks like a winner, then the wheel
+              creeps off it. Shown regardless of `state` (the wheel is paused,
+              not settled). */}
+          {flashIndex >= 0 ? (
+            <path
+              d={arcPath(
+                CX,
+                CY,
+                SEGMENT_R,
+                flashIndex * (360 / segmentCount),
+                flashIndex * (360 / segmentCount) + 360 / segmentCount,
+              )}
+              fill="#FFFFFF"
+              fillOpacity={0.6}
+              stroke="none"
+              pointerEvents="none"
+            >
+              <animate
+                attributeName="fill-opacity"
+                values="0.35;0.75;0.35"
+                dur="0.5s"
+                repeatCount="indefinite"
+              />
+            </path>
           ) : null}
           {/* Bold dark boundary ring around the colored area — always drawn
               last so it stays a crisp, even, full dark circle (never erased by

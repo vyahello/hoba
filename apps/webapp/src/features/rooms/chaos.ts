@@ -21,6 +21,7 @@ export const CHAOS_EVENTS = [
   "shuffle",
   "earthquake",
   "fake_out",
+  "glitch",
 ] as const;
 
 export const CHAOS_EVENT_EMOJI: Record<string, string> = {
@@ -37,6 +38,7 @@ export const CHAOS_EVENT_EMOJI: Record<string, string> = {
   shuffle: "🎰",
   earthquake: "💥",
   fake_out: "🎭",
+  glitch: "📺",
 };
 
 /** One leg of the roaming-pointer path: an absolute screen angle + how long

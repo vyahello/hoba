@@ -48,6 +48,7 @@ CHAOS_EVENTS: tuple[str, ...] = (
     "shuffle",
     "earthquake",
     "fake_out",
+    "glitch",
 )
 
 
@@ -154,6 +155,14 @@ class ChaosEngine:
             return SpinDecision(
                 segments=ctx.segments,
                 effects={"chaos_event": "earthquake"},
+            )
+        if event == "glitch":
+            # A normal forward spin + result; the client plays a "broken wheel"
+            # stutter (erratic jolts under a glitch overlay) before recovering
+            # onto the real result. Pure presentation — engine just names it.
+            return SpinDecision(
+                segments=ctx.segments,
+                effects={"chaos_event": "glitch"},
             )
         if event == "shuffle":
             return self._shuffle(ctx)

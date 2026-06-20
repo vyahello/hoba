@@ -60,12 +60,14 @@ import {
 import { computeTurnState } from "@/features/rooms/turnState";
 import { Wheel, type WheelHandle } from "@/features/wheel/Wheel";
 import { freshSeed } from "@/features/wheel/seededRandom";
+import { segmentUnderPointer } from "@/features/wheel/spinMath";
 import {
   type SegmentDef,
   type SpinResult,
   type WheelState,
 } from "@/features/wheel/types";
 import { type GameMode, type PunishmentDeck, api } from "@/lib/api";
+import { cn } from "@/lib/cn";
 import { haptics } from "@/lib/haptics";
 import { safeNavigateBack } from "@/lib/navigation";
 import {
@@ -99,8 +101,27 @@ const NUDGE_CREEP_MS = 900;
 // earthquake: a violent tremor before the wheel breaks loose into the spin.
 const QUAKE_SHAKE_MS = 950;
 // fake_out: settle on a decoy, hold so everyone reacts, then creep to the real one.
-const FAKE_OUT_HOLD_MS = 800;
+const FAKE_OUT_HOLD_MS = 950;
 const FAKE_OUT_CREEP_MS = 950;
+// shuffle: visibly jump the segments through this many random orders (so the
+// scramble is unmistakable) before settling on the real order, then spinning.
+const SHUFFLE_SCRAMBLE_STEPS = 7;
+const SHUFFLE_STEP_MS = 135;
+// glitch: the final "recover" spin onto the real result after the stutter.
+const GLITCH_RECOVER_MS = 1100;
+
+/** A new array of `ids` in a random order that is never the identity (so a
+ * `shuffle` scramble step always visibly moves). Client-only cosmetic. */
+function shuffledIds(ids: number[]): number[] {
+  if (ids.length < 2) return [...ids];
+  const out = [...ids];
+  for (let k = out.length - 1; k > 0; k--) {
+    const j = Math.floor(Math.random() * (k + 1));
+    [out[k], out[j]] = [out[j]!, out[k]!];
+  }
+  if (out.every((v, i) => v === ids[i])) [out[0], out[1]] = [out[1]!, out[0]!];
+  return out;
+}
 
 export function RoomPage(): JSX.Element {
   const { code = "" } = useParams<{ code: string }>();
@@ -165,6 +186,16 @@ export function RoomPage(): JSX.Element {
   // Chaos multi-phase choreography (multi_spin reps, nudge creep): a local
   // SpinResult that overrides the server one while the sequence plays.
   const [phaseSpin, setPhaseSpin] = useState<SpinResult | null>(null);
+  // Chaos `shuffle`: a transient segment order shown while the wheel visibly
+  // scrambles before the spin (null = use the real server order).
+  const [scrambleOrder, setScrambleOrder] = useState<number[] | null>(null);
+  // Chaos `fake_out`: the decoy segment id flashed as a "fake win" during the
+  // hold, before the wheel creeps off it to the real winner.
+  const [fakeWinId, setFakeWinId] = useState<string | null>(null);
+  // Chaos `earthquake`: screen-shake the room content while the wheel convulses.
+  const [quaking, setQuaking] = useState(false);
+  // Chaos `glitch`: render the broken-wheel glitch overlay during the stutter.
+  const [glitching, setGlitching] = useState(false);
   const wheelRef = useRef<WheelHandle>(null);
   // The active dare card — scrolled into view when a dare is dealt so the
   // punished player doesn't have to hunt for it below the fold.
@@ -342,6 +373,10 @@ export function RoomPage(): JSX.Element {
     setRevealed(false);
     setSpinLanded(false); // a spin is animating → hold result/winner UI
     setPhaseSpin(null);
+    setScrambleOrder(null);
+    setFakeWinId(null);
+    setQuaking(false);
+    setGlitching(false);
 
     async function run(): Promise<void> {
       if (event !== null) {
@@ -352,6 +387,24 @@ export function RoomPage(): JSX.Element {
         if (cancelled) return;
         setChaosAnnounce(null);
       }
+
+      if (event === "shuffle") {
+        // Make the scramble UNMISTAKABLE: while the wheel is still, jump the
+        // segments through a series of random orders (each re-render snaps them
+        // to new sectors), then settle on the real server order before spinning.
+        const ids = segmentsRef.current.map((s) => Number(s.id));
+        for (let k = 0; k < SHUFFLE_SCRAMBLE_STEPS; k++) {
+          setScrambleOrder(shuffledIds(ids));
+          haptics.light();
+          audio.play("wheel_tick");
+          await sleep(SHUFFLE_STEP_MS);
+          if (cancelled) return;
+        }
+        setScrambleOrder(null); // settle to the real (server) order
+        await sleep(260);
+        if (cancelled) return;
+      }
+
       setWheelState("spinning");
 
       if (event === "multi_spin") {
@@ -405,31 +458,91 @@ export function RoomPage(): JSX.Element {
         }
         if (cancelled) return;
       } else if (event === "fake_out") {
-        // Settle on the decoy stop (a couple sectors short), hold so everyone
-        // believes it, then creep the rest of the way to the real winner.
+        // Settle on the decoy, FAKE A WIN there (flash the wedge + celebrate),
+        // hold so everyone reacts — then yank it away and creep to the real
+        // winner. The fake celebration is what sets this apart from `nudge`.
         const decoy = fx?.fake_stop_angle ?? finalAngle;
         setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: decoy, durationMs: baseDur, seed: freshSeed() });
         await sleep(baseDur);
         if (cancelled) return;
+        // "Winner!" — flash the decoy wedge with the celebratory cue.
+        const decoyIdx = segmentUnderPointer(decoy, segmentsRef.current.length);
+        const decoyId = segmentsRef.current[decoyIdx]?.id ?? null;
+        setFakeWinId(decoyId);
+        haptics.success();
+        audio.play("result_chime");
         await sleep(FAKE_OUT_HOLD_MS);
         if (cancelled) return;
+        // …gotcha. Drop the fake win and creep on to the truth.
+        setFakeWinId(null);
+        haptics.heavy();
+        audio.play("chaos_event");
         setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: finalAngle, durationMs: FAKE_OUT_CREEP_MS, seed: freshSeed() });
         await sleep(FAKE_OUT_CREEP_MS);
         if (cancelled) return;
       } else if (event === "earthquake") {
-        // Violent tremor while the wheel is still, then it breaks loose and
-        // spins normally to the server result.
+        // Violent tremor: the whole screen shakes, the wheel convulses, and the
+        // phone rumbles — THEN it breaks loose and spins to the server result.
+        setQuaking(true);
         if (wheelScope.current !== null) {
           void animateWheel(
             wheelScope.current,
-            { rotate: [0, -8, 8, -7, 7, -5, 5, -3, 3, 0], x: [0, -4, 4, -3, 3, 0] },
+            {
+              rotate: [0, -11, 11, -10, 10, -7, 7, -5, 5, -3, 3, 0],
+              x: [0, -8, 8, -7, 7, -4, 4, -2, 2, 0],
+              y: [0, 5, -5, 4, -4, 2, -2, 0],
+            },
             { duration: QUAKE_SHAKE_MS / 1000, ease: "easeInOut" },
           );
         }
-        await sleep(QUAKE_SHAKE_MS);
-        if (cancelled) return;
+        // Rumble: a burst of heavy haptics across the quake.
+        for (let r = 0; r < 5; r++) {
+          haptics.heavy();
+          await sleep(QUAKE_SHAKE_MS / 6);
+          if (cancelled) {
+            setQuaking(false);
+            return;
+          }
+        }
+        setQuaking(false);
         setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: finalAngle, durationMs: baseDur, seed: freshSeed() });
         await sleep(baseDur);
+        if (cancelled) return;
+      } else if (event === "glitch") {
+        // "Broken wheel": jolt erratically — fast lurches, backward stutters,
+        // freezes — under a glitch overlay, then RECOVER smoothly onto the
+        // real result. The overlay + the broken motion sell the malfunction.
+        setGlitching(true);
+        let angle = wheelRef.current?.getCurrentRotation() ?? 0;
+        const jolts = [
+          { d: 360 * 1.5 + Math.random() * 220, ms: 300 },
+          { d: -35 - Math.random() * 45, ms: 130 }, // backward stutter
+          { d: 360 + Math.random() * 200, ms: 240 },
+          { d: -60, ms: 120 }, // glitch back
+          { d: 180 + Math.random() * 160, ms: 200 },
+        ];
+        for (const j of jolts) {
+          angle += j.d;
+          setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: angle, durationMs: j.ms, seed: freshSeed() });
+          haptics.heavy();
+          await sleep(j.ms + 70); // the gap reads as a freeze between jolts
+          if (cancelled) {
+            setGlitching(false);
+            return;
+          }
+        }
+        // Recover: push past the current angle so the settle still travels
+        // forward, landing on the real server result.
+        let target = finalAngle;
+        while (target <= angle + 360) target += 360;
+        setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: target, durationMs: GLITCH_RECOVER_MS, seed: freshSeed() });
+        await sleep(GLITCH_RECOVER_MS - 200);
+        if (cancelled) {
+          setGlitching(false);
+          return;
+        }
+        setGlitching(false); // overlay clears just before the clean stop
+        await sleep(200);
         if (cancelled) return;
       } else {
         // normal / slow_burn / reverse / swap / shuffle — one server-driven
@@ -556,16 +669,20 @@ export function RoomPage(): JSX.Element {
   const segments: SegmentDef[] = useMemo(() => {
     if (snapshot?.active_question == null) return [];
     const living = snapshot.active_question.segments.filter((s) => !s.is_eliminated);
-    // Chaos "swap": the server spun over a re-ordered set, so we must render
-    // that same order or the wheel lands on the wrong sector.
-    const ordered = orderSegmentsForSpin(living, currentSpin?.mode_effects?.segment_order);
+    // Chaos "swap"/"shuffle": the server spun over a re-ordered set, so we must
+    // render that same order or the wheel lands on the wrong sector. While a
+    // `shuffle` is visibly scrambling, `scrambleOrder` overrides with a series
+    // of random orders (the animation); it clears to the real order before the
+    // spin is released.
+    const order = scrambleOrder ?? currentSpin?.mode_effects?.segment_order;
+    const ordered = orderSegmentsForSpin(living, order);
     return ordered.map((s) => ({
       id: String(s.id),
       label: s.label,
       emoji: s.emoji ?? undefined,
       colorSeed: s.color_seed,
     }));
-  }, [snapshot, currentSpin]);
+  }, [snapshot, currentSpin, scrambleOrder]);
   segmentsRef.current = segments;
 
   const winningSegmentIndex = useMemo(() => {
@@ -964,7 +1081,12 @@ export function RoomPage(): JSX.Element {
         ) : null}
       </section>
 
-      <main className="flex-1 px-4 pt-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))] flex flex-col gap-4 relative">
+      <main
+        className={cn(
+          "flex-1 px-4 pt-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))] flex flex-col gap-4 relative",
+          quaking && "animate-screen-quake", // Chaos earthquake: shake the room
+        )}
+      >
         {roundOver && spinLanded ? (
           // Joyful finish — the lone survivor, as a centered popup so the
           // result is unmissable without scrolling. Gated on spinLanded so it
@@ -996,7 +1118,21 @@ export function RoomPage(): JSX.Element {
             waitingLabel={t("room:elimination.waiting_new_round")}
           />
         ) : (
-          <motion.div ref={wheelScope}>
+          <motion.div ref={wheelScope} className="relative">
+            {/* Chaos `glitch`: a broken-screen overlay (jittering RGB-split
+                tint + crawling scanlines) over the wheel while it stutters. */}
+            {glitching ? (
+              <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden rounded-full mix-blend-screen">
+                <div className="absolute inset-0 animate-glitch-jitter bg-gradient-to-br from-brand-pink/40 via-transparent to-brand-cyan/40" />
+                <div
+                  className="absolute inset-0 animate-glitch-scan opacity-60"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(0deg, rgba(0,0,0,0.35) 0px, rgba(0,0,0,0.35) 2px, transparent 2px, transparent 5px)",
+                  }}
+                />
+              </div>
+            ) : null}
             <Wheel
               ref={wheelRef}
               segments={segments}
@@ -1021,6 +1157,9 @@ export function RoomPage(): JSX.Element {
                   ? String(currentSpin.result_segment_id)
                   : undefined
               }
+              // Chaos fake_out: pulse the decoy wedge as a "fake win" during
+              // the hold, before the wheel creeps off it to the real winner.
+              flashSegmentId={fakeWinId ?? undefined}
               ariaLabel={snapshot.active_question?.text ?? t("room:header.wheel_aria")}
               // Only attach the hub-tap handler when this user is actually
               // allowed to spin (host_only policy) — otherwise the hub
