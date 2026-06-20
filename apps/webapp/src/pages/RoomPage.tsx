@@ -566,11 +566,16 @@ export function RoomPage(): JSX.Element {
           audio.playChaos("jammed"); // a strained grind each attempt
           haptics.heavy();
           if (wheelScope.current !== null) {
-            // A hard shudder in place — the motor straining against the jam.
+            // A HARD shudder in place — the motor straining violently against
+            // the jam (bigger rotate + x/y buzz, more oscillations).
             void animateWheel(
               wheelScope.current,
-              { rotate: [0, -3, 3, -2, 2, 0] },
-              { duration: 0.26, ease: "easeInOut" },
+              {
+                rotate: [0, -6, 6, -5, 5, -4, 4, -2, 2, 0],
+                x: [0, -4, 4, -3, 3, -2, 2, 0],
+                y: [0, 3, -3, 2, -2, 0],
+              },
+              { duration: 0.3, ease: "easeInOut" },
             );
           }
           // A tiny strain forward… then it's dragged right back. It won't go.
@@ -578,12 +583,22 @@ export function RoomPage(): JSX.Element {
           await sleep(150);
           if (cancelled) return;
           setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: base, durationMs: 120, seed: freshSeed() });
-          await sleep(175);
+          await sleep(165);
           if (cancelled) return;
         }
-        // Dead stuck — settle exactly where it started (= the server result).
+        // The motor finally dies: a power-down groan + one last weak shudder,
+        // then it settles dead on the spot (= the server result).
+        audio.playChaos("jammed_dead");
+        haptics.heavy();
+        if (wheelScope.current !== null) {
+          void animateWheel(
+            wheelScope.current,
+            { rotate: [0, -2, 2, -1, 1, 0] },
+            { duration: 0.6, ease: "easeOut" },
+          );
+        }
         setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: base, durationMs: 150, seed: freshSeed() });
-        await sleep(170);
+        await sleep(620); // let the dying-motor groan play out before the reveal
         if (cancelled) return;
       } else {
         // normal / slow_burn / reverse / swap / shuffle — one server-driven

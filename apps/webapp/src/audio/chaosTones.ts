@@ -284,6 +284,12 @@ export function playChaosTone(ctx: AudioContext, event: string, master: number):
       noise(ctx, master, { dur: 0.14, gain: 0.16, filter: 850, q: 1.1 }); // grind
       noise(ctx, master, { at: 0.2, dur: 0.04, gain: 0.16, filterType: "bandpass", filter: 1600, q: 2 }); // clunk
       break;
+    case "jammed_dead": // 🔒 the motor finally dies: pitch + energy sag, then a dead clunk
+      osc(ctx, master, { type: "sawtooth", freq: 175, to: 38, dur: 0.8, gain: 0.28, attack: 0.01, vibrato: { rate: 9, depth: 22 } });
+      osc(ctx, master, { type: "square", freq: 92, to: 26, dur: 0.85, gain: 0.13, attack: 0.01 });
+      noise(ctx, master, { dur: 0.65, gain: 0.13, filter: 600, sweepTo: 150, q: 0.8 }); // grind winding down
+      noise(ctx, master, { at: 0.78, dur: 0.05, gain: 0.2, filterType: "bandpass", filter: 1300, q: 2 }); // final dead clunk
+      break;
     default: // unknown event — a neutral blip
       osc(ctx, master, { type: "triangle", freq: 600, dur: 0.1, gain: 0.16 });
   }
