@@ -152,7 +152,9 @@ During play, the standings list every player's `option matches/N`; the **viewer'
 
 **Per-spin feedback:** no confetti on every stop. When the wheel settles, the **landed wedge flashes** (an animated highlight on the `<Wheel>` via `highlightSegmentId`, used by both Chaos and Punishment) so it's clear which option came up. A **hit** (lands your own option, non-winning) also shows the **"Hoba! {option}"** lucky banner in the standings area; a **miss** shows nothing. The **winning** hit flips the phase to `over` immediately, so the lucky banner is skipped and only the **winner hero** ("{option} wins! 🏆") shows — they never overlap. The winner hero fires its own confetti (chaos-only effect, since Chaos has no per-spin burst).
 
-### The thirteen chaos events (uniform, never the same one twice running)
+### The fourteen chaos events (uniform, never the same one twice running)
+
+Each event has a **distinct synthesised sound cue** (`audio.playChaos(event)` → `audio/chaosTones.ts`, generated live via Web Audio — no audio files), played on its announcement; `earthquake` + `glitch` also re-fire theirs synced to the shake/stutter, and `fake_out` plays a "wah-wah" let-down (`fake_out_drop`) on the yank-away.
 
 | Event | Effect | Where it's applied |
 |---|---|---|

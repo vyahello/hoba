@@ -381,7 +381,7 @@ export function RoomPage(): JSX.Element {
     async function run(): Promise<void> {
       if (event !== null) {
         setChaosAnnounce(event);
-        audio.play("chaos_event");
+        audio.playChaos(event); // a distinct synthesised cue per event
         setWheelState("idle"); // hold while the card is up
         await sleep(CHAOS_ANNOUNCE_MS);
         if (cancelled) return;
@@ -473,10 +473,11 @@ export function RoomPage(): JSX.Element {
         audio.play("result_chime");
         await sleep(FAKE_OUT_HOLD_MS);
         if (cancelled) return;
-        // …gotcha. Drop the fake win and creep on to the truth.
+        // …gotcha. Drop the fake win and creep on to the truth — with the
+        // comedic "wah-wah" let-down cue.
         setFakeWinId(null);
         haptics.heavy();
-        audio.play("chaos_event");
+        audio.playChaos("fake_out_drop");
         setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: finalAngle, durationMs: FAKE_OUT_CREEP_MS, seed: freshSeed() });
         await sleep(FAKE_OUT_CREEP_MS);
         if (cancelled) return;
@@ -484,6 +485,7 @@ export function RoomPage(): JSX.Element {
         // Violent tremor: the whole screen shakes, the wheel convulses, and the
         // phone rumbles — THEN it breaks loose and spins to the server result.
         setQuaking(true);
+        audio.playChaos("earthquake"); // the rumble, synced to the shake
         if (wheelScope.current !== null) {
           void animateWheel(
             wheelScope.current,
@@ -513,6 +515,7 @@ export function RoomPage(): JSX.Element {
         // freezes — under a glitch overlay, then RECOVER smoothly onto the
         // real result. The overlay + the broken motion sell the malfunction.
         setGlitching(true);
+        audio.playChaos("glitch"); // the broken-signal stutter, synced to it
         let angle = wheelRef.current?.getCurrentRotation() ?? 0;
         const jolts = [
           { d: 360 * 1.5 + Math.random() * 220, ms: 300 },

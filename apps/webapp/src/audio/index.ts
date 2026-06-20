@@ -10,6 +10,7 @@
 
 import { Howl, Howler } from "howler";
 
+import { playChaosTone } from "./chaosTones";
 import { AUDIO_MANIFEST, type AudioName, MUSIC_TRACKS, MUSIC_VOLUME } from "./manifest";
 
 const DEFAULT_MASTER_VOLUME = 0.6;
@@ -100,6 +101,29 @@ class AudioManager {
       this.howls.set(name, howl);
     }
     howl.play();
+  }
+
+  /**
+   * Play the signature synthesised cue for a Chaos event (one distinct sound
+   * per event, generated live — see `chaosTones`). Respects the Sound setting
+   * and reuses Howler's shared Web Audio context. Falls back to the generic
+   * `chaos_event` sample if Web Audio isn't available yet (no context).
+   */
+  playChaos(event: string): void {
+    if (!this.enabled) return;
+    // Howler's types say `ctx` is always present, but it's lazily created on
+    // the first Howl — so it can genuinely be absent here.
+    const ctx = Howler.ctx as AudioContext | null | undefined;
+    if (ctx === null || ctx === undefined) {
+      this.play("chaos_event"); // Web Audio not up yet — generic cue
+      return;
+    }
+    try {
+      if (ctx.state !== "running") void ctx.resume();
+      playChaosTone(ctx, event, this.master);
+    } catch {
+      /* synthesis failed (unsupported) — stay silent rather than crash */
+    }
   }
 
   // --- background music ---------------------------------------------------
