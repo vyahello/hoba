@@ -96,6 +96,8 @@ const MULTI_SPIN_FINAL_MS = 2200;
 // nudge_*: the "thinking" shake, then the one-sector creep to the new result.
 const NUDGE_SHAKE_MS = 750;
 const NUDGE_CREEP_MS = 900;
+// earthquake: a violent tremor before the wheel breaks loose into the spin.
+const QUAKE_SHAKE_MS = 950;
 
 export function RoomPage(): JSX.Element {
   const { code = "" } = useParams<{ code: string }>();
@@ -399,9 +401,25 @@ export function RoomPage(): JSX.Element {
           await sleep(baseDur);
         }
         if (cancelled) return;
+      } else if (event === "earthquake") {
+        // Violent tremor while the wheel is still, then it breaks loose and
+        // spins normally to the server result.
+        if (wheelScope.current !== null) {
+          void animateWheel(
+            wheelScope.current,
+            { rotate: [0, -8, 8, -7, 7, -5, 5, -3, 3, 0], x: [0, -4, 4, -3, 3, 0] },
+            { duration: QUAKE_SHAKE_MS / 1000, ease: "easeInOut" },
+          );
+        }
+        await sleep(QUAKE_SHAKE_MS);
+        if (cancelled) return;
+        setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: finalAngle, durationMs: baseDur, seed: freshSeed() });
+        await sleep(baseDur);
+        if (cancelled) return;
       } else {
-        // normal / slow_burn / reverse / swap — one server-driven spin
-        // (phaseSpin stays null → the Wheel animates the server result).
+        // normal / slow_burn / reverse / swap / shuffle — one server-driven
+        // spin (phaseSpin stays null → the Wheel animates the server result;
+        // shuffle's reordered segments come through `segment_order`).
         await sleep(baseDur);
         if (cancelled) return;
       }

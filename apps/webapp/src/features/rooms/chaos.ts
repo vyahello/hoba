@@ -18,6 +18,8 @@ export const CHAOS_EVENTS = [
   "roaming_pointer",
   "mega_spin",
   "tiny_spin",
+  "shuffle",
+  "earthquake",
 ] as const;
 
 export const CHAOS_EVENT_EMOJI: Record<string, string> = {
@@ -31,6 +33,8 @@ export const CHAOS_EVENT_EMOJI: Record<string, string> = {
   roaming_pointer: "🎯",
   mega_spin: "🌪️",
   tiny_spin: "💨",
+  shuffle: "🎰",
+  earthquake: "💥",
 };
 
 /** One leg of the roaming-pointer path: an absolute screen angle + how long

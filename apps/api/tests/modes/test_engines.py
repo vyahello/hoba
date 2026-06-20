@@ -157,6 +157,27 @@ def test_chaos_roaming_pointer() -> None:
     assert d.segments == segs
 
 
+def test_chaos_shuffle_permutes_all_and_emits_order() -> None:
+    segs = [_seg(1, 0), _seg(2, 1), _seg(3, 2)]
+    # _roll("shuffle") picks shuffle; the rest drive Fisher–Yates.
+    d = ChaosEngine(
+        rng=_seq_rng([_roll("shuffle"), 0.0, 0.99]),
+    ).on_spin_request(_ctx(segs))
+    assert d.effects["chaos_event"] == "shuffle"
+    order = d.effects["segment_order"]
+    assert sorted(order) == [1, 2, 3]  # a permutation of every segment
+    assert [s.id for s in d.segments] == order  # render order matches
+    assert order != [1, 2, 3]  # guaranteed to actually move
+
+
+def test_chaos_earthquake_is_a_plain_spin() -> None:
+    segs = [_seg(1, 0), _seg(2, 1)]
+    d = ChaosEngine(rng=_seq_rng([_roll("earthquake")])).on_spin_request(_ctx(segs))
+    assert d.effects == {"chaos_event": "earthquake"}
+    assert d.duration_multiplier == 1.0
+    assert d.segments == segs
+
+
 def test_chaos_never_repeats_last_event() -> None:
     # Whatever the previous event, none of many rolls may reproduce it.
     segs = [_seg(1, 0), _seg(2, 1), _seg(3, 2)]

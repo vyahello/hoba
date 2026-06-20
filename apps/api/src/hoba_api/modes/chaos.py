@@ -45,6 +45,8 @@ CHAOS_EVENTS: tuple[str, ...] = (
     "roaming_pointer",
     "mega_spin",
     "tiny_spin",
+    "shuffle",
+    "earthquake",
 )
 
 
@@ -136,6 +138,16 @@ class ChaosEngine:
                 segments=ctx.segments,
                 effects={"chaos_event": "roaming_pointer"},
             )
+        if event == "earthquake":
+            # A normal forward spin, but the client makes the wheel convulse
+            # before it breaks loose. Pure presentation — the service spins
+            # normally; the engine just names the event.
+            return SpinDecision(
+                segments=ctx.segments,
+                effects={"chaos_event": "earthquake"},
+            )
+        if event == "shuffle":
+            return self._shuffle(ctx)
         return self._swap(ctx)
 
     def _swap(self, ctx: SpinContext) -> SpinDecision:
@@ -159,6 +171,32 @@ class ChaosEngine:
                 "chaos_event": "swap",
                 "segment_order": [s.id for s in segs],
                 "swap_pair": swapped_ids,
+            },
+        )
+
+    def _shuffle(self, ctx: SpinContext) -> SpinDecision:
+        """Scramble EVERY segment into a new order for this spin only.
+
+        Like `swap`, but a full random permutation — the result is computed
+        over the shuffled order, so the whole order rides out in
+        `segment_order` and the client re-renders it (the same reorder path
+        swap uses). Guaranteed to actually move (never the identity order) so
+        the chaos is visible.
+        """
+        segs = list(ctx.segments)
+        n = len(segs)
+        # Fisher–Yates over the copy.
+        for k in range(n - 1, 0, -1):
+            j = min(int(self._rng() * (k + 1)), k)
+            segs[k], segs[j] = segs[j], segs[k]
+        # A no-op permutation would read as "nothing happened" — force a move.
+        if n > 1 and [s.id for s in segs] == [s.id for s in ctx.segments]:
+            segs[0], segs[1] = segs[1], segs[0]
+        return SpinDecision(
+            segments=segs,
+            effects={
+                "chaos_event": "shuffle",
+                "segment_order": [s.id for s in segs],
             },
         )
 
