@@ -547,6 +547,27 @@ export function RoomPage(): JSX.Element {
         setGlitching(false); // overlay clears just before the clean stop
         await sleep(200);
         if (cancelled) return;
+      } else if (event === "jammed") {
+        // "Stuck wheel": it strains forward a little, can't, and snaps back to
+        // where it was — a few times, staying put — then finally breaks free
+        // and spins to the real result.
+        const base = wheelRef.current?.getCurrentRotation() ?? 0;
+        for (let i = 0; i < 3; i++) {
+          audio.playChaos("jammed"); // a strained clunk each attempt
+          haptics.heavy();
+          setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: base + 16 + Math.random() * 12, durationMs: 150, seed: freshSeed() });
+          await sleep(180);
+          if (cancelled) return;
+          setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: base, durationMs: 120, seed: freshSeed() }); // snaps back, stuck
+          await sleep(190);
+          if (cancelled) return;
+        }
+        // It breaks free → spin forward to the real result.
+        let target = finalAngle;
+        while (target <= base + 360) target += 360;
+        setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: target, durationMs: baseDur, seed: freshSeed() });
+        await sleep(baseDur);
+        if (cancelled) return;
       } else {
         // normal / slow_burn / reverse / swap / shuffle — one server-driven
         // spin (phaseSpin stays null → the Wheel animates the server result;
@@ -1559,17 +1580,17 @@ export function RoomPage(): JSX.Element {
               {chaosAnnounce === "swap" ? (
                 // Show the two sectors actually trading places so it's clear
                 // WHICH swapped (the on-wheel swap alone reads as invisible).
-                <div className="relative h-20 w-64 mt-1" aria-hidden>
+                <div className="relative h-24 w-full max-w-[19rem] mt-1" aria-hidden>
                   <motion.span
-                    className="absolute top-6 left-0 max-w-[45%] truncate text-base font-bold px-3 py-1 rounded-full bg-ds-surface-2"
-                    animate={{ x: [0, 0, 150, 150], y: [0, -24, -24, 0] }}
+                    className="absolute top-5 left-0 max-w-[46%] text-sm font-bold leading-tight text-center whitespace-normal break-words px-3 py-1.5 rounded-2xl bg-ds-surface-2"
+                    animate={{ x: [0, 0, 140, 140], y: [0, -26, -26, 0] }}
                     transition={{ duration: 1.1, times: [0, 0.25, 0.75, 1], ease: "easeInOut", repeat: Infinity, repeatType: "reverse" }}
                   >
                     {segLabel(currentSpin?.mode_effects?.swap_pair?.[0] ?? -1) || "🔀"}
                   </motion.span>
                   <motion.span
-                    className="absolute top-6 right-0 max-w-[45%] truncate text-base font-bold px-3 py-1 rounded-full bg-ds-surface-2"
-                    animate={{ x: [0, 0, -150, -150], y: [0, 24, 24, 0] }}
+                    className="absolute top-5 right-0 max-w-[46%] text-sm font-bold leading-tight text-center whitespace-normal break-words px-3 py-1.5 rounded-2xl bg-ds-surface-2"
+                    animate={{ x: [0, 0, -140, -140], y: [0, 26, 26, 0] }}
                     transition={{ duration: 1.1, times: [0, 0.25, 0.75, 1], ease: "easeInOut", repeat: Infinity, repeatType: "reverse" }}
                   >
                     {segLabel(currentSpin?.mode_effects?.swap_pair?.[1] ?? -1) || "🔀"}

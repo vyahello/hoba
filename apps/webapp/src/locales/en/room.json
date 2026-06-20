@@ -137,6 +137,10 @@
       "glitch": {
         "title": "Broken wheel",
         "desc": "The wheel glitches and stutters… then pulls itself together."
+      },
+      "jammed": {
+        "title": "Jammed!",
+        "desc": "The wheel strains and won't budge… then breaks free."
       }
     }
   },

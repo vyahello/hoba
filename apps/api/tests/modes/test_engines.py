@@ -196,6 +196,15 @@ def test_chaos_glitch_is_a_plain_spin() -> None:
     assert d.segments == segs
 
 
+def test_chaos_jammed_is_a_plain_spin() -> None:
+    # Engine names it; the "stuck wheel" strain is the client's job.
+    segs = [_seg(1, 0), _seg(2, 1)]
+    d = ChaosEngine(rng=_seq_rng([_roll("jammed")])).on_spin_request(_ctx(segs))
+    assert d.effects == {"chaos_event": "jammed"}
+    assert d.duration_multiplier == 1.0
+    assert d.segments == segs
+
+
 def test_chaos_never_repeats_last_event() -> None:
     # Whatever the previous event, none of many rolls may reproduce it.
     segs = [_seg(1, 0), _seg(2, 1), _seg(3, 2)]

@@ -152,11 +152,12 @@ export function playChaosTone(ctx: AudioContext, event: string, master: number):
       osc(ctx, master, { type: "triangle", freq: 660, dur: 0.12, gain: 0.2 });
       osc(ctx, master, { type: "triangle", freq: 440, at: 0.13, dur: 0.12, gain: 0.2 });
       break;
-    case "nudge_fwd": // ⏩ a short up-tick
-      osc(ctx, master, { type: "triangle", freq: 520, to: 680, dur: 0.1, gain: 0.2 });
-      break;
-    case "nudge_back": // ⏪ a short down-tick
-      osc(ctx, master, { type: "triangle", freq: 520, to: 390, dur: 0.1, gain: 0.2 });
+    case "nudge_fwd": // ⏩⏪ a ratchet creep + clunk into place. Both nudges
+    case "nudge_back": // share one neutral cue so the ear doesn't spoil the way.
+      noise(ctx, master, { at: 0, dur: 0.03, gain: 0.18, filterType: "bandpass", filter: 2200, q: 1.6 });
+      noise(ctx, master, { at: 0.08, dur: 0.03, gain: 0.18, filterType: "bandpass", filter: 2500, q: 1.6 });
+      osc(ctx, master, { type: "square", freq: 500, to: 560, at: 0.14, dur: 0.16, gain: 0.24 });
+      osc(ctx, master, { type: "triangle", freq: 560, at: 0.31, dur: 0.13, gain: 0.2 }); // clunk
       break;
     case "blind_pointer": // 🫥 a vanishing whoosh
       noise(ctx, master, { dur: 0.5, gain: 0.18, filter: 1300, sweepTo: 300, q: 0.7 });
@@ -173,11 +174,19 @@ export function playChaosTone(ctx: AudioContext, event: string, master: number):
         noise(ctx, master, { at: i * 0.045, dur: 0.03, gain: 0.13, filterType: "bandpass", filter: 2600 + i * 220, q: 1.2 });
       }
       break;
-    case "earthquake": // 💥 a low rumble
-      noise(ctx, master, { dur: 1.0, gain: 0.32, filter: 170, q: 0.6 });
-      osc(ctx, master, { type: "sine", freq: 62, to: 44, dur: 1.0, gain: 0.3, attack: 0.05 });
-      osc(ctx, master, { type: "triangle", freq: 90, to: 60, dur: 1.0, gain: 0.14, attack: 0.05 });
+    case "earthquake": { // 💥 a broadband rumble (audible on phone speakers —
+      // pure sub-bass was inaudible). A low-mid boom with harmonics, an
+      // overlapping noise rumble that "shakes", and debris crackle.
+      osc(ctx, master, { type: "sawtooth", freq: 165, to: 70, dur: 0.75, gain: 0.34, attack: 0.004 });
+      osc(ctx, master, { type: "square", freq: 82, to: 55, dur: 0.85, gain: 0.16, attack: 0.01 });
+      for (let i = 0; i < 10; i++) { // the shaking rumble (overlapping bursts)
+        noise(ctx, master, { at: i * 0.085, dur: 0.16, gain: 0.18 + (i % 3) * 0.04, filter: 520 + (i % 4) * 130, q: 0.9 });
+      }
+      for (let i = 0; i < 5; i++) { // debris crackle
+        noise(ctx, master, { at: 0.1 + i * 0.14, dur: 0.04, gain: 0.13, filterType: "bandpass", filter: 1900 + i * 220, q: 2.2 });
+      }
       break;
+    }
     case "fake_out": // 🎭 a hopeful "ta-da?" rise (the drop comes later)
       osc(ctx, master, { type: "triangle", freq: 440, to: 560, dur: 0.18, gain: 0.2 });
       osc(ctx, master, { type: "triangle", freq: 620, at: 0.2, dur: 0.22, gain: 0.2 });
@@ -196,6 +205,12 @@ export function playChaosTone(ctx: AudioContext, event: string, master: number):
       }
       break;
     }
+    case "jammed": // 🔒 a stuck-motor strain: a low buzz that grinds + a clunk
+      osc(ctx, master, { type: "sawtooth", freq: 150, to: 115, dur: 0.22, gain: 0.24, attack: 0.006 });
+      osc(ctx, master, { type: "square", freq: 70, dur: 0.24, gain: 0.12, attack: 0.01 });
+      noise(ctx, master, { dur: 0.14, gain: 0.16, filter: 850, q: 1.1 }); // grind
+      noise(ctx, master, { at: 0.2, dur: 0.04, gain: 0.16, filterType: "bandpass", filter: 1600, q: 2 }); // clunk
+      break;
     default: // unknown event — a neutral blip
       osc(ctx, master, { type: "triangle", freq: 600, dur: 0.1, gain: 0.16 });
   }
