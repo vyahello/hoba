@@ -449,6 +449,30 @@ async def test_trigger_spin_chaos_roaming_pointer_keeps_wheel_still(
     assert spin.result_segment_id in spin.mode_state_snapshot["living_segment_ids"]
 
 
+async def test_trigger_spin_chaos_jammed_stays_put_on_under_pointer(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Force "jammed": the wheel can't move at all — the final angle equals the
+    # starting angle, and the result is the segment under the (stationary)
+    # pointer at that angle.
+    from hoba_api.modes.registry import engine_for
+    from hoba_api.wheel.spin_math import segment_under_pointer
+
+    monkeypatch.setattr(engine_for("chaos"), "_rng", _chaos_roll("jammed"))
+    host_id = await _make_user(db, tg_id=605)
+    room = await create_room(
+        db, host_id=host_id, question_text="Q?", segments=_drafts(4),
+        spin_policy="anyone", game_mode="chaos",
+    )
+    await db.commit()
+    spin = await trigger_spin(db, room=room, user_id=host_id)
+    await db.commit()
+    assert spin.mode_state_snapshot["mode_effects"]["chaos_event"] == "jammed"
+    assert spin.final_angle_deg == 0.0  # first spin starts at 0 → stays at 0
+    living = spin.mode_state_snapshot["living_segment_ids"]
+    assert spin.result_segment_id == living[segment_under_pointer(0.0, len(living))]
+
+
 def test_best_of_n_leaders() -> None:
     from hoba_api.services.spins import best_of_n_leaders
 

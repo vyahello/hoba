@@ -25,7 +25,11 @@ from hoba_api.modes.chaos import (
 )
 from hoba_api.redis_client import presence_user_ids
 from hoba_api.services.rooms import RoomServiceError
-from hoba_api.wheel.spin_math import MIN_FULL_ROTATIONS, compute_spin
+from hoba_api.wheel.spin_math import (
+    MIN_FULL_ROTATIONS,
+    compute_spin,
+    segment_under_pointer,
+)
 
 MIN_SEGMENTS_TO_SPIN = 2
 def best_of_n_leaders(tally: dict[int, int]) -> list[int]:
@@ -198,6 +202,12 @@ async def trigger_spin(
         # Wheel stays put — keep the current angle so nothing rotates; the
         # client roams the pointer to the (normally-picked) result segment.
         result = replace(result, final_angle_deg=starting_angle_deg)
+    elif chaos_event == "jammed":
+        # Fully locked: the wheel can't move at all. Keep it exactly where it
+        # is, and the result is whatever segment is already under the (also
+        # stationary) pointer — you're stuck on the option you were showing.
+        result = replace(result, final_angle_deg=starting_angle_deg)
+        winning_index = segment_under_pointer(starting_angle_deg, len(spin_segments))
 
     winning_segment = spin_segments[winning_index]
     started_at = datetime.now(UTC)

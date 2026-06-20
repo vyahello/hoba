@@ -139,8 +139,8 @@
         "desc": "The wheel glitches and stutters… then pulls itself together."
       },
       "jammed": {
-        "title": "Jammed!",
-        "desc": "The wheel strains and won't budge… then breaks free."
+        "title": "Locked up!",
+        "desc": "The wheel strains and shudders but won't budge — it stays right where it is."
       }
     }
   },

@@ -557,25 +557,33 @@ export function RoomPage(): JSX.Element {
         await sleep(200);
         if (cancelled) return;
       } else if (event === "jammed") {
-        // "Stuck wheel": it strains forward a little, can't, and snaps back to
-        // where it was — a few times, staying put — then finally breaks free
-        // and spins to the real result.
+        // FULLY LOCKED: the wheel strains and shudders but never moves — it
+        // ends exactly where it started. The server keeps it put and makes the
+        // result the segment already under the pointer (so the lock is real,
+        // not a fake spin). It never breaks free.
         const base = wheelRef.current?.getCurrentRotation() ?? 0;
-        for (let i = 0; i < 3; i++) {
-          audio.playChaos("jammed"); // a strained clunk each attempt
+        for (let i = 0; i < 4; i++) {
+          audio.playChaos("jammed"); // a strained grind each attempt
           haptics.heavy();
-          setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: base + 16 + Math.random() * 12, durationMs: 150, seed: freshSeed() });
-          await sleep(180);
+          if (wheelScope.current !== null) {
+            // A hard shudder in place — the motor straining against the jam.
+            void animateWheel(
+              wheelScope.current,
+              { rotate: [0, -3, 3, -2, 2, 0] },
+              { duration: 0.26, ease: "easeInOut" },
+            );
+          }
+          // A tiny strain forward… then it's dragged right back. It won't go.
+          setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: base + 7 + Math.random() * 5, durationMs: 120, seed: freshSeed() });
+          await sleep(150);
           if (cancelled) return;
-          setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: base, durationMs: 120, seed: freshSeed() }); // snaps back, stuck
-          await sleep(190);
+          setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: base, durationMs: 120, seed: freshSeed() });
+          await sleep(175);
           if (cancelled) return;
         }
-        // It breaks free → spin forward to the real result.
-        let target = finalAngle;
-        while (target <= base + 360) target += 360;
-        setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: target, durationMs: baseDur, seed: freshSeed() });
-        await sleep(baseDur);
+        // Dead stuck — settle exactly where it started (= the server result).
+        setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: base, durationMs: 150, seed: freshSeed() });
+        await sleep(170);
         if (cancelled) return;
       } else {
         // normal / slow_burn / reverse / swap / shuffle — one server-driven
