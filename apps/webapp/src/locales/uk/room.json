@@ -181,7 +181,8 @@
     "deny": "Відхилити"
   },
   "reactions": {
-    "aria_label": "Реакція {emoji}"
+    "aria_label": "Реакція {emoji}",
+    "custom": "Обрати свою емодзі"
   },
   "errors": {
     "create_failed": "Не вдалося створити кімнату. Спробуйте ще раз.",

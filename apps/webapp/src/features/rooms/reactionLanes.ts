@@ -21,9 +21,17 @@ const LANES: Readonly<Record<string, number>> = {
  * Resolve the horizontal lane (in `[0, 1]`) for a given reaction emoji.
  * Caller may pass small `jitter` (e.g. `(Math.random() - 0.5) * 0.05`)
  * so a burst of identical reactions doesn't stack on the same pixel.
- * Unknown emojis fall back to centre.
+ * Custom (non-default) emojis get a STABLE lane derived from their code
+ * points — spread across `[0.15, 0.85]` so different customs don't all
+ * stack in the centre, while the same custom always flies in one lane.
  */
 export function reactionLaneFor(emoji: string, jitter: number = 0): number {
-  const base = LANES[emoji] ?? 0.5;
+  const base = LANES[emoji] ?? hashedLane(emoji);
   return Math.max(0, Math.min(1, base + jitter));
+}
+
+function hashedLane(emoji: string): number {
+  let h = 0;
+  for (const ch of emoji) h = (h * 31 + (ch.codePointAt(0) ?? 0)) >>> 0;
+  return 0.15 + (h % 1000) / 1000 * 0.7; // 0.15 … 0.85
 }

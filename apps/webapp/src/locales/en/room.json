@@ -181,7 +181,8 @@
     "deny": "Deny"
   },
   "reactions": {
-    "aria_label": "React {emoji}"
+    "aria_label": "React {emoji}",
+    "custom": "Pick your own emoji"
   },
   "errors": {
     "create_failed": "Couldn't create the room. Try again.",
