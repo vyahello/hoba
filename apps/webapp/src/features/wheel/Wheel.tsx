@@ -20,6 +20,10 @@ const MAX_LABEL_CHARS = 12;
 /** Decelerate phase begins at this fraction of total spin duration. */
 const DECELERATE_START_FRACTION = 0.35;
 const TICK_MIN_INTERVAL_MS = 1000 / 12;
+/** Pointer "ratchet": each peg flicks the pointer this many degrees (in the
+ * wheel's clockwise direction), then it springs back by this factor per frame. */
+const POINTER_KICK_DEG = 9;
+const POINTER_KICK_DECAY = 0.8;
 const INK = "#14101F";
 /** Default spin easing (ease-out-ish) when a SpinResult carries none. */
 const DEFAULT_EASE: readonly [number, number, number, number] = [0.15, 0.85, 0.25, 1];
@@ -366,6 +370,9 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
     const startMono = performance.now();
     let lastSector = segmentUnderPointer(startDeg, segmentCount);
     let lastTickAt = 0;
+    // Pointer ratchet: a transient angular offset kicked on each peg-tick and
+    // sprung back toward the base angle every frame (a physical flapper feel).
+    let pointerKick = 0;
     spinningRef.current = true;
 
     // prefers-reduced-motion → snap straight to the result, no animation loop.
@@ -387,14 +394,23 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
         const sector = segmentUnderPointer(deg, segmentCount);
         if (sector !== lastSector && now - lastTickAt >= TICK_MIN_INTERVAL_MS) {
           haptics.light();
-          audio.play("wheel_tick");
+          // Tick pitch ramps up as it nears the stop (classic wheel feel).
+          const p = Math.max(0, Math.min(1, (tt - DECELERATE_START_FRACTION) / (1 - DECELERATE_START_FRACTION)));
+          audio.playTick(p);
+          pointerKick = POINTER_KICK_DEG; // flick the pointer
           lastTickAt = now;
         }
         lastSector = sector;
       }
+      // Apply the current kick, then spring it back toward the base angle.
+      if (pointerKick !== 0) {
+        setPointerAngle(pointerDeg + pointerKick);
+        pointerKick = Math.abs(pointerKick) < 0.1 ? 0 : pointerKick * POINTER_KICK_DECAY;
+      }
 
       if (tt >= 1) {
         setWheelRotation(targetDeg); // land exactly on the result
+        if (pointerKick !== 0) setPointerAngle(pointerDeg); // settle the pointer
         spinningRef.current = false;
         rafRef.current = null;
         return;

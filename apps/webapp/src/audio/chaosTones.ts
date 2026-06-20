@@ -124,6 +124,43 @@ function noise(ctx: AudioContext, master: number, o: NoiseOpts): void {
   src.stop(t0 + o.dur + 0.02);
 }
 
+/**
+ * A single wheel "tick" (peg clack) whose pitch ramps up with `p01` (0 at the
+ * start of the decel → 1 just before the stop) — the classic wheel-of-fortune
+ * accelerating-tick feel. Modest + direct (NOT through the boosted chaos bus),
+ * since these fire many times a second. No-op at zero volume.
+ */
+export function playTickTone(ctx: AudioContext, p01: number, master: number): void {
+  const m = Math.max(0, Math.min(1, master));
+  if (m <= 0) return;
+  const p = Math.max(0, Math.min(1, p01));
+  const t0 = ctx.currentTime;
+  // The clack: a short bandpass-noise transient, centre rising with p.
+  const src = ctx.createBufferSource();
+  src.buffer = whiteNoise(ctx);
+  const bp = ctx.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.frequency.setValueAtTime(1400 + p * 1900, t0);
+  bp.Q.setValueAtTime(3, t0);
+  const ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.17 * m, t0);
+  ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.03);
+  src.connect(bp).connect(ng).connect(ctx.destination);
+  src.start(t0);
+  src.stop(t0 + 0.05);
+  // A short resonant blip body, pitch rising with p.
+  const o = ctx.createOscillator();
+  o.type = "triangle";
+  o.frequency.setValueAtTime(620 + p * 920, t0);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.0001, t0);
+  og.gain.linearRampToValueAtTime(0.1 * m, t0 + 0.002);
+  og.gain.linearRampToValueAtTime(0.0001, t0 + 0.035);
+  o.connect(og).connect(ctx.destination);
+  o.start(t0);
+  o.stop(t0 + 0.05);
+}
+
 /** Schedule the signature sound for `event` on `ctx`. Unknown names get a
  *  neutral blip. `master` is the global SFX volume (0…1). */
 export function playChaosTone(ctx: AudioContext, event: string, master: number): void {

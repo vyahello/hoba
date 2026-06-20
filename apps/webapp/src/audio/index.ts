@@ -10,7 +10,7 @@
 
 import { Howl, Howler } from "howler";
 
-import { playChaosTone } from "./chaosTones";
+import { playChaosTone, playTickTone } from "./chaosTones";
 import { AUDIO_MANIFEST, type AudioName, MUSIC_TRACKS, MUSIC_VOLUME } from "./manifest";
 
 const DEFAULT_MASTER_VOLUME = 0.6;
@@ -133,6 +133,26 @@ class AudioManager {
     try {
       if (ctx.state !== "running") void ctx.resume();
       playChaosTone(ctx, event, this.master);
+    } catch {
+      /* synthesis failed (unsupported) — stay silent rather than crash */
+    }
+  }
+
+  /**
+   * A wheel "tick" whose pitch rises with `progress` (0…1, 1 = about to stop).
+   * Synthesised live (rising-pitch ratchet feel); falls back to the generic
+   * `wheel_tick` sample if Web Audio isn't up yet. Respects the Sound setting.
+   */
+  playTick(progress: number): void {
+    if (!this.enabled) return;
+    const ctx = Howler.ctx as AudioContext | null | undefined;
+    if (ctx === null || ctx === undefined) {
+      this.play("wheel_tick"); // Web Audio not up yet — generic sample
+      return;
+    }
+    try {
+      if (ctx.state !== "running") void ctx.resume();
+      playTickTone(ctx, progress, this.master);
     } catch {
       /* synthesis failed (unsupported) — stay silent rather than crash */
     }
