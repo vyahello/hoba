@@ -186,8 +186,11 @@
   },
   "reactions": {
     "aria_label": "React {emoji}",
-    "aria_label_custom": "React {emoji} — hold to remove",
-    "custom": "Pick your own emoji"
+    "aria_label_custom": "React {emoji} — hold to edit",
+    "custom": "Pick your own emoji",
+    "manage_title": "Custom emoji",
+    "change": "Change emoji",
+    "remove": "Remove"
   },
   "errors": {
     "create_failed": "Couldn't create the room. Try again.",

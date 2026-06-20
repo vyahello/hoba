@@ -186,8 +186,11 @@
   },
   "reactions": {
     "aria_label": "Реакція {emoji}",
-    "aria_label_custom": "Реакція {emoji} — утримай, щоб прибрати",
-    "custom": "Обрати свою емодзі"
+    "aria_label_custom": "Реакція {emoji} — утримай, щоб змінити",
+    "custom": "Обрати свою емодзі",
+    "manage_title": "Своя емодзі",
+    "change": "Змінити емодзі",
+    "remove": "Прибрати"
   },
   "errors": {
     "create_failed": "Не вдалося створити кімнату. Спробуйте ще раз.",
