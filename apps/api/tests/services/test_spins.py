@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 
 import pytest
@@ -23,6 +24,15 @@ from hoba_api.wheel.spin_math import segment_under_pointer
 
 def _drafts(n: int) -> list[SegmentDraft]:
     return [SegmentDraft(label=f"S{i}", color_seed=i % 12) for i in range(n)]
+
+
+def _chaos_roll(event: str) -> Callable[[], float]:
+    """An `_rng` for ChaosEngine that forces `event` on a fresh spin
+    (candidates == all events). Index-derived, so it stays correct as the
+    CHAOS_EVENTS set grows."""
+    from hoba_api.modes.chaos import CHAOS_EVENTS
+
+    return lambda: (CHAOS_EVENTS.index(event) + 0.5) / len(CHAOS_EVENTS)
 
 
 async def _make_user(db: AsyncSession, tg_id: int) -> int:
@@ -296,7 +306,7 @@ async def test_trigger_spin_chaos_reverse_flips_angle_backward(
     # sector.
     from hoba_api.modes.registry import engine_for
 
-    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.3)
+    monkeypatch.setattr(engine_for("chaos"), "_rng", _chaos_roll("reverse"))
     host_id = await _make_user(db, tg_id=600)
     room = await create_room(
         db, host_id=host_id, question_text="Q?", segments=_drafts(4),
@@ -319,7 +329,7 @@ async def test_trigger_spin_chaos_nudge_changes_result_and_records_pre_angle(
     # pre-nudge stop angle must be carried for the client choreography.
     from hoba_api.modes.registry import engine_for
 
-    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.55)
+    monkeypatch.setattr(engine_for("chaos"), "_rng", _chaos_roll("nudge_fwd"))
     host_id = await _make_user(db, tg_id=601)
     room = await create_room(
         db, host_id=host_id, question_text="Q?", segments=_drafts(4),
@@ -347,7 +357,7 @@ async def test_trigger_spin_chaos_slow_burn_trims_turns(
     from hoba_api.modes.chaos import SLOW_BURN_TURNS
     from hoba_api.modes.registry import engine_for
 
-    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.2)
+    monkeypatch.setattr(engine_for("chaos"), "_rng", _chaos_roll("slow_burn"))
     host_id = await _make_user(db, tg_id=603)
     room = await create_room(
         db, host_id=host_id, question_text="Q?", segments=_drafts(4),
@@ -370,7 +380,7 @@ async def test_trigger_spin_chaos_blind_pointer_lands_under_pointer(
     # result must be the segment under the random pointer angle.
     from hoba_api.modes.registry import engine_for
 
-    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.8)
+    monkeypatch.setattr(engine_for("chaos"), "_rng", _chaos_roll("blind_pointer"))
     host_id = await _make_user(db, tg_id=602)
     room = await create_room(
         db, host_id=host_id, question_text="Q?", segments=_drafts(4),
@@ -397,7 +407,7 @@ async def test_trigger_spin_chaos_roaming_pointer_keeps_wheel_still(
     # result is still a valid segment (the client roams the pointer to it).
     from hoba_api.modes.registry import engine_for
 
-    monkeypatch.setattr(engine_for("chaos"), "_rng", lambda: 0.95)
+    monkeypatch.setattr(engine_for("chaos"), "_rng", _chaos_roll("roaming_pointer"))
     host_id = await _make_user(db, tg_id=604)
     room = await create_room(
         db, host_id=host_id, question_text="Q?", segments=_drafts(4),

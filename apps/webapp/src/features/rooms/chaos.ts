@@ -16,6 +16,8 @@ export const CHAOS_EVENTS = [
   "nudge_back",
   "blind_pointer",
   "roaming_pointer",
+  "mega_spin",
+  "tiny_spin",
 ] as const;
 
 export const CHAOS_EVENT_EMOJI: Record<string, string> = {
@@ -27,6 +29,8 @@ export const CHAOS_EVENT_EMOJI: Record<string, string> = {
   nudge_back: "⏪",
   blind_pointer: "🫥",
   roaming_pointer: "🎯",
+  mega_spin: "🌪️",
+  tiny_spin: "💨",
 };
 
 /** One leg of the roaming-pointer path: an absolute screen angle + how long

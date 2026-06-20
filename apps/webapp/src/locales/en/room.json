@@ -113,6 +113,14 @@
       "roaming_pointer": {
         "title": "Roaming pointer",
         "desc": "The wheel freezes — the pointer wanders the options."
+      },
+      "mega_spin": {
+        "title": "Mega spin",
+        "desc": "An epic, never-ending whirl — buckle up!"
+      },
+      "tiny_spin": {
+        "title": "Tiny spin",
+        "desc": "Blink and you'll miss it — a lightning snap."
       }
     }
   },

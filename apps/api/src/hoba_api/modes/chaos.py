@@ -26,6 +26,12 @@ SLOW_BURN_TURNS = 3
 # multi_spin fires this many short fast spins in a row (the last one counts).
 MULTI_SPIN_MIN = 2
 MULTI_SPIN_MAX = 5
+# mega_spin: an epic, much-longer spin with a pile of extra full turns.
+MEGA_SPIN_MULTIPLIER = 2.6
+MEGA_SPIN_TURNS = 12
+# tiny_spin: a quick snap — barely a turn, over and done in a blink.
+TINY_SPIN_MULTIPLIER = 0.5
+TINY_SPIN_TURNS = 1
 
 # Every spin picks one of these uniformly.
 CHAOS_EVENTS: tuple[str, ...] = (
@@ -37,6 +43,8 @@ CHAOS_EVENTS: tuple[str, ...] = (
     "nudge_back",
     "blind_pointer",
     "roaming_pointer",
+    "mega_spin",
+    "tiny_spin",
 )
 
 
@@ -83,6 +91,21 @@ class ChaosEngine:
                 segments=ctx.segments,
                 duration_multiplier=SLOW_BURN_MULTIPLIER,
                 effects={"chaos_event": "slow_burn", "dramatic": True},
+            )
+        if event == "mega_spin":
+            # Epic: a pile of extra turns over a long duration (service trims
+            # the whole-turn count to MEGA_SPIN_TURNS).
+            return SpinDecision(
+                segments=ctx.segments,
+                duration_multiplier=MEGA_SPIN_MULTIPLIER,
+                effects={"chaos_event": "mega_spin", "dramatic": True},
+            )
+        if event == "tiny_spin":
+            # Snap: ~one turn, over in a blink (service trims to TINY_SPIN_TURNS).
+            return SpinDecision(
+                segments=ctx.segments,
+                duration_multiplier=TINY_SPIN_MULTIPLIER,
+                effects={"chaos_event": "tiny_spin"},
             )
         if event == "reverse":
             # The service flips the final angle to spin counter-clockwise.
