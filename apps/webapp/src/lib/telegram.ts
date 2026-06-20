@@ -127,6 +127,29 @@ export function confirmPopup(message: string): Promise<boolean> {
   );
 }
 
+/**
+ * Subscribe to Telegram's `activated` event — the Mini App being brought back
+ * to the foreground after a minimise (swipe-down to a pill). Bot API 8.0+; a
+ * silent no-op on older clients that never emit it. Returns an unsubscriber.
+ * The SDK's event union predates this event, so we go through a cast.
+ */
+export function onActivated(handler: () => void): () => void {
+  try {
+    const wa = WebApp as unknown as {
+      onEvent: (event: string, h: () => void) => void;
+      offEvent: (event: string, h: () => void) => void;
+    };
+    wa.onEvent("activated", handler);
+    return () => {
+      wa.offEvent("activated", handler);
+    };
+  } catch {
+    return () => {
+      /* noop */
+    };
+  }
+}
+
 /** Subscribe to Telegram's `themeChanged` event; returns an unsubscriber. */
 export function onThemeChanged(handler: () => void): () => void {
   try {

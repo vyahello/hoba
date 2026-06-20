@@ -7,7 +7,7 @@ import "@/index.css";
 
 import { audio } from "@/audio";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
-import { expand, ready } from "@/lib/telegram";
+import { expand, onActivated, ready } from "@/lib/telegram";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { router } from "@/router";
 
@@ -18,6 +18,11 @@ try {
   expand();
   // Bind the first-gesture Web Audio unlock now so iPhone playback works.
   audio.installUnlock();
+  // Telegram "minimise" (swipe-down) backgrounds the WebView and iOS suspends
+  // audio; resume it when the Mini App is brought back to the foreground.
+  onActivated(() => {
+    audio.wake();
+  });
 } catch (error) {
   console.warn("Telegram WebApp init failed:", error);
 }

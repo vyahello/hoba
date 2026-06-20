@@ -47,23 +47,35 @@ class AudioManager {
   installUnlock(): void {
     if (this.unlockBound || typeof document === "undefined") return;
     this.unlockBound = true;
-    const revive = (): void => {
-      try {
-        if (Howler.ctx && Howler.ctx.state !== "running") void Howler.ctx.resume();
-      } catch {
-        /* no Web Audio context (non-Telegram / unsupported) */
-      }
-      // A gesture is also our chance to (re)start music that wants to play
-      // but was blocked by autoplay policy or paused on backgrounding.
-      if (this.musicShouldPlay()) this.startMusic();
-    };
+    const revive = (): void => this.wake();
     for (const event of ["touchend", "pointerdown", "click"] as const) {
       document.addEventListener(event, revive, { passive: true });
     }
-    // Returning from background (iOS suspends the context) — revive then too.
+    // Returning from background (iOS suspends the context, and Telegram
+    // "minimise" — swipe-down to a pill — backgrounds the WebView). Cover
+    // every signal a foreground gives us. `pageshow` fires on bfcache restore.
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") revive();
     });
+    window.addEventListener("focus", revive);
+    window.addEventListener("pageshow", revive);
+  }
+
+  /**
+   * Resume audio after a background/minimise. iOS suspends the Web Audio
+   * context when the Mini App is backgrounded (incl. Telegram's swipe-down
+   * minimise), which silences SFX *and* music until something resumes it.
+   * Safe to call repeatedly; also wired to the Telegram `activated` event
+   * (see main.tsx) and to every user gesture.
+   */
+  wake(): void {
+    try {
+      if (Howler.ctx && Howler.ctx.state !== "running") void Howler.ctx.resume();
+    } catch {
+      /* no Web Audio context (non-Telegram / unsupported) */
+    }
+    // Music paused on backgrounding (html5 stream) — kick it back to life.
+    if (this.musicShouldPlay()) this.startMusic();
   }
 
   setMasterVolume(value: number): void {
