@@ -40,7 +40,31 @@ type NoiseOpts = {
   q?: number;
 };
 
+// Chaos cues were too quiet against the music bed. Boost every voice and run
+// them through a per-context limiter so the louder signal can't clip/distort
+// when several voices stack (earthquake, glitch, multi_spin).
+const CHAOS_BOOST = 3.2;
+
 const noiseBuffers = new WeakMap<AudioContext, AudioBuffer>();
+const buses = new WeakMap<AudioContext, GainNode>();
+
+/** A shared, loud-but-clean output bus: makeup gain → limiter → destination. */
+function chaosBus(ctx: AudioContext): GainNode {
+  const cached = buses.get(ctx);
+  if (cached !== undefined) return cached;
+  const comp = ctx.createDynamicsCompressor();
+  const t = ctx.currentTime;
+  comp.threshold.setValueAtTime(-8, t);
+  comp.knee.setValueAtTime(6, t);
+  comp.ratio.setValueAtTime(20, t);
+  comp.attack.setValueAtTime(0.003, t);
+  comp.release.setValueAtTime(0.12, t);
+  const input = ctx.createGain();
+  input.gain.setValueAtTime(1, t);
+  input.connect(comp).connect(ctx.destination);
+  buses.set(ctx, input);
+  return input;
+}
 
 function whiteNoise(ctx: AudioContext): AudioBuffer {
   const cached = noiseBuffers.get(ctx);
@@ -61,12 +85,12 @@ function osc(ctx: AudioContext, master: number, o: OscOpts): void {
     node.frequency.linearRampToValueAtTime(o.to, t0 + o.dur);
   }
   const g = ctx.createGain();
-  const peak = Math.max(0.0001, o.gain * master);
+  const peak = Math.min(0.9, Math.max(0.0001, o.gain * master * CHAOS_BOOST));
   const atk = Math.min(o.attack ?? 0.008, o.dur * 0.5);
   g.gain.setValueAtTime(0, t0);
   g.gain.linearRampToValueAtTime(peak, t0 + atk);
   g.gain.linearRampToValueAtTime(0, t0 + o.dur);
-  node.connect(g).connect(ctx.destination);
+  node.connect(g).connect(chaosBus(ctx));
   if (o.vibrato !== undefined) {
     const lfo = ctx.createOscillator();
     lfo.type = "sine";
@@ -91,11 +115,11 @@ function noise(ctx: AudioContext, master: number, o: NoiseOpts): void {
   if (o.sweepTo !== undefined) filt.frequency.linearRampToValueAtTime(o.sweepTo, t0 + o.dur);
   filt.Q.setValueAtTime(o.q ?? 0.7, t0);
   const g = ctx.createGain();
-  const peak = Math.max(0.0001, o.gain * master);
+  const peak = Math.min(0.9, Math.max(0.0001, o.gain * master * CHAOS_BOOST));
   g.gain.setValueAtTime(0, t0);
   g.gain.linearRampToValueAtTime(peak, t0 + Math.min(0.01, o.dur * 0.4));
   g.gain.linearRampToValueAtTime(0, t0 + o.dur);
-  src.connect(filt).connect(g).connect(ctx.destination);
+  src.connect(filt).connect(g).connect(chaosBus(ctx));
   src.start(t0);
   src.stop(t0 + o.dur + 0.02);
 }
