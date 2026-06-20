@@ -164,6 +164,7 @@ export function RoomPage(): JSX.Element {
   // The active dare card — scrolled into view when a dare is dealt so the
   // punished player doesn't have to hunt for it below the fold.
   const dareCardRef = useRef<HTMLDivElement>(null);
+  const luckyRef = useRef<HTMLDivElement>(null);
   // Latest rendered segments, read inside the spin choreography without making
   // it a hook dep (which would restart the animation when segments change).
   const segmentsRef = useRef<SegmentDef[]>([]);
@@ -270,6 +271,16 @@ export function RoomPage(): JSX.Element {
       dareCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [dareKey]);
+  // Same for the lucky "Хоба!" result — show it without scrolling the page.
+  const luckyKey =
+    spinLanded && punishOutcome?.kind === "lucky"
+      ? `${punishOutcome.spinner_id}:${punishOutcome.result_segment_id}`
+      : null;
+  useEffect(() => {
+    if (luckyKey !== null) {
+      luckyRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [luckyKey]);
   const mustApprove = isMyApproval(snapshot);
   const punishWinnerId = winnerUserId(snapshot);
   const myMatchCount =
@@ -1217,10 +1228,13 @@ export function RoomPage(): JSX.Element {
                 </div>
               )
             ) : punishOutcome?.kind === "lucky" ? (
-              <div className="flex flex-col items-center gap-1 rounded-xl bg-brand-accent/15 px-4 py-3 text-center">
+              <div
+                ref={luckyRef}
+                className="flex flex-col items-center gap-1 rounded-xl bg-brand-accent/15 border-[3px] border-ds-border px-4 py-3 text-center scroll-mt-24"
+              >
                 <HobaWord sizeClass="text-4xl" />
                 <p className="text-sm font-semibold text-ds-text">
-                  <span className="font-display font-bold text-brand-violet-2">
+                  <span className="font-display font-bold text-brand-primary">
                     {punishOutcome.spinner_id === snapshot.me_user_id
                       ? t("room:punishment.lucky_you")
                       : nameFor(punishOutcome.spinner_id)}
