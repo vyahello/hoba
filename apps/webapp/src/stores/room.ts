@@ -99,7 +99,7 @@ interface RoomStore {
    * Punishment mode — spin before every present player has locked a guess.
    */
   triggerSpin(force?: boolean): void;
-  sendReaction(emoji: string): void;
+  sendReaction(emoji: string, x?: number): void;
   resetSpinState(): void;
   /**
    * Replace the snapshot with a fresh one fetched via REST (e.g. after a
@@ -359,17 +359,18 @@ function wireListeners(s: Socket): void {
 
   s.on(
     "reaction:received",
-    (payload: { emoji: string; user_id: number; at: string }) => {
+    (payload: { emoji: string; user_id: number; at: string; x?: number }) => {
       const id = `${payload.at}-${payload.user_id}-${Math.random().toString(36).slice(2, 8)}`;
-      // Lane = horizontal position of the emoji's button in the bar
-      // (deterministic). Jitter is a small ±2.5% wobble so a burst of
-      // identical reactions doesn't pixel-stack.
+      // Lane = where the sender's tapped button actually was (payload `x`), so
+      // custom emojis fly from their button too; fall back to the per-emoji
+      // lane for clients/reactions without it. Jitter is a small ±2.5% wobble
+      // so a burst of identical reactions doesn't pixel-stack.
       const jitter = (Math.random() - 0.5) * 0.05;
-      const next: FlyingReaction = {
-        ...payload,
-        id,
-        x: reactionLaneFor(payload.emoji, jitter),
-      };
+      const x =
+        typeof payload.x === "number"
+          ? Math.max(0, Math.min(1, payload.x + jitter))
+          : reactionLaneFor(payload.emoji, jitter);
+      const next: FlyingReaction = { ...payload, id, x };
       setState((state) => ({
         reactions: [...state.reactions, next],
       }));
@@ -424,8 +425,8 @@ export const useRoomStore = create<RoomStore>((_set, get) => ({
     socket?.emit("spin:trigger", force ? { force: true } : {});
   },
 
-  sendReaction(emoji: string): void {
-    socket?.emit("reaction:send", { emoji });
+  sendReaction(emoji: string, x?: number): void {
+    socket?.emit("reaction:send", x === undefined ? { emoji } : { emoji, x });
   },
 
   resetSpinState(): void {

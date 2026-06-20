@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { REACTION_EMOJIS, reactionLaneFor } from "../reactionLanes";
+import { laneFromClientX, REACTION_EMOJIS, reactionLaneFor } from "../reactionLanes";
 
 describe("reactionLaneFor", () => {
   it("returns a stable lane for each known emoji in the bar", () => {
@@ -40,5 +40,23 @@ describe("reactionLaneFor", () => {
   it("gives each emoji in the bar a distinct lane (no overlaps)", () => {
     const lanes = new Set(REACTION_EMOJIS.map((e) => reactionLaneFor(e)));
     expect(lanes.size).toBe(REACTION_EMOJIS.length);
+  });
+});
+
+describe("laneFromClientX", () => {
+  it("maps a centred tap to x≈0.5 and clamps the edges", () => {
+    // So a button tapped dead-centre flies up the middle; edge taps clamp in.
+    expect(laneFromClientX(200, 400)).toBeCloseTo(0.5, 5);
+    expect(laneFromClientX(0, 400)).toBe(0);
+    expect(laneFromClientX(400, 400)).toBe(1);
+  });
+
+  it("inverts FlyingReactions' left:x*90+5 mapping at centre", () => {
+    const x = laneFromClientX(0.5 * 400, 400);
+    expect(x * 90 + 5).toBeCloseTo(50, 5); // 50% tap → 50% render
+  });
+
+  it("is safe when the viewport width is unknown (0)", () => {
+    expect(laneFromClientX(123, 0)).toBe(0.5);
   });
 });

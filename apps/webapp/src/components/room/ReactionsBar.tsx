@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { REACTION_EMOJIS } from "@/features/rooms/reactionLanes";
+import { laneFromClientX, REACTION_EMOJIS } from "@/features/rooms/reactionLanes";
 import { lastEmoji } from "@/features/wheel/emoji";
 import { cn } from "@/lib/cn";
 import { haptics } from "@/lib/haptics";
@@ -39,18 +39,22 @@ export function ReactionsBar({ className }: { className?: string }): JSX.Element
   const [custom, setCustom] = useState<string[]>(loadCustom);
   const pickerRef = useRef<HTMLInputElement>(null);
 
-  const fire = (emoji: string): void => {
+  // Fire a reaction that flies up from the tapped element's actual position
+  // (so custom emojis fly from THEIR button, not a hashed guess).
+  const fire = (emoji: string, origin: HTMLElement): void => {
+    const rect = origin.getBoundingClientRect();
+    const x = laneFromClientX(rect.left + rect.width / 2, window.innerWidth);
     haptics.light();
-    sendReaction(emoji);
+    sendReaction(emoji, x);
   };
 
   // The OS emoji keyboard appends into the hidden input; keep only the most
   // recent emoji (reject plain text), send it, remember it, then reset.
-  const onPick = (raw: string): void => {
+  const onPick = (raw: string, origin: HTMLElement): void => {
     const emoji = lastEmoji(raw);
     if (pickerRef.current !== null) pickerRef.current.value = "";
     if (emoji === undefined) return;
-    fire(emoji);
+    fire(emoji, origin);
     setCustom((prev) => {
       const next = [emoji, ...prev.filter((e) => e !== emoji)].slice(0, MAX_CUSTOM);
       saveCustom(next);
@@ -75,8 +79,8 @@ export function ReactionsBar({ className }: { className?: string }): JSX.Element
           key={emoji}
           type="button"
           aria-label={t("reactions.aria_label", { emoji })}
-          onClick={() => {
-            fire(emoji);
+          onClick={(e) => {
+            fire(emoji, e.currentTarget);
           }}
           className="ds-tactile w-11 h-11 inline-flex items-center justify-center text-2xl rounded-full active:bg-surface-light dark:active:bg-surface-dark"
         >
@@ -99,7 +103,7 @@ export function ReactionsBar({ className }: { className?: string }): JSX.Element
           aria-hidden
           className="absolute inset-0 w-full h-full opacity-0 caret-transparent"
           onChange={(e) => {
-            onPick(e.target.value);
+            onPick(e.target.value, e.currentTarget);
           }}
         />
       </label>

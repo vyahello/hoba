@@ -35,3 +35,15 @@ function hashedLane(emoji: string): number {
   for (const ch of emoji) h = (h * 31 + (ch.codePointAt(0) ?? 0)) >>> 0;
   return 0.15 + (h % 1000) / 1000 * 0.7; // 0.15 … 0.85
 }
+
+/**
+ * The lane value for a flying emoji so it starts from a tapped button at
+ * screen `centerX` (px) within a viewport of `viewportWidth` (px). Inverts
+ * `FlyingReactions`' `left: x*90+5` mapping, so x=0.5 ⇒ screen-centre. Used so
+ * custom reactions (whose bar position isn't a fixed lane) fly from their
+ * actual button instead of a hashed guess.
+ */
+export function laneFromClientX(centerX: number, viewportWidth: number): number {
+  const f = viewportWidth > 0 ? centerX / viewportWidth : 0.5;
+  return Math.max(0, Math.min(1, (f * 100 - 5) / 90));
+}

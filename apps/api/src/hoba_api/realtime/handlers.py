@@ -985,6 +985,13 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
         emoji = (data or {}).get("emoji", "")
         if not isinstance(emoji, str) or not emoji or len(emoji) > 16:
             return
+        # Cosmetic horizontal lane [0,1] = where the sender's tapped emoji
+        # button sits, so the flying emoji starts from it (purely visual; not
+        # trusted for any state). Clamp defensively; omit if absent/invalid.
+        x_raw = (data or {}).get("x")
+        x: float | None = None
+        if isinstance(x_raw, (int, float)) and not isinstance(x_raw, bool):
+            x = max(0.0, min(1.0, float(x_raw)))
         allowed = await rate_limit_take(
             f"react:{user_id}",
             max_in_window=REACTIONS_PER_WINDOW,
@@ -993,13 +1000,16 @@ def register_handlers(sio: socketio.AsyncServer) -> None:
         if not allowed:
             await sio.emit("error", {"code": "rate_limited"}, to=sid, namespace=NAMESPACE)
             return
+        payload: dict[str, str | int | float] = {
+            "emoji": emoji,
+            "user_id": user_id,
+            "at": datetime.now(UTC).isoformat(),
+        }
+        if x is not None:
+            payload["x"] = x
         await sio.emit(
             "reaction:received",
-            {
-                "emoji": emoji,
-                "user_id": user_id,
-                "at": datetime.now(UTC).isoformat(),
-            },
+            payload,
             room=room_code,
             namespace=NAMESPACE,
         )

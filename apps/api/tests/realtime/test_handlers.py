@@ -620,6 +620,30 @@ async def test_reaction_send_broadcasts_to_room(
 
 
 @pytest.mark.asyncio
+async def test_reaction_send_passes_and_clamps_lane(
+    sio: FakeSocketIO, db: Any,
+) -> None:
+    host = await upsert_from_telegram(db, _tg_user_for_handlers(user_id=80))
+    await db.commit()
+    code = await _create_room(db, host_id=host.id)
+
+    await _connect(sio, "sid-x", user_id=80)
+    await sio.call("room:join", "sid-x", {"code": code})
+    sio.emitted.clear()
+
+    await sio.call("reaction:send", "sid-x", {"emoji": "🔥", "x": 0.42})  # in range
+    await sio.call("reaction:send", "sid-x", {"emoji": "🔥", "x": 9.0})  # clamps to 1
+    await sio.call("reaction:send", "sid-x", {"emoji": "🔥", "x": True})  # bool → omit
+    await sio.call("reaction:send", "sid-x", {"emoji": "🔥"})  # absent → omit
+
+    evs = sio.events_named("reaction:received")
+    assert evs[0][1]["x"] == 0.42
+    assert evs[1][1]["x"] == 1.0
+    assert "x" not in evs[2][1]
+    assert "x" not in evs[3][1]
+
+
+@pytest.mark.asyncio
 async def test_reaction_send_rate_limited_at_eleventh_in_window(
     sio: FakeSocketIO, db: Any,
 ) -> None:
