@@ -129,6 +129,10 @@
       "earthquake": {
         "title": "Earthquake",
         "desc": "The wheel convulses, then breaks loose into the spin."
+      },
+      "fake_out": {
+        "title": "Fake-out",
+        "desc": "It 'stops' on one — then sneaks on to another."
       }
     }
   },

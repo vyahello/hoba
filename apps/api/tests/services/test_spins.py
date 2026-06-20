@@ -348,6 +348,33 @@ async def test_trigger_spin_chaos_nudge_changes_result_and_records_pre_angle(
     assert 0 <= segment_under_pointer(spin.final_angle_deg, 4) < 4
 
 
+async def test_trigger_spin_chaos_fake_out_records_decoy_stop(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Force "fake_out". The real result stands; a decoy stop angle a couple
+    # sectors short rides out for the client's settle → pause → creep gag, and
+    # the decoy must point at a DIFFERENT segment than the winner.
+    from hoba_api.modes.registry import engine_for
+
+    monkeypatch.setattr(engine_for("chaos"), "_rng", _chaos_roll("fake_out"))
+    host_id = await _make_user(db, tg_id=611)
+    room = await create_room(
+        db, host_id=host_id, question_text="Q?", segments=_drafts(4),
+        spin_policy="anyone", game_mode="chaos",
+    )
+    await db.commit()
+    spin = await trigger_spin(db, room=room, user_id=host_id)
+    await db.commit()
+    effects = spin.mode_state_snapshot["mode_effects"]
+    assert effects["chaos_event"] == "fake_out"
+    decoy_angle = effects["fake_stop_angle"]
+    # The decoy is reached first (less rotation) and sits on another segment.
+    assert decoy_angle < spin.final_angle_deg
+    winner_idx = segment_under_pointer(spin.final_angle_deg, 4)
+    decoy_idx = segment_under_pointer(decoy_angle, 4)
+    assert decoy_idx != winner_idx
+
+
 async def test_trigger_spin_chaos_slow_burn_trims_turns(
     db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -178,6 +178,15 @@ def test_chaos_earthquake_is_a_plain_spin() -> None:
     assert d.segments == segs
 
 
+def test_chaos_fake_out_is_named_by_engine() -> None:
+    # The engine only names it; the decoy stop angle is the service's job.
+    segs = [_seg(1, 0), _seg(2, 1)]
+    d = ChaosEngine(rng=_seq_rng([_roll("fake_out")])).on_spin_request(_ctx(segs))
+    assert d.effects == {"chaos_event": "fake_out"}
+    assert d.duration_multiplier == 1.0
+    assert d.segments == segs
+
+
 def test_chaos_never_repeats_last_event() -> None:
     # Whatever the previous event, none of many rolls may reproduce it.
     segs = [_seg(1, 0), _seg(2, 1), _seg(3, 2)]

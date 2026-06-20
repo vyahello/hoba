@@ -176,6 +176,14 @@ async def trigger_spin(
         # `direction` segments forward we rotate by -direction * sector.
         result = replace(result, final_angle_deg=pre_angle - direction * sector_deg)
         effects["nudge_from_angle"] = pre_angle
+    elif chaos_event == "fake_out":
+        # Keep the real result, but hand the client a decoy stop a couple
+        # sectors short of it (a different segment). The client settles on the
+        # decoy, pauses, then creeps the rest of the way to the real winner.
+        # Smaller angle = pointer sits `decoy` segments forward, so the decoy
+        # is always a different sector (decoy = 2 unless too few segments).
+        decoy = 2 if len(spin_segments) >= 4 else 1
+        effects["fake_stop_angle"] = result.final_angle_deg - decoy * sector_deg
     elif chaos_event == "blind_pointer":
         # Normal spin (angle unchanged), but the pointer is hidden and pops up
         # at a random screen angle on stop — whatever sits there is the result.

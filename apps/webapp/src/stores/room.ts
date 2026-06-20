@@ -38,6 +38,8 @@ export interface SpinModeEffects {
   nudge_from_angle?: number;
   /** blind_pointer only: screen angle (deg) the pointer reappears at on stop. */
   pointer_deg?: number;
+  /** fake_out only: the decoy stop angle (settles here, pauses, then creeps on). */
+  fake_stop_angle?: number;
   dramatic?: boolean;
 }
 

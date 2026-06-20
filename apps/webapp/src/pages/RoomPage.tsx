@@ -98,6 +98,9 @@ const NUDGE_SHAKE_MS = 750;
 const NUDGE_CREEP_MS = 900;
 // earthquake: a violent tremor before the wheel breaks loose into the spin.
 const QUAKE_SHAKE_MS = 950;
+// fake_out: settle on a decoy, hold so everyone reacts, then creep to the real one.
+const FAKE_OUT_HOLD_MS = 800;
+const FAKE_OUT_CREEP_MS = 950;
 
 export function RoomPage(): JSX.Element {
   const { code = "" } = useParams<{ code: string }>();
@@ -400,6 +403,18 @@ export function RoomPage(): JSX.Element {
         } else {
           await sleep(baseDur);
         }
+        if (cancelled) return;
+      } else if (event === "fake_out") {
+        // Settle on the decoy stop (a couple sectors short), hold so everyone
+        // believes it, then creep the rest of the way to the real winner.
+        const decoy = fx?.fake_stop_angle ?? finalAngle;
+        setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: decoy, durationMs: baseDur, seed: freshSeed() });
+        await sleep(baseDur);
+        if (cancelled) return;
+        await sleep(FAKE_OUT_HOLD_MS);
+        if (cancelled) return;
+        setPhaseSpin({ resultSegmentIndex: 0, finalAngleDeg: finalAngle, durationMs: FAKE_OUT_CREEP_MS, seed: freshSeed() });
+        await sleep(FAKE_OUT_CREEP_MS);
         if (cancelled) return;
       } else if (event === "earthquake") {
         // Violent tremor while the wheel is still, then it breaks loose and

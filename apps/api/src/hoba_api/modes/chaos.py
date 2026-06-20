@@ -47,6 +47,7 @@ CHAOS_EVENTS: tuple[str, ...] = (
     "tiny_spin",
     "shuffle",
     "earthquake",
+    "fake_out",
 )
 
 
@@ -137,6 +138,14 @@ class ChaosEngine:
             return SpinDecision(
                 segments=ctx.segments,
                 effects={"chaos_event": "roaming_pointer"},
+            )
+        if event == "fake_out":
+            # Normal spin + result; the service computes a decoy stop a couple
+            # sectors short so the client can "settle" there, pause, then creep
+            # on to the real winner. Engine only names it.
+            return SpinDecision(
+                segments=ctx.segments,
+                effects={"chaos_event": "fake_out"},
             )
         if event == "earthquake":
             # A normal forward spin, but the client makes the wheel convulse
