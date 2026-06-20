@@ -123,6 +123,15 @@ function shuffledIds(ids: number[]): number[] {
   return out;
 }
 
+/** Confetti palette biased to the winning segment's colour (dominant) + an
+ * accent + a white sparkle, so the burst matches what landed. `undefined`
+ * colour seed → undefined (fireConfetti falls back to the brand palette). */
+function winnerColors(colorSeed: number | undefined): string[] | undefined {
+  if (colorSeed === undefined) return undefined;
+  const c = WHEEL_PALETTE[colorSeed % WHEEL_PALETTE.length] ?? "#7C5CFF";
+  return [c, c, c, "#FFB84D", "#FFFFFF"];
+}
+
 export function RoomPage(): JSX.Element {
   const { code = "" } = useParams<{ code: string }>();
   const navigate = useNavigate();
@@ -587,6 +596,7 @@ export function RoomPage(): JSX.Element {
 
       haptics.heavy();
       haptics.success();
+      audio.playThunk(); // the satisfying landing impact
       audio.play("result_chime");
       setWheelState("settled");
       setSpinLanded(true); // wheel has visually landed → reveal result/winner
@@ -596,7 +606,10 @@ export function RoomPage(): JSX.Element {
       audio.play("hoba_pop");
       // Chaos: no per-spin confetti — a hit shows the "Hoba! {option}" banner
       // instead, and the win gets its own celebration (effect below).
-      if (!isElimination && !isChaos) fireConfetti();
+      if (!isElimination && !isChaos) {
+        const winSeg = snapshot?.active_question?.segments.find((s) => s.id === resultSegId);
+        fireConfetti({ colors: winnerColors(winSeg?.color_seed) }); // in the winner's colour
+      }
       setRevealed(true);
     }
     void run();
@@ -622,11 +635,11 @@ export function RoomPage(): JSX.Element {
 
   // Triumphant winner celebration: fanfare + confetti pop + visual burst.
   // Shared by every "someone won" moment so they all feel like a payoff.
-  const celebrateWinner = useCallback((): void => {
+  const celebrateWinner = useCallback((colorSeed?: number): void => {
     audio.play("winner_fanfare");
     audio.play("confetti_burst");
     haptics.success();
-    fireConfetti();
+    fireConfetti({ colors: winnerColors(colorSeed) });
   }, []);
 
   // Crown the survivor: celebrate once when the round ends — but only after
@@ -634,21 +647,25 @@ export function RoomPage(): JSX.Element {
   // never beat the final spin.
   useEffect(() => {
     if (!(roundOver && spinLanded)) return;
-    celebrateWinner();
-  }, [roundOver, spinLanded, celebrateWinner]);
+    const survivor = snapshot?.active_question?.segments.find((s) => !s.is_eliminated);
+    celebrateWinner(survivor?.color_seed);
+  }, [roundOver, spinLanded, celebrateWinner, snapshot]);
 
   // Same celebration when a best-of-N round finalizes a winner.
   useEffect(() => {
     if (!(bonOver && spinLanded)) return;
-    celebrateWinner();
-  }, [bonOver, spinLanded, celebrateWinner]);
+    const seg = snapshot?.active_question?.segments.find((s) => s.id === bonWinnerId);
+    celebrateWinner(seg?.color_seed);
+  }, [bonOver, spinLanded, celebrateWinner, snapshot, bonWinnerId]);
 
   // Chaos has no per-spin confetti, so the bet-race winner gets its own
   // celebration on the winner popup. (Punishment keeps its per-spin burst.)
   useEffect(() => {
     if (!(punishOver && isChaos && spinLanded)) return;
-    celebrateWinner();
-  }, [punishOver, isChaos, spinLanded, celebrateWinner]);
+    const betId = snapshot?.room.punishment_bets?.[String(punishWinnerId)];
+    const seg = snapshot?.active_question?.segments.find((s) => s.id === betId);
+    celebrateWinner(seg?.color_seed);
+  }, [punishOver, isChaos, spinLanded, celebrateWinner, snapshot, punishWinnerId]);
 
   // Rigged Mode 🎭 reveal: when the host pulls the trigger, everyone's snapshot
   // un-redacts (rigged_revealed → true). Play the full-screen reveal once.
@@ -1345,21 +1362,34 @@ export function RoomPage(): JSX.Element {
             <div className="flex flex-wrap justify-center gap-2 text-xs">
               {punishBettors.map((uid) => {
                 const betSeg = snapshot.room.punishment_bets?.[String(uid)];
-                // Highlight the viewer's OWN row so they always know which
-                // option is theirs throughout the game.
+                // Highlight the viewer's OWN row (so they always know which
+                // option is theirs) and ring the row whose turn it is now.
                 const isMe = uid === snapshot.me_user_id;
+                const isTurn = uid === punishCurrentTurn;
+                const count = matchCount(snapshot, uid);
                 return (
                   <span
                     key={uid}
-                    className={`rounded-full px-2.5 py-1 ${
+                    className={cn(
+                      "rounded-full px-2.5 py-1 transition-colors",
                       isMe
-                        ? "bg-brand-primary text-white font-semibold ring-2 ring-brand-primary/40"
-                        : "bg-ds-surface-2 text-ds-text"
-                    }`}
+                        ? "bg-brand-primary text-white font-semibold"
+                        : "bg-ds-surface-2 text-ds-text",
+                      isTurn && "ring-2 ring-brand-accent", // ← whose turn now
+                    )}
                   >
                     {isMe ? `★ ${t("room:punishment.you")}` : nameFor(uid)}
                     {betSeg !== undefined ? ` (${segLabel(betSeg)})` : ""}{" "}
-                    {matchCount(snapshot, uid)}/{matchesToWin(snapshot)}
+                    {/* Count bumps (re-mounts on change) when a match scores. */}
+                    <motion.span
+                      key={count}
+                      initial={{ scale: 1.7 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", damping: 11, stiffness: 380 }}
+                      className="inline-block font-bold"
+                    >
+                      {count}/{matchesToWin(snapshot)}
+                    </motion.span>
                   </span>
                 );
               })}

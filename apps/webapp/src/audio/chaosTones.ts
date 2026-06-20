@@ -161,6 +161,42 @@ export function playTickTone(ctx: AudioContext, p01: number, master: number): vo
   o.stop(t0 + 0.05);
 }
 
+/**
+ * A satisfying "thunk" — the wheel's stopper catching as it lands. A fast
+ * pitch-drop body + a click transient. Played once per spin at the settle.
+ * Modest + direct. No-op at zero volume.
+ */
+export function playThunkTone(ctx: AudioContext, master: number): void {
+  const m = Math.max(0, Math.min(1, master));
+  if (m <= 0) return;
+  const t0 = ctx.currentTime;
+  // Impact body: pitch drops fast.
+  const o = ctx.createOscillator();
+  o.type = "triangle";
+  o.frequency.setValueAtTime(260, t0);
+  o.frequency.exponentialRampToValueAtTime(80, t0 + 0.13);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.0001, t0);
+  og.gain.linearRampToValueAtTime(0.34 * m, t0 + 0.005);
+  og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
+  o.connect(og).connect(ctx.destination);
+  o.start(t0);
+  o.stop(t0 + 0.22);
+  // Click transient for the "tk".
+  const src = ctx.createBufferSource();
+  src.buffer = whiteNoise(ctx);
+  const bp = ctx.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.frequency.setValueAtTime(1800, t0);
+  bp.Q.setValueAtTime(1.5, t0);
+  const ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.2 * m, t0);
+  ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.04);
+  src.connect(bp).connect(ng).connect(ctx.destination);
+  src.start(t0);
+  src.stop(t0 + 0.06);
+}
+
 /** Schedule the signature sound for `event` on `ctx`. Unknown names get a
  *  neutral blip. `master` is the global SFX volume (0…1). */
 export function playChaosTone(ctx: AudioContext, event: string, master: number): void {

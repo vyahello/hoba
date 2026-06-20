@@ -10,7 +10,7 @@
 
 import { Howl, Howler } from "howler";
 
-import { playChaosTone, playTickTone } from "./chaosTones";
+import { playChaosTone, playThunkTone, playTickTone } from "./chaosTones";
 import { AUDIO_MANIFEST, type AudioName, MUSIC_TRACKS, MUSIC_VOLUME } from "./manifest";
 
 const DEFAULT_MASTER_VOLUME = 0.6;
@@ -153,6 +153,20 @@ class AudioManager {
     try {
       if (ctx.state !== "running") void ctx.resume();
       playTickTone(ctx, progress, this.master);
+    } catch {
+      /* synthesis failed (unsupported) — stay silent rather than crash */
+    }
+  }
+
+  /** A "thunk" impact when the wheel lands. Synthesised; silent no-op if Web
+   *  Audio isn't up. Respects the Sound setting. */
+  playThunk(): void {
+    if (!this.enabled) return;
+    const ctx = Howler.ctx as AudioContext | null | undefined;
+    if (ctx === null || ctx === undefined) return;
+    try {
+      if (ctx.state !== "running") void ctx.resume();
+      playThunkTone(ctx, this.master);
     } catch {
       /* synthesis failed (unsupported) — stay silent rather than crash */
     }
