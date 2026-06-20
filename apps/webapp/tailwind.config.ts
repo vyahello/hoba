@@ -168,6 +168,12 @@ export default {
           "0%": { backgroundPosition: "0 0" },
           "100%": { backgroundPosition: "0 16px" },
         },
+        // Chaos earthquake: a red "danger" vignette pulsing over the screen.
+        "danger-flash": {
+          "0%, 100%": { opacity: "0" },
+          "20%, 60%": { opacity: "1" },
+          "40%, 80%": { opacity: "0.45" },
+        },
       },
       animation: {
         "aurora-drift": "aurora-drift 30s ease-in-out infinite",
@@ -179,6 +185,7 @@ export default {
         "screen-quake": "screen-quake 950ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both",
         "glitch-jitter": "glitch-jitter 320ms steps(2, end) infinite",
         "glitch-scan": "glitch-scan 220ms linear infinite",
+        "danger-flash": "danger-flash 950ms ease-in-out",
       },
       backgroundImage: {
         "aurora-light":

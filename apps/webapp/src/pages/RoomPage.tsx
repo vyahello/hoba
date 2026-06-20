@@ -572,6 +572,15 @@ export function RoomPage(): JSX.Element {
         // normal / slow_burn / reverse / swap / shuffle — one server-driven
         // spin (phaseSpin stays null → the Wheel animates the server result;
         // shuffle's reordered segments come through `segment_order`).
+        // A quick anticipation squash → pop as it breaks loose for that bit of
+        // game-feel (skipped for the deliberately-gentle slow_burn).
+        if (wheelScope.current !== null && event !== "slow_burn") {
+          void animateWheel(
+            wheelScope.current,
+            { scale: [1, 0.94, 1.03, 1] },
+            { duration: 0.4, ease: "easeOut" },
+          );
+        }
         await sleep(baseDur);
         if (cancelled) return;
       }
@@ -956,6 +965,15 @@ export function RoomPage(): JSX.Element {
 
   return (
     <>
+      {/* Chaos earthquake: a red "danger" vignette pulsing over the whole
+          screen while the room shakes — sells the quake far harder. */}
+      {quaking ? (
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 z-40 animate-danger-flash"
+          style={{ boxShadow: "inset 0 0 110px 24px rgba(220,38,38,0.6)" }}
+        />
+      ) : null}
       <header className="ds-glass-header pl-4 pr-5 py-3 pt-safe flex items-center gap-3">
         <IconButton
           aria-label={t("common:actions.back")}

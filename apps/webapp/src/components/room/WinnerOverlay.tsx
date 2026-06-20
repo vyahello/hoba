@@ -59,9 +59,18 @@ export function WinnerOverlay({
       >
         {emoji ? `${emoji} ` : ""}🏆
       </motion.span>
-      <h2 className="font-display font-extrabold text-3xl text-brand-accent px-4">
-        {title}
-      </h2>
+      {/* Stamped banner: the headline slams in big → settles, like a rubber
+          stamp. Filled accent + ink border + hard shadow = on-brand neubrutal. */}
+      <motion.div
+        initial={{ scale: 1.7, opacity: 0, rotate: -7 }}
+        animate={{ scale: 1, opacity: 1, rotate: -2 }}
+        transition={{ delay: 0.3, type: "spring", damping: 10, stiffness: 360 }}
+        className="origin-center"
+      >
+        <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-ds-text bg-brand-accent border-[3px] border-ds-border shadow-brutal rounded-2xl px-5 py-2">
+          {title}
+        </h2>
+      </motion.div>
       {isHost ? (
         <Button variant="primary" size="lg" className="mt-2" onClick={onAction}>
           {actionLabel}
