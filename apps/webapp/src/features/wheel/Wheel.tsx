@@ -586,6 +586,19 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
         </g>
       </svg>
 
+      {/* "Your turn" affordance: a radar ping around the hub while it's idle
+          and this player may spin (canSpin only when onSpinClick is wired,
+          i.e. it really is their move). CSS animation → respects
+          prefers-reduced-motion via the global reduce rule. HUB_R*2/400 of the
+          square wheel = the hub diameter. */}
+      {canSpin && state === "idle" ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full animate-hub-ping"
+          style={{ width: `${(HUB_R * 2 * 100) / 400}%`, height: `${(HUB_R * 2 * 100) / 400}%` }}
+        />
+      ) : null}
+
       {/* The actual spin control: a real, focusable, screen-reader-announced
           button overlaid on the hub. */}
       {canSpin ? (

@@ -174,6 +174,11 @@ export default {
           "20%, 60%": { opacity: "1" },
           "40%, 80%": { opacity: "0.45" },
         },
+        // SPIN hub "your turn" radar ping — an expanding ring inviting the tap.
+        "hub-ping": {
+          "0%": { boxShadow: "0 0 0 0 rgba(124, 92, 255, 0.5)" },
+          "70%, 100%": { boxShadow: "0 0 0 18px rgba(124, 92, 255, 0)" },
+        },
       },
       animation: {
         "aurora-drift": "aurora-drift 30s ease-in-out infinite",
@@ -186,6 +191,7 @@ export default {
         "glitch-jitter": "glitch-jitter 320ms steps(2, end) infinite",
         "glitch-scan": "glitch-scan 220ms linear infinite",
         "danger-flash": "danger-flash 950ms ease-in-out",
+        "hub-ping": "hub-ping 1.8s ease-out infinite",
       },
       backgroundImage: {
         "aurora-light":
