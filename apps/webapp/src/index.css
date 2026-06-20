@@ -153,6 +153,51 @@
   .ds-tap-target {
     @apply min-w-[44px] min-h-[44px] inline-flex items-center justify-center;
   }
+
+  /* Neubrutalist range slider: bold ink-bordered track + chunky brand thumb.
+     Native range pseudo-elements can't be Tailwind-styled, so they live here.
+     No box-shadow on the thumb (it moves on drag) — the thick border carries
+     the look, staying on the GPU-transform-only budget. */
+  .ds-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 30px;
+    background: transparent;
+    cursor: pointer;
+  }
+  .ds-range::-webkit-slider-runnable-track {
+    height: 12px;
+    border-radius: 999px;
+    background: var(--ds-surface-2);
+    border: 3px solid var(--ds-border);
+  }
+  .ds-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 26px;
+    width: 26px;
+    margin-top: -10px;
+    border-radius: 999px;
+    background: #7c5cff;
+    border: 3px solid var(--ds-border);
+  }
+  .ds-range:disabled {
+    opacity: 0.5;
+  }
+  .ds-range::-moz-range-track {
+    height: 12px;
+    border-radius: 999px;
+    background: var(--ds-surface-2);
+    border: 3px solid var(--ds-border);
+  }
+  .ds-range::-moz-range-thumb {
+    height: 26px;
+    width: 26px;
+    border-radius: 999px;
+    background: #7c5cff;
+    border: 3px solid var(--ds-border);
+  }
 }
 
 @layer utilities {

@@ -60,8 +60,49 @@ export function RigEditorSheet({ open, onClose, snapshot }: RigEditorSheetProps)
     }
   }
 
+  function handleReveal(): void {
+    setRevealing(true);
+    haptics.heavy();
+    void api
+      .revealRig(code)
+      .then((updated) => {
+        setSnapshot(updated);
+        onClose(); // let the full-screen reveal play on the room
+      })
+      .catch((exc) => {
+        const errCode = exc instanceof ApiError ? exc.code : "save_failed";
+        const localized = t(`room:errors.${errCode}`);
+        toast({
+          title: localized === `room:errors.${errCode}`
+            ? t("room:rig.save_failed")
+            : localized,
+          intent: "error",
+        });
+      })
+      .finally(() => {
+        setRevealing(false);
+      });
+  }
+
   return (
-    <Sheet open={open} onClose={onClose} title={t("room:rig.title")}>
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={t("room:rig.title")}
+      footer={
+        isRigged && !revealed ? (
+          <Button
+            variant="accent"
+            size="lg"
+            fullWidth
+            loading={revealing}
+            onClick={handleReveal}
+          >
+            {t("room:rig.reveal")}
+          </Button>
+        ) : undefined
+      }
+    >
       <p className="text-sm text-ds-text-muted mb-3">
         {t("room:rig.hint")}
       </p>
@@ -69,12 +110,15 @@ export function RigEditorSheet({ open, onClose, snapshot }: RigEditorSheetProps)
         {segments.map((s) => {
           const value = weights[s.id] ?? s.weight;
           return (
-            <div key={s.id} className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-sm font-medium text-ds-text">
-                <span className="truncate">
+            <div
+              key={s.id}
+              className="flex flex-col gap-2 rounded-lg bg-ds-surface-2 border-[3px] border-ds-border p-3"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate font-display font-bold text-ds-text">
                   {s.emoji ? `${s.emoji} ` : ""}{s.label}
                 </span>
-                <span className="tabular-nums text-ds-text-muted">
+                <span className="shrink-0 tabular-nums font-display font-extrabold text-sm bg-brand-primary text-white border-2 border-ds-border rounded-md px-2 py-0.5 min-w-[2.25rem] text-center">
                   {value}
                 </span>
               </div>
@@ -95,7 +139,7 @@ export function RigEditorSheet({ open, onClose, snapshot }: RigEditorSheetProps)
                 onBlur={() => {
                   void commit();
                 }}
-                className="w-full accent-brand-primary h-9"
+                className="ds-range"
               />
             </div>
           );
@@ -104,40 +148,6 @@ export function RigEditorSheet({ open, onClose, snapshot }: RigEditorSheetProps)
       <p className="text-xs text-ds-text-muted mt-3">
         {t("room:rig.footer")}
       </p>
-      {isRigged && !revealed ? (
-        <Button
-          variant="accent"
-          size="lg"
-          fullWidth
-          className="mt-4"
-          loading={revealing}
-          onClick={() => {
-            setRevealing(true);
-            haptics.heavy();
-            void api
-              .revealRig(code)
-              .then((updated) => {
-                setSnapshot(updated);
-                onClose(); // let the full-screen reveal play on the room
-              })
-              .catch((exc) => {
-                const errCode = exc instanceof ApiError ? exc.code : "save_failed";
-                const localized = t(`room:errors.${errCode}`);
-                toast({
-                  title: localized === `room:errors.${errCode}`
-                    ? t("room:rig.save_failed")
-                    : localized,
-                  intent: "error",
-                });
-              })
-              .finally(() => {
-                setRevealing(false);
-              });
-          }}
-        >
-          {t("room:rig.reveal")}
-        </Button>
-      ) : null}
     </Sheet>
   );
 }
