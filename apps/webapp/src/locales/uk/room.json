@@ -186,6 +186,7 @@
   },
   "reactions": {
     "aria_label": "Реакція {emoji}",
+    "aria_label_custom": "Реакція {emoji} — утримай, щоб прибрати",
     "custom": "Обрати свою емодзі"
   },
   "errors": {

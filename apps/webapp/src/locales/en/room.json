@@ -186,6 +186,7 @@
   },
   "reactions": {
     "aria_label": "React {emoji}",
+    "aria_label_custom": "React {emoji} — hold to remove",
     "custom": "Pick your own emoji"
   },
   "errors": {

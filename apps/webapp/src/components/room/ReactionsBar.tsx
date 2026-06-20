@@ -38,6 +38,33 @@ export function ReactionsBar({ className }: { className?: string }): JSX.Element
   // keyboard. The server already accepts any emoji — no whitelist.
   const [custom, setCustom] = useState<string[]>(loadCustom);
   const pickerRef = useRef<HTMLInputElement>(null);
+  // Long-press (custom emoji only) → remove it. `longPressed` suppresses the
+  // tap-to-react that would otherwise fire on release.
+  const longPressTimer = useRef<number | null>(null);
+  const longPressed = useRef(false);
+
+  const removeCustom = (emoji: string): void => {
+    haptics.warning();
+    setCustom((prev) => {
+      const next = prev.filter((e) => e !== emoji);
+      saveCustom(next);
+      return next;
+    });
+  };
+  const cancelLongPress = (): void => {
+    if (longPressTimer.current !== null) {
+      window.clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+  const startLongPress = (emoji: string): void => {
+    longPressed.current = false;
+    cancelLongPress();
+    longPressTimer.current = window.setTimeout(() => {
+      longPressed.current = true;
+      removeCustom(emoji);
+    }, 550);
+  };
 
   // Fire a reaction that flies up from the tapped element's actual position
   // (so custom emojis fly from THEIR button, not a hashed guess).
@@ -74,15 +101,34 @@ export function ReactionsBar({ className }: { className?: string }): JSX.Element
         className,
       )}
     >
-      {[...REACTION_EMOJIS, ...extraCustom].map((emoji) => (
+      {[
+        ...REACTION_EMOJIS.map((emoji) => ({ emoji, isCustom: false })),
+        ...extraCustom.map((emoji) => ({ emoji, isCustom: true })),
+      ].map(({ emoji, isCustom }) => (
         <button
           key={emoji}
           type="button"
-          aria-label={t("reactions.aria_label", { emoji })}
+          aria-label={
+            isCustom
+              ? t("reactions.aria_label_custom", { emoji })
+              : t("reactions.aria_label", { emoji })
+          }
           onClick={(e) => {
+            // A long-press just removed it — don't also fire a reaction.
+            if (isCustom && longPressed.current) {
+              longPressed.current = false;
+              return;
+            }
             fire(emoji, e.currentTarget);
           }}
-          className="ds-tactile w-11 h-11 inline-flex items-center justify-center text-2xl rounded-full active:bg-surface-light dark:active:bg-surface-dark"
+          onPointerDown={() => {
+            if (isCustom) startLongPress(emoji);
+          }}
+          onPointerUp={cancelLongPress}
+          onPointerLeave={cancelLongPress}
+          onPointerCancel={cancelLongPress}
+          style={{ WebkitTouchCallout: "none" }}
+          className="ds-tactile w-11 h-11 inline-flex items-center justify-center text-2xl rounded-full select-none active:bg-surface-light dark:active:bg-surface-dark"
         >
           {emoji}
         </button>
