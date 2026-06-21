@@ -329,7 +329,7 @@ bash scripts/deploy.sh --no-pull
 | `VPS_USER` | SSH user | `deploy` |
 | `VPS_SSH_KEY` | **private** key (PEM) whose public half is in that user's `~/.ssh/authorized_keys` | `-----BEGIN OPENSSH PRIVATE KEY-----…` |
 | `VPS_APP_DIR` | repo checkout dir on the VPS | `~/hoba` |
-| `REPO_SSH_URL` | *(optional)* clone URL if the dir needs initialising; defaults to `git@github.com:vyahello/hoba.git` | |
+| `REPO_SSH_URL` | *(optional)* clone URL if the dir needs initialising; defaults to this repo over SSH (`git@github.com:<owner>/<repo>.git`, derived from the `github.repository` context) | |
 
 **One-time VPS prereqs** (the workflow assumes these already exist):
 

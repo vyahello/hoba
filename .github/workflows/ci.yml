@@ -100,8 +100,11 @@ jobs:
             set -e
             APP_DIR="${{ secrets.VPS_APP_DIR }}"
             APP_DIR="${APP_DIR:-$HOME/hoba}"
+            # Default to this repo over SSH (deploy-key auth on the VPS);
+            # owner/name come from the github context, not a hardcode.
+            # Override with the REPO_SSH_URL secret to deploy a fork/mirror.
             REPO="${{ secrets.REPO_SSH_URL }}"
-            REPO="${REPO:-git@github.com:vyahello/hoba.git}"
+            REPO="${REPO:-git@github.com:${{ github.repository }}.git}"
             # Set up a git checkout in place (works for a fresh dir or a
             # pre-existing/rsynced one).
             if [ ! -d "$APP_DIR/.git" ]; then
