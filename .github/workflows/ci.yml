@@ -99,7 +99,7 @@ jobs:
           script: |
             set -e
             APP_DIR="${{ secrets.VPS_APP_DIR }}"
-            APP_DIR="${APP_DIR:-$HOME/_hoba}"
+            APP_DIR="${APP_DIR:-$HOME/hoba}"
             REPO="${{ secrets.REPO_SSH_URL }}"
             REPO="${REPO:-git@github.com:vyahello/hoba.git}"
             # Set up a git checkout in place (works for a fresh dir or a

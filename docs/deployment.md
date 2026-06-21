@@ -167,7 +167,7 @@ sudo certbot certonly --nginx -d hoba.<your-domain>
 #    `hoba.example.com` everywhere it appears — both `server_name` AND the
 #    two `ssl_certificate` paths — so the block points at the cert from
 #    step 2. (The template ships ACTIVE, not commented, cert lines.)
-sudo cp ~/_hoba/infra/nginx/hoba.conf /etc/nginx/sites-available/hoba
+sudo cp ~/hoba/infra/nginx/hoba.conf /etc/nginx/sites-available/hoba
 sudo sed -i 's/hoba\.example\.com/hoba.<your-domain>/g' /etc/nginx/sites-available/hoba
 sudo ln -s /etc/nginx/sites-available/hoba /etc/nginx/sites-enabled/hoba
 sudo nginx -t && sudo systemctl reload nginx
@@ -315,7 +315,7 @@ deploys so two never overlap.
 What the deploy step does on the box, as `${VPS_USER}`:
 
 ```bash
-cd "$VPS_APP_DIR"          # /home/cax/_hoba
+cd "$VPS_APP_DIR"          # e.g. ~/hoba
 git fetch --prune origin
 git reset --hard origin/main   # .env + data/ are gitignored → untouched
 bash scripts/deploy.sh --no-pull
@@ -325,10 +325,10 @@ bash scripts/deploy.sh --no-pull
 
 | Secret | Purpose | Example |
 | --- | --- | --- |
-| `VPS_HOST` | VPS hostname / IP | `hobagame.duckdns.org` |
-| `VPS_USER` | SSH user | `cax` |
+| `VPS_HOST` | VPS hostname / IP | `hoba.example.com` |
+| `VPS_USER` | SSH user | `deploy` |
 | `VPS_SSH_KEY` | **private** key (PEM) whose public half is in that user's `~/.ssh/authorized_keys` | `-----BEGIN OPENSSH PRIVATE KEY-----…` |
-| `VPS_APP_DIR` | repo checkout dir on the VPS | `/home/cax/_hoba` |
+| `VPS_APP_DIR` | repo checkout dir on the VPS | `~/hoba` |
 | `REPO_SSH_URL` | *(optional)* clone URL if the dir needs initialising; defaults to `git@github.com:vyahello/hoba.git` | |
 
 **One-time VPS prereqs** (the workflow assumes these already exist):
@@ -374,7 +374,7 @@ docker compose exec api python -m hoba_api.tasks.cleanup
 Suggested host crontab line (hourly):
 
 ```cron
-0 * * * * cd /home/cax/_hoba && docker compose -f compose.shared.yaml exec -T api python -m hoba_api.tasks.cleanup >> /var/log/hoba-cleanup.log 2>&1
+0 * * * * cd ~/hoba && docker compose -f compose.shared.yaml exec -T api python -m hoba_api.tasks.cleanup >> /var/log/hoba-cleanup.log 2>&1
 ```
 
 ### 8c. Who used the app — visitor / usage report
@@ -568,7 +568,7 @@ Expected: `proxy_pass http://127.0.0.1:8800;` for `/api/` and `/socket.io/` (`/o
 
 ```bash
 sudo cp /etc/nginx/sites-available/hoba{,.bak}   # back up the live file first
-sudo cp ~/_hoba/infra/nginx/hoba.conf /etc/nginx/sites-available/hoba
+sudo cp ~/hoba/infra/nginx/hoba.conf /etc/nginx/sites-available/hoba
 sudo sed -i 's/hoba\.example\.com/<your-domain>/g' /etc/nginx/sites-available/hoba
 sudo ln -sf /etc/nginx/sites-available/hoba /etc/nginx/sites-enabled/hoba
 sudo nginx -t && sudo systemctl reload nginx
