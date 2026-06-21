@@ -365,7 +365,7 @@ cat /home/kali/hoba/docs/soft-launch-invite.md
 
 - [ ] **Step 2: Check for confident drift**
 
-- botfather-setup.md: §8 short_name was aligned to `play` in Stage A item 15 (commit `0756782`). Verify no leftover `spin` short_name references. Verify the production URL matches `hobagame.duckdns.org`.
+- botfather-setup.md: §8 short_name was aligned to `play` in Stage A item 15 (commit `0756782`). Verify no leftover `spin` short_name references. Verify the production URL matches the deployed host.
 - privacy.md: was created 2026-05-27 for BotFather. Verify production URL + contact email match Stage C reality.
 - soft-launch-invite.md: invite copy. Verify production URL + bot handle.
 

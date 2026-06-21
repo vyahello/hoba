@@ -14,7 +14,7 @@ The full product + engineering specification is at **`docs/spec.md`**.
 >
 > **Open carry-overs (`docs/TODO.md`, all polish — none blocking launch):** make-public category picker; admin un-hide/review UI for reported wheels; Chaos animation-constant tuning + deferred Chaos events (Double-spin, Phantom-segment); Rigged reveal feel; the Stage G owner-only launch checklist.
 >
-> **Production live on `hobagame.duckdns.org`** (Hetzner shared VPS; host nginx TLS terminator; containers on `127.0.0.1:8800/5800/6800`; static-bundle webapp). Deploy via `./scripts/deploy.sh`; topology + recipes in `docs/deployment.md`.
+> **Production live on a shared VPS** (Hetzner; host nginx TLS terminator; containers on `127.0.0.1:8800/5800/6800`; static-bundle webapp). The prod host/user live in deploy secrets, not the repo. Deploy via `./scripts/deploy.sh`; topology + recipes in `docs/deployment.md`.
 >
 > **Full delivered-slice history (Phases 1–6, Stages A–G) is in [`docs/changelog.md`](docs/changelog.md).** Read it for the documented record instead of re-deriving from `git log`.
 
@@ -75,7 +75,7 @@ EN + UK only. Brand is locale-aware per spec §0 and rule 5 below — `Hoba!` in
 - **Backend:** Python 3.12 + FastAPI + aiogram 3 + SQLAlchemy 2.0 (async) + Alembic + python-socketio + Redis + structlog + pytest. Deps via `uv`.
 - **Frontend:** React 18 + Vite 5 + TypeScript 5 (strict) + Tailwind + Framer Motion + Zustand + @twa-dev/sdk + socket.io-client + react-i18next + Howler. Deps via `pnpm`.
 - **Persistence:** SQLite (default, `aiosqlite`) via `DATABASE_URL`. Postgres-ready (URL swap). Redis required from day 1.
-- **Infra:** Docker Compose. Caddy in dedicated-VPS prod profile (auto-TLS); shared-VPS deploys (current prod `hobagame.duckdns.org`) disable Caddy and use host nginx as TLS terminator via `compose.shared.yaml`. Dev tunnel via ngrok (developer-managed, not in compose; cloudflared had iPhone Safari reachability issues during Stage A).
+- **Infra:** Docker Compose. Caddy in dedicated-VPS prod profile (auto-TLS); shared-VPS deploys (current prod) disable Caddy and use host nginx as TLS terminator via `compose.shared.yaml`. Dev tunnel via ngrok (developer-managed, not in compose; cloudflared had iPhone Safari reachability issues during Stage A).
 
 ## Telegram bot identity
 

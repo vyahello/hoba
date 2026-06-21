@@ -581,7 +581,7 @@ sudo certbot certificates          # shows Certificate Name + Certificate Path
 sudo ls /etc/letsencrypt/live/      # the live dir name must match server_name
 ```
 
-The `server_name`, the cert directory, and the `-d` domain certbot issued must all be byte-identical (e.g. `hobagame.duckdns.org`, not `hoba.duckdns.org`). A mismatch either fails `nginx -t` (missing cert) or makes requests fall through to the wrong server block. The failed `nginx -t` short-circuits the `&& reload`, so the running server keeps serving the old config — fix the file before any restart, or the box goes down on next boot.
+The `server_name`, the cert directory, and the `-d` domain certbot issued must all be byte-identical (e.g. `hoba.example.com`, not `www.hoba.example.com`). A mismatch either fails `nginx -t` (missing cert) or makes requests fall through to the wrong server block. The failed `nginx -t` short-circuits the `&& reload`, so the running server keeps serving the old config — fix the file before any restart, or the box goes down on next boot.
 
 ### Recipe — Docker image cache during `--build`
 

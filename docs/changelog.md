@@ -253,7 +253,7 @@ Bottom sheet on Invite tap with 4 modes (Rigged stays for long-press reveal per 
 Backend `turn_based` spin policy + mode-default `spin_policy` derivation. Alembic 0004 added `current_turn_user_id` to rooms; `advance_turn` helper, `user_can_spin` dispatch, `_emit_settled` advance + `room:updated` broadcast, `update_room` cursor lifecycle. Frontend `computeCanSpin` turn_based branch, new `computeTurnState` helper, room-header status line in EN + UK. Spec `docs/superpowers/specs/2026-05-28-turn-based-mode-defaults-design.md`. Commits `6a91c46 … 023b6f3`.
 
 ### Stage D production deploy notes (2026-05-29)
-Production live on `hobagame.duckdns.org` (Hetzner shared VPS, host nginx TLS terminator, containers on `127.0.0.1:8800/5800/6800`; static-bundle webapp). Test totals at this point: **164 backend / 82 frontend**, 91% coverage. The 2026-05-29 deploy uncovered 4 production-only issues (uvicorn `--reload` loop, Alembic `batch_alter_table` FK naming, partial-migration corruption, sudo-rm-while-container-running no-op) — all fixed and folded into `docs/deployment.md` § 9b "Troubleshooting recipes" + tracked as Stage G items in `docs/TODO.md`. See `docs/validation-notes.md` § Owner-side deploy + verification — 2026-05-29.
+Production live on a shared VPS (Hetzner, host nginx TLS terminator, containers on `127.0.0.1:8800/5800/6800`; static-bundle webapp). Test totals at this point: **164 backend / 82 frontend**, 91% coverage. The 2026-05-29 deploy uncovered 4 production-only issues (uvicorn `--reload` loop, Alembic `batch_alter_table` FK naming, partial-migration corruption, sudo-rm-while-container-running no-op) — all fixed and folded into `docs/deployment.md` § 9b "Troubleshooting recipes" + tracked as Stage G items in `docs/TODO.md`. See `docs/validation-notes.md` § Owner-side deploy + verification — 2026-05-29.
 
 ---
 
@@ -267,7 +267,7 @@ Production deploy hit a shared VPS that already ran an unrelated site on its pub
 - `c0a591e` — anchored the rsync excludes in `docs/deployment.md` after the unanchored `--exclude=data` collateral-deleted `apps/webapp/src/data/quickWheels.ts` from the server.
 - `acd2c62` — `docs/privacy.md` for BotFather's Privacy Policy field.
 - `2c156f7` — `docs/deployment.md` smoke-test paths fixed (FastAPI serves `openapi.json` at root, not `/api/v1/openapi.json`).
-- BotFather (manual, owner-side) — name `Hoba!`, About + Description in EN, command list, profile pic, Direct Link Mini App `play` URL, Privacy Policy URL — all set against `https://hobagame.duckdns.org/`.
+- BotFather (manual, owner-side) — name `Hoba!`, About + Description in EN, command list, profile pic, Direct Link Mini App `play` URL, Privacy Policy URL — all set against the production URL.
 
 Stage C closed 2026-05-28 with owner-override GO on Phase 7+.
 

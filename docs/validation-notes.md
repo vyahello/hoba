@@ -5,7 +5,7 @@
 > Anything that's actionable bubbles up to `docs/TODO.md` (with a
 > stage tag) or directly into the next stage's plan.
 
-Production URL: <https://hobagame.duckdns.org>
+Production URL: configured in deploy secrets (not in the repo)
 Bot: [@hobagame_bot](https://t.me/hobagame_bot)
 Deployed: 2026-05-27 (Hetzner, shared nginx, static bundle, DuckDNS)
 
@@ -77,7 +77,7 @@ All four debug recipes folded into `docs/deployment.md` § 9b for
 the next time this surfaces.
 
 **Outcome:** api container clean-boots, `/openapi.json` returns 200
-from both inside the container and via `https://hobagame.duckdns.org`.
+from both inside the container and via the production URL.
 Mode-picker tested end-to-end on iPhone 14: sheet opens with 4
 modes, Classic preselected, picking Elimination creates a room
 with the matching mode badge in the header. `Take turns` option

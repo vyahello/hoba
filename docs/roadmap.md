@@ -8,7 +8,7 @@
 
 ## Where we are right now
 
-**Stage C open with NO-GO on Phase 7+** (recorded 2026-05-28). Stages A + B + C shipped on top of the Phase 6 MVP commits `dbbf570 … 559d534`. Stage A closed the original five MVP blockers plus six verification-pass fixes plus a nine-item close-out batch (multiplayer invite flow lands, RoomPage i18n cleared, hub-tap regression guards, etc.). Stage B added pre-launch hardening (server rate limits + spin cooldown, brand-keyed crash screen, host settings sheet, `room:updated` broadcast). Stage C deployed to `hobagame.duckdns.org` (Hetzner shared VPS, host nginx as TLS terminator, multi-stage Dockerfile pulled forward from Stage G), but no soft-launch sessions were logged — the verdict in `docs/validation-notes.md` is **NO-GO**, rationale = insufficient real-user evidence.
+**Stage C open with NO-GO on Phase 7+** (recorded 2026-05-28). Stages A + B + C shipped on top of the Phase 6 MVP commits `dbbf570 … 559d534`. Stage A closed the original five MVP blockers plus six verification-pass fixes plus a nine-item close-out batch (multiplayer invite flow lands, RoomPage i18n cleared, hub-tap regression guards, etc.). Stage B added pre-launch hardening (server rate limits + spin cooldown, brand-keyed crash screen, host settings sheet, `room:updated` broadcast). Stage C deployed to the production shared VPS (Hetzner, host nginx as TLS terminator, multi-stage Dockerfile pulled forward from Stage G), but no soft-launch sessions were logged — the verdict in `docs/validation-notes.md` is **NO-GO**, rationale = insufficient real-user evidence.
 
 Test totals at the current freeze: **113 backend / 53 frontend, 91 % coverage**.
 
