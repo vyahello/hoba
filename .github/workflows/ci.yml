@@ -77,3 +77,43 @@ jobs:
       - name: test
         working-directory: apps/webapp
         run: pnpm run test
+
+  deploy:
+    name: Deploy to VPS
+    needs: [validate-compose, validate-python, validate-webapp]
+    # Only a real push to main — never PRs/forks; blocked unless every
+    # validate job above is green (needs:).
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-vps
+      cancel-in-progress: false
+    steps:
+      - name: Deploy over SSH (sync main + run deploy.sh)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            APP_DIR="${{ secrets.VPS_APP_DIR }}"
+            APP_DIR="${APP_DIR:-$HOME/_hoba}"
+            REPO="${{ secrets.REPO_SSH_URL }}"
+            REPO="${REPO:-git@github.com:vyahello/hoba.git}"
+            # Set up a git checkout in place (works for a fresh dir or a
+            # pre-existing/rsynced one).
+            if [ ! -d "$APP_DIR/.git" ]; then
+              echo "No git checkout in $APP_DIR — initialising one"
+              mkdir -p "$APP_DIR"
+              git init -q "$APP_DIR"
+              git -C "$APP_DIR" remote add origin "$REPO" 2>/dev/null \
+                || git -C "$APP_DIR" remote set-url origin "$REPO"
+            fi
+            cd "$APP_DIR"
+            git fetch --prune origin
+            # .env + data/ are gitignored, so reset --hard leaves them intact.
+            git reset --hard origin/main
+            # The tree is already synced above — skip the script's own pull.
+            bash "$APP_DIR/scripts/deploy.sh" --no-pull

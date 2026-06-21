@@ -304,6 +304,47 @@ detailed checklist.
 
 ## 8. Operate
 
+### 8a. Automated deploy (GitHub Actions → VPS)
+
+A push to `main` runs CI (`.github/workflows/ci.yml`); once all three
+validate jobs are green, the `deploy` job SSHes into the VPS and runs the
+same `scripts/deploy.sh` used for manual deploys. No PR or fork triggers
+it (`if: push && ref == refs/heads/main`); a `concurrency` group serialises
+deploys so two never overlap.
+
+What the deploy step does on the box, as `${VPS_USER}`:
+
+```bash
+cd "$VPS_APP_DIR"          # /home/cax/_hoba
+git fetch --prune origin
+git reset --hard origin/main   # .env + data/ are gitignored → untouched
+bash scripts/deploy.sh --no-pull
+```
+
+**Required GitHub repo secrets:**
+
+| Secret | Purpose | Example |
+| --- | --- | --- |
+| `VPS_HOST` | VPS hostname / IP | `hobagame.duckdns.org` |
+| `VPS_USER` | SSH user | `cax` |
+| `VPS_SSH_KEY` | **private** key (PEM) whose public half is in that user's `~/.ssh/authorized_keys` | `-----BEGIN OPENSSH PRIVATE KEY-----…` |
+| `VPS_APP_DIR` | repo checkout dir on the VPS | `/home/cax/_hoba` |
+| `REPO_SSH_URL` | *(optional)* clone URL if the dir needs initialising; defaults to `git@github.com:vyahello/hoba.git` | |
+
+**One-time VPS prereqs** (the workflow assumes these already exist):
+
+- `docker` + `docker compose` installed and the SSH user can run them.
+- `$VPS_APP_DIR/.env` populated (see § 3) — it's gitignored, so deploys
+  never overwrite it.
+- The SSH user can fetch the repo. If `$VPS_APP_DIR` is a fresh dir the
+  workflow runs `git init` + `git fetch`, which needs the box to be able
+  to reach `REPO` (a GitHub deploy key, or a public-HTTPS `REPO_SSH_URL`).
+
+A failed health check inside `deploy.sh` exits non-zero, so the Actions
+run goes red — check the job log, then the recipes in § 9b.
+
+### 8b. Daily commands
+
 Useful daily commands:
 
 ```bash
@@ -336,7 +377,7 @@ Suggested host crontab line (hourly):
 0 * * * * cd /home/cax/_hoba && docker compose -f compose.shared.yaml exec -T api python -m hoba_api.tasks.cleanup >> /var/log/hoba-cleanup.log 2>&1
 ```
 
-### 8b. Who used the app — visitor / usage report
+### 8c. Who used the app — visitor / usage report
 
 `scripts/visitors.py` is a read-only report that stitches together the
 three places Hoba records usage: the `users` table (identity), the API
