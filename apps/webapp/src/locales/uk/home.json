@@ -35,10 +35,10 @@
     },
     "watch": {
       "superhero": "Супергерої",
-      "crime": "Крайм",
+      "crime": "Детектив",
       "comedy": "Комедія",
       "scifi": "Sci-fi",
-      "romance": "Романтік",
+      "romance": "Романтика",
       "horror": "Жахи"
     },
     "truth_dare": {

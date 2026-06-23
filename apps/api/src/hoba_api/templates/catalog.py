@@ -93,10 +93,10 @@ _TEMPLATES: tuple[TemplateDef, ...] = (
         title=_loc("What to watch?", "Що подивитись?"),
         segments=(
             TemplateSegmentDef("superhero", _loc("Superhero", "Супергерої"), 0, "🦸"),
-            TemplateSegmentDef("crime", _loc("Crime", "Крайм"), 1, "🔪"),
+            TemplateSegmentDef("crime", _loc("Crime", "Детектив"), 1, "🔪"),
             TemplateSegmentDef("comedy", _loc("Comedy", "Комедія"), 2, "😂"),
             TemplateSegmentDef("scifi", _loc("Sci-fi", "Sci-fi"), 3, "🚀"),
-            TemplateSegmentDef("romance", _loc("Romance", "Романтік"), 4, "💘"),
+            TemplateSegmentDef("romance", _loc("Romance", "Романтика"), 4, "💘"),
             TemplateSegmentDef("horror", _loc("Horror", "Жахи"), 5, "👻"),
         ),
     ),

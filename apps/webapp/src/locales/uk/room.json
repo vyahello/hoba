@@ -216,10 +216,10 @@
     "fallback": "Щось зламалось."
   },
   "punishment": {
-    "my_tally": "{count, plural, one {Ти виконав # покарання} few {Ти виконав # покарання} many {Ти виконав # покарань} other {Ти виконав # покарань}}",
+    "my_tally": "{count, plural, one {Ти виконав(-ла) # покарання} few {Ти виконав(-ла) # покарання} many {Ти виконав(-ла) # покарань} other {Ти виконав(-ла) # покарань}}",
     "done": "Виконую ✓",
     "refuse": "Відмовитись (−1)",
-    "approve_prompt": "{name} виконав завдання?",
+    "approve_prompt": "{name} виконав(-ла) завдання?",
     "approve_yes": "Так ✓",
     "approve_no": "Ні",
     "waiting_approval": "Чекаємо підтвердження від {name}…",
@@ -232,7 +232,7 @@
     "turn_of": "Хід гравця {name}",
     "you": "Ти",
     "lucky_you": "Тобі",
-    "lucky_tail": "повезло — випало {item} 🍀",
+    "lucky_tail": "пощастило — випало {item} 🍀",
     "must_do": "{name} має виконати: {card}",
     "winner_title": "{item} — переможець!",
     "spin_count_label": "Перемог для виграшу",
