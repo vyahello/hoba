@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/cn";
@@ -21,10 +22,20 @@ export function RoomCodePill({
   className,
 }: RoomCodePillProps): JSX.Element {
   const { t } = useTranslation("room");
+  // One-shot celebratory squeeze on a successful copy (the only feedback the
+  // pill itself gives). Re-armed each copy by toggling the class off then on.
+  const [copied, setCopied] = useState(false);
   const handleCopy = async (): Promise<void> => {
     try {
       await navigator.clipboard.writeText(code);
       haptics.success();
+      setCopied(false);
+      requestAnimationFrame(() => {
+        setCopied(true);
+      });
+      window.setTimeout(() => {
+        setCopied(false);
+      }, 320);
       toast({ title: t("code_pill.copied_title"), intent: "success" });
       onCopied?.();
     } catch {
@@ -49,6 +60,7 @@ export function RoomCodePill({
         // loop (PERF_AUDIT R6: animated box-shadow + always-on). Bold border
         // + hard shadow reads as "shareable" without a loop.
         "border-[3px] border-ds-border shadow-brutal active:shadow-brutal-sm",
+        copied && "animate-pop-bounce",
         className,
       )}
     >

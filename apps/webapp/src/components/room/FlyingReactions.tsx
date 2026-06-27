@@ -5,8 +5,9 @@ import { useRoomStore } from "@/stores/room";
 const DURATION_S = 2.0;
 const PARTICLE_S = 0.7;
 // Upward fan of particle directions (deg; screen-up = -90). Each reaction
-// jitters these a little from its id so bursts aren't identical.
-const PARTICLE_ANGLES = [-150, -118, -90, -62, -30] as const;
+// jitters these a little from its id so bursts aren't identical. Seven sparks
+// for a fuller, more celebratory burst (still tiny + short-lived).
+const PARTICLE_ANGLES = [-150, -126, -104, -90, -76, -54, -30] as const;
 
 function prefersReducedMotion(): boolean {
   return (
@@ -19,6 +20,7 @@ interface Particle {
   dx: number;
   dy: number;
   size: number;
+  rot: number;
 }
 
 /** Deterministic burst offsets for a reaction (stable across re-renders so
@@ -30,7 +32,13 @@ function burstParticles(id: string): Particle[] {
     const jitter = ((h >> (i * 3)) % 30) - 15; // ±15°
     const rad = ((base + jitter) * Math.PI) / 180;
     const dist = 52 + ((h >> i) % 28); // 52…80 px
-    return { dx: Math.cos(rad) * dist, dy: Math.sin(rad) * dist, size: i === 2 ? 1.05 : 0.85 };
+    const rot = ((h >> (i * 2)) % 120) - 60; // ±60° spin as it flies
+    return {
+      dx: Math.cos(rad) * dist,
+      dy: Math.sin(rad) * dist,
+      size: i === 3 ? 1.05 : 0.85,
+      rot,
+    };
   });
 }
 
@@ -64,8 +72,8 @@ export function FlyingReactions(): JSX.Element {
           const sparks = burstParticles(r.id).map((p, i) => (
             <motion.span
               key={`${r.id}-p${i}`}
-              initial={{ x: 0, y: 0, scale: 0.7, opacity: 0.95 }}
-              animate={{ x: p.dx, y: p.dy, scale: 0, opacity: 0 }}
+              initial={{ x: 0, y: 0, scale: 0.7, opacity: 0.95, rotate: 0 }}
+              animate={{ x: p.dx, y: p.dy, scale: 0, opacity: 0, rotate: p.rot }}
               transition={{ duration: PARTICLE_S, ease: "easeOut" }}
               style={{ left, fontSize: `${p.size}rem` }}
               className="absolute bottom-2"

@@ -40,9 +40,11 @@ export function HobaWord({
       className={cn(
         "inline-block font-display font-extrabold leading-none select-none",
         "text-brand-accent",
-        // Neubrutalist: crisp HARD ink shadow (zero blur) instead of the old
-        // blurred glow drop-shadow filter (cheaper on mobile, on-style).
-        "[text-shadow:4px_4px_0_#14101F]",
+        // Neubrutalist STACKED hard shadow (zero blur): a pink mid-layer over a
+        // deeper ink layer turns the amber word into a chunky 3-colour sticker.
+        // Both layers are crisp offsets — no blur, no filter — and the pink
+        // stays legible on the dark result backdrop where pure ink would vanish.
+        "[text-shadow:3px_3px_0_#FF5C9C,6px_6px_0_#14101F]",
         sizeClass,
         className,
       )}

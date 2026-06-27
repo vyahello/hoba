@@ -32,6 +32,9 @@
   "spin": {
     "host_only_hint": "Host spins. React with the bar above."
   },
+  "result": {
+    "spun_by": "{name} spun it"
+  },
   "turn": {
     "my_turn": "Your turn",
     "waiting_named": "Waiting for {name}",

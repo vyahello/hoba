@@ -105,12 +105,16 @@
   }
 
   /* Respect prefers-reduced-motion: drop to minimal animation everywhere.
-     Covers CSS keyframes + transitions; Framer Motion reads the same pref. */
+     Covers CSS keyframes + transitions; Framer Motion reads the same pref.
+     animation-delay is zeroed too — otherwise a staggered entrance (which
+     holds opacity:0 via `both` fill) would strand reduced-motion users on an
+     invisible element until its delay elapsed. */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
     *::after {
       animation-duration: 0.001ms !important;
+      animation-delay: 0ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.001ms !important;
       scroll-behavior: auto !important;
@@ -130,12 +134,20 @@
   }
 
   /* Tactile press — transform ONLY (GPU-composited). Neubrutalist "press
-     into the shadow": shift down-right on tap. Pairs with .ds-brutal. */
+     into the shadow": shift down-right AND compress slightly on tap, so the
+     element reads as physically pressed. Pairs with .ds-brutal's shadow sink.
+     (IconButton already shipped a `disabled:active:scale-100` guard — this
+     reclaims the scale the system was designed around.) */
   .ds-tactile {
     transition: transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   .ds-tactile:active {
-    transform: translate(2px, 2px);
+    transform: translate(2px, 2px) scale(0.98);
+  }
+  /* A disabled control must never animate its press. */
+  .ds-tactile:disabled:active,
+  .ds-tactile[aria-disabled="true"]:active {
+    transform: none;
   }
 
   /* Neubrutalist surface: bold border + hard offset shadow (static, no blur).

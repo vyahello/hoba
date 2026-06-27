@@ -81,7 +81,7 @@ export function HomePage(): JSX.Element {
   return (
     <>
       <header className="ds-glass-header px-4 py-3 pt-safe flex items-center justify-between">
-        <span className="font-display font-extrabold text-xl text-[#14101f] bg-brand-accent border-[3px] border-ds-border shadow-brutal-sm rounded-md px-3 py-1 -rotate-2">
+        <span className="animate-logo-pop font-display font-extrabold text-xl text-[#14101f] bg-brand-accent border-[3px] border-ds-border shadow-brutal-sm rounded-md px-3 py-1">
           {t("home:header.app_name")}
         </span>
         <IconButton
@@ -121,16 +121,21 @@ export function HomePage(): JSX.Element {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
-              {templates.map((template) => (
-                <QuickWheelCard
+              {templates.map((template, i) => (
+                <div
                   key={template.key}
-                  title={template.title}
-                  emoji={template.emoji}
-                  gradient={template.gradient}
-                  onTap={() => {
-                    spinTemplate(template);
-                  }}
-                />
+                  className="animate-rise-in"
+                  style={{ animationDelay: `${Math.min(i, 7) * 55}ms` }}
+                >
+                  <QuickWheelCard
+                    title={template.title}
+                    emoji={template.emoji}
+                    gradient={template.gradient}
+                    onTap={() => {
+                      spinTemplate(template);
+                    }}
+                  />
+                </div>
               ))}
             </div>
           )}
@@ -188,7 +193,7 @@ export function HomePage(): JSX.Element {
             </Card>
           ) : (
             <div className="flex flex-col gap-2">
-              {wheels.slice(0, 3).map((w) => (
+              {wheels.slice(0, 3).map((w, i) => (
                 <Card
                   key={w.id}
                   interactive
@@ -196,7 +201,8 @@ export function HomePage(): JSX.Element {
                   onClick={() => {
                     navigate("/library");
                   }}
-                  className="flex items-center justify-between gap-3"
+                  style={{ animationDelay: `${i * 60}ms` }}
+                  className="animate-rise-in flex items-center justify-between gap-3"
                 >
                   <span className="font-display font-semibold text-base truncate text-ds-text">
                     {w.title}
@@ -227,7 +233,7 @@ export function HomePage(): JSX.Element {
               </button>
             </div>
             <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-1">
-              {trending.map((w) => (
+              {trending.map((w, i) => (
                 <Card
                   key={w.id}
                   interactive
@@ -235,7 +241,8 @@ export function HomePage(): JSX.Element {
                   onClick={() => {
                     navigate("/trending");
                   }}
-                  className="shrink-0 w-40 flex flex-col gap-2"
+                  style={{ animationDelay: `${Math.min(i, 7) * 55}ms` }}
+                  className="animate-rise-in shrink-0 w-40 flex flex-col gap-2"
                 >
                   <span className="font-display font-semibold text-base line-clamp-2 text-ds-text">
                     {w.title}

@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/cn";
 
@@ -27,6 +28,7 @@ export function ResultBanner({
   modeEffects,
   className,
 }: ResultBannerProps): JSX.Element {
+  const { t } = useTranslation("room");
   return (
     <motion.section
       initial={{ y: 60, opacity: 0 }}
@@ -41,10 +43,17 @@ export function ResultBanner({
         className,
       )}
     >
-      <div className="flex flex-col gap-3">
+      {/* Static top sheen — painted once (no animation, no blur), it gives the
+          card a faint glassy catch-light along the top edge. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-1/3"
+        style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.14), transparent)" }}
+      />
+      <div className="relative flex flex-col gap-3">
         {triggeredByName !== undefined ? (
           <p className="text-xs uppercase tracking-widest text-ds-text-muted">
-            {triggeredByName} spun it
+            {t("result.spun_by", { name: triggeredByName })}
           </p>
         ) : null}
         <div className="flex items-center gap-3">

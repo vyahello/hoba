@@ -179,6 +179,50 @@ export default {
           "0%": { boxShadow: "0 0 0 0 rgba(124, 92, 255, 0.5)" },
           "70%, 100%": { boxShadow: "0 0 0 18px rgba(124, 92, 255, 0)" },
         },
+        // ── Reusable "juice" primitives. All transform + opacity only
+        //    (GPU-composited), one-shot or bounded, killed by the global
+        //    prefers-reduced-motion rule. No layout properties, no blur. ──
+        // General entrance: arrives with a touch of overshoot, then settles.
+        "pop-in": {
+          "0%": { transform: "scale(0.9)", opacity: "0" },
+          "60%": { transform: "scale(1.02)", opacity: "1" },
+          "100%": { transform: "scale(1)", opacity: "1" },
+        },
+        // List/card entrance: rises from below + fades. Stagger via delay.
+        "rise-in": {
+          "0%": { transform: "translateY(14px) scale(0.97)", opacity: "0" },
+          "100%": { transform: "translateY(0) scale(1)", opacity: "1" },
+        },
+        // Settle sparkle: a tiny star pops, twirls, and fades. Bounded count.
+        "sparkle": {
+          "0%": { transform: "scale(0) rotate(0deg)", opacity: "0" },
+          "35%": { transform: "scale(1) rotate(50deg)", opacity: "1" },
+          "100%": { transform: "scale(0.2) rotate(130deg)", opacity: "0" },
+        },
+        // A like "heartbeat" — a punchy double-thump on tap.
+        "heart-beat": {
+          "0%, 100%": { transform: "scale(1)" },
+          "30%": { transform: "scale(1.35)" },
+          "55%": { transform: "scale(0.92)" },
+          "75%": { transform: "scale(1.12)" },
+        },
+        // Celebratory follow-through after a spring settles (e.g. HobaWord).
+        "pop-bounce": {
+          "0%, 100%": { transform: "scale(1)" },
+          "50%": { transform: "scale(1.07)" },
+        },
+        // A brief light "moment of glory" veil behind a result reveal.
+        "flash-veil": {
+          "0%, 100%": { opacity: "0" },
+          "40%": { opacity: "0.4" },
+        },
+        // Brand badge drop-in — ends at the resting -2° tilt so the entrance
+        // never flattens the logo (carries its own final rotate via `both`).
+        "logo-pop": {
+          "0%": { transform: "translateY(-10px) rotate(-10deg) scale(0.7)", opacity: "0" },
+          "60%": { transform: "translateY(0) rotate(3deg) scale(1.06)", opacity: "1" },
+          "100%": { transform: "translateY(0) rotate(-2deg) scale(1)", opacity: "1" },
+        },
       },
       animation: {
         "aurora-drift": "aurora-drift 30s ease-in-out infinite",
@@ -192,6 +236,16 @@ export default {
         "glitch-scan": "glitch-scan 220ms linear infinite",
         "danger-flash": "danger-flash 950ms ease-in-out",
         "hub-ping": "hub-ping 1.8s ease-out infinite",
+        // One-shot juice utilities (see matching keyframes above). `both` fill
+        // holds the start frame pre-run so entrances never flash unstyled; the
+        // global reduced-motion rule collapses duration + delay to ~0.
+        "pop-in": "pop-in 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both",
+        "rise-in": "rise-in 420ms cubic-bezier(0.15, 0.85, 0.25, 1) both",
+        "sparkle": "sparkle 620ms ease-out forwards",
+        "heart-beat": "heart-beat 450ms ease-in-out",
+        "pop-bounce": "pop-bounce 280ms ease-in-out",
+        "flash-veil": "flash-veil 360ms ease-out forwards",
+        "logo-pop": "logo-pop 520ms cubic-bezier(0.68, -0.55, 0.27, 1.55) both",
       },
       backgroundImage: {
         "aurora-light":

@@ -39,17 +39,31 @@ export function QuickWheelCard({
         className,
       )}
       style={{
-        // Neubrutalist flat fill (no gradient/blur). `gradient[0]` is the
-        // template's primary brand hex; the second endpoint is intentionally
-        // unused now to keep the surface flat and cheap.
+        // A STATIC two-stop gradient between the template's brand hexes —
+        // rasterized once into the card's layer, so it costs the same as the
+        // old flat fill but reads with depth. (The earlier "flat & cheap" note
+        // conflated static gradients with animated ones; only the latter cost.)
+        backgroundImage: `linear-gradient(145deg, ${gradient[0]}, ${gradient[1]})`,
         backgroundColor: gradient[0],
       }}
     >
-      <span aria-hidden className="text-[3rem] leading-none">
+      {/* Top catch-light + bottom scrim — both static. The scrim guarantees
+          white-text legibility (AA) over any brand-colour pair. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-2/5"
+        style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.22), transparent)" }}
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5"
+        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.28), transparent)" }}
+      />
+      <span aria-hidden className="relative text-[3rem] leading-none">
         {emoji}
       </span>
       <div className="relative">
-        <h3 className="font-display font-extrabold text-lg leading-[1.1] mb-1">
+        <h3 className="font-display font-extrabold text-lg leading-[1.1] mb-1 [text-shadow:1px_1px_0_rgba(0,0,0,0.35)]">
           {title}
         </h3>
         <p className="text-[11px] font-extrabold uppercase tracking-widest opacity-90">

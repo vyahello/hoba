@@ -53,7 +53,7 @@ export function WinnerOverlay({
       <motion.span
         initial={{ scale: 0.4, rotate: -10, opacity: 0 }}
         animate={{ scale: 1, rotate: 0, opacity: 1 }}
-        transition={{ delay: 0.15, type: "spring", damping: 12, stiffness: 220 }}
+        transition={{ delay: 0.15, type: "spring", damping: 8, stiffness: 280 }}
         className="text-7xl leading-none"
         aria-hidden
       >

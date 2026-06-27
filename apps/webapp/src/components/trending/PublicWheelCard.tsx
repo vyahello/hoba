@@ -47,7 +47,10 @@ export function PublicWheelCard({
           aria-pressed={liked}
           className="shrink-0 flex items-center gap-1 text-sm font-semibold tabular-nums px-2 py-1 -my-1 rounded-full"
         >
-          <span aria-hidden className={liked ? "" : "grayscale opacity-70"}>
+          <span
+            aria-hidden
+            className={cn("inline-block", liked ? "animate-heart-beat" : "grayscale opacity-70")}
+          >
             {liked ? "❤️" : "🤍"}
           </span>
           <span className="text-ds-text-muted">{wheel.like_count}</span>

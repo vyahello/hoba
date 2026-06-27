@@ -32,7 +32,9 @@ function fieldClasses(error: string | undefined): string {
     "text-ds-text",
     "placeholder:text-ds-text-muted",
     "border-[3px] border-ds-border",
-    "focus:border-brand-primary focus:outline-none",
+    // On focus the field lifts on a hard offset shadow + purple border — a
+    // neubrutalist "this field is live" cue (static shadow, no blur, no anim).
+    "focus:border-brand-primary focus:outline-none focus:shadow-brutal",
     error && "border-state-danger",
   );
 }

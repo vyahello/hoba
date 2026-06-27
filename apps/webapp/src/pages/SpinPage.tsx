@@ -264,6 +264,7 @@ export function SpinPage(): JSX.Element {
           spin={spin}
           onSpinClick={handleSpin}
           ariaLabel={wheel.questionText}
+          burstOnSettle
           className="max-w-md mx-auto"
         />
 
@@ -299,13 +300,20 @@ export function SpinPage(): JSX.Element {
               aria-live="polite"
               role="status"
             >
-              <HobaWord />
-              <ResultBanner
-                segmentLabel={result.segment.label}
-                segmentEmoji={result.segment.emoji}
-                segmentColor={result.color}
-                className="mt-6 w-full max-w-sm"
+              {/* One-shot white "moment of glory" bloom behind the reveal. */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 bg-white animate-flash-veil"
               />
+              <div className="relative z-10 flex flex-col items-center w-full">
+                <HobaWord />
+                <ResultBanner
+                  segmentLabel={result.segment.label}
+                  segmentEmoji={result.segment.emoji}
+                  segmentColor={result.color}
+                  className="mt-6 w-full max-w-sm"
+                />
+              </div>
             </motion.div>
           ) : null}
         </AnimatePresence>

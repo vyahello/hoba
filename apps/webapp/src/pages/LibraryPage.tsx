@@ -129,10 +129,11 @@ export function LibraryPage(): JSX.Element {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {wheels.map((w) => (
+            {wheels.map((w, i) => (
               <div
                 key={w.id}
-                className="rounded-xl bg-ds-surface-2 p-4 flex flex-col gap-3"
+                style={{ animationDelay: `${Math.min(i, 7) * 55}ms` }}
+                className="animate-rise-in rounded-xl bg-ds-surface-2 p-4 flex flex-col gap-3"
               >
                 <div className="flex items-start justify-between gap-2">
                   <h2 className="font-display font-bold text-base text-ds-text break-words">

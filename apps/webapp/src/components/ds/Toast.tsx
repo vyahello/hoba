@@ -35,9 +35,9 @@ export function Toaster(): JSX.Element | null {
           <motion.div
             key={t.id}
             layout
-            initial={{ y: -32, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -32, opacity: 0 }}
+            initial={{ y: -32, opacity: 0, scale: 0.95 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: -32, opacity: 0, scale: 0.95 }}
             transition={{ type: "spring", damping: 30, stiffness: 360 }}
             className={cn(
               "pointer-events-auto mt-3 w-full max-w-sm rounded-lg shadow-brutal",

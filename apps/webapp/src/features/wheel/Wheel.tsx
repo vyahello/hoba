@@ -202,6 +202,36 @@ function SegmentVisual({ segment, index, total }: SegmentVisualProps): JSX.Eleme
   );
 }
 
+/** Bounded one-shot celebration sparkles fanned around the rim on settle.
+ *  Pure CSS (`animate-sparkle`), 10 elements, killed by reduced-motion. */
+const SPARKLE_COUNT = 10;
+const SPARKLE_COLORS = ["#FFB84D", "#FF5C9C", "#5CE5FF", "#7C5CFF", "#FFFFFF"];
+
+function SettleSparkles(): JSX.Element {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0">
+      {Array.from({ length: SPARKLE_COUNT }).map((_, i) => {
+        const rad = ((i / SPARKLE_COUNT) * 360 * Math.PI) / 180;
+        const radius = 30 + (i % 3) * 5;
+        return (
+          <span
+            key={i}
+            className="absolute -translate-x-1/2 -translate-y-1/2 animate-sparkle text-lg font-bold leading-none"
+            style={{
+              left: `${50 + radius * Math.cos(rad)}%`,
+              top: `${50 + radius * Math.sin(rad)}%`,
+              color: SPARKLE_COLORS[i % SPARKLE_COLORS.length],
+              animationDelay: `${i * 35}ms`,
+            }}
+          >
+            ✦
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 export interface WheelProps {
   segments: SegmentDef[];
   state: WheelState;
@@ -237,6 +267,12 @@ export interface WheelProps {
    * settle highlight. Undefined = none.
    */
   flashSegmentId?: string;
+  /**
+   * Fire a one-shot sparkle burst around the rim when the wheel settles — the
+   * little "ta-da" before the result reveal. Opt-in (default false) so only
+   * genuinely celebratory settles use it (solo spin), never Chaos no-ops.
+   */
+  burstOnSettle?: boolean;
 }
 
 export interface WheelHandle {
@@ -258,6 +294,7 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
     pointerHidden = false,
     highlightSegmentId,
     flashSegmentId,
+    burstOnSettle = false,
     onHubLongPress,
   },
   ref,
@@ -470,6 +507,19 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
       style={{ WebkitTouchCallout: "none" }}
     >
       <svg viewBox="0 0 400 400" role="img" aria-label={ariaLabel} className="w-full h-full">
+        {/* Static paint only — rasterized once into the SVG surface, zero
+            animation, zero extra GPU layers. A fixed top-left catch-light over
+            the spinning face + a subtle sphere gradient on the hub. */}
+        <defs>
+          <radialGradient id="hub-gloss" cx="0.35" cy="0.28" r="0.75">
+            <stop offset="0%" stopColor="#FFFFFF" />
+            <stop offset="100%" stopColor="#ECE7FB" />
+          </radialGradient>
+          <radialGradient id="wheel-gloss" cx="0.32" cy="0.24" r="0.62">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.5" />
+            <stop offset="62%" stopColor="#FFFFFF" stopOpacity="0" />
+          </radialGradient>
+        </defs>
         {/* Static rim: thick ink ring + concentric amber accent ring. Does NOT
             rotate. The offset shadow disc was dropped — on a circle it read as
             an uneven (thicker-at-bottom) rim; concentric rings stay even all
@@ -543,6 +593,17 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
           <circle cx={CX} cy={CY} r={SEGMENT_R} fill="none" stroke={INK} strokeWidth={5} />
         </g>
 
+        {/* Fixed catch-light over the spinning face — the wedges rotate UNDER
+            it so the light reads as a real reflection, not a painted-on shine.
+            Static, pointer-events-none, drawn under the hub + pointer. */}
+        <circle
+          cx={CX}
+          cy={CY}
+          r={SEGMENT_R}
+          fill="url(#wheel-gloss)"
+          pointerEvents="none"
+        />
+
         {/* Pointer. Normally fixed at the top; Chaos blind/roaming pointer move
             it (set imperatively). */}
         {pointerHidden ? null : (
@@ -567,7 +628,7 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
         {/* Hub — flat fill + thick ink border (no gradient, no idle breathing
             loop). The real, focusable control is the HTML button below. */}
         <g aria-hidden>
-          <circle cx={CX} cy={CY} r={HUB_R} fill="#FFFFFF" stroke={INK} strokeWidth={4} />
+          <circle cx={CX} cy={CY} r={HUB_R} fill="url(#hub-gloss)" stroke={INK} strokeWidth={4} />
           {canSpin ? (
             <text
               x={CX}
@@ -585,6 +646,8 @@ export const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
           ) : null}
         </g>
       </svg>
+
+      {burstOnSettle && state === "settled" ? <SettleSparkles /> : null}
 
       {/* "Your turn" affordance: a radar ping around the hub while it's idle
           and this player may spin (canSpin only when onSpinClick is wired,

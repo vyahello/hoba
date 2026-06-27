@@ -177,23 +177,28 @@ export function TrendingPage(): JSX.Element {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {wheels.map((w) => (
-              <PublicWheelCard
+            {wheels.map((w, i) => (
+              <div
                 key={w.id}
-                wheel={w}
-                liked={w.liked}
-                reportConfirming={reportConfirmId === w.id}
-                onUse={() => {
-                  haptics.medium();
-                  setUseId(w.id);
-                }}
-                onLike={() => {
-                  void handleLike(w);
-                }}
-                onReport={() => {
-                  void handleReport(w);
-                }}
-              />
+                className="animate-rise-in"
+                style={{ animationDelay: `${Math.min(i, 7) * 55}ms` }}
+              >
+                <PublicWheelCard
+                  wheel={w}
+                  liked={w.liked}
+                  reportConfirming={reportConfirmId === w.id}
+                  onUse={() => {
+                    haptics.medium();
+                    setUseId(w.id);
+                  }}
+                  onLike={() => {
+                    void handleLike(w);
+                  }}
+                  onReport={() => {
+                    void handleReport(w);
+                  }}
+                />
+              </div>
             ))}
           </div>
         )}

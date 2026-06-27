@@ -1145,7 +1145,7 @@ export function RoomPage(): JSX.Element {
             it's unmissable (the old bottom line hid near the home indicator).
             Only the turn_based kinds render here; classic is not_turn_based. */}
         {turnState.kind === "my_turn" && !roundOver ? (
-          <div className="rounded-lg bg-brand-accent/15 py-2 px-3 text-center text-sm font-semibold text-brand-accent">
+          <div className="animate-pop-in rounded-lg bg-brand-accent text-[#14101f] border-[3px] border-ds-border shadow-brutal py-2 px-3 text-center text-sm font-bold">
             {t("room:turn.my_turn")}
           </div>
         ) : null}
@@ -1383,7 +1383,7 @@ export function RoomPage(): JSX.Element {
                   })}
             </p>
             <div className="flex flex-wrap justify-center gap-2 text-xs">
-              {punishBettors.map((uid) => {
+              {punishBettors.map((uid, i) => {
                 const betSeg = snapshot.room.punishment_bets?.[String(uid)];
                 // Highlight the viewer's OWN row (so they always know which
                 // option is theirs) and ring the row whose turn it is now.
@@ -1393,8 +1393,9 @@ export function RoomPage(): JSX.Element {
                 return (
                   <span
                     key={uid}
+                    style={{ animationDelay: `${i * 50}ms` }}
                     className={cn(
-                      "rounded-full px-2.5 py-1 transition-colors",
+                      "animate-rise-in rounded-full px-2.5 py-1 transition-colors",
                       isMe
                         ? "bg-brand-primary text-white font-semibold"
                         : "bg-ds-surface-2 text-ds-text",
@@ -1461,7 +1462,7 @@ export function RoomPage(): JSX.Element {
               ) : (
                 <div
                   ref={dareCardRef}
-                  className="flex flex-col items-center gap-2 rounded-xl bg-brand-primary border-[3px] border-ds-border p-4 text-center text-white shadow-brutal scroll-mt-24"
+                  className="animate-rise-in flex flex-col items-center gap-2 rounded-xl bg-brand-primary border-[3px] border-ds-border p-4 text-center text-white shadow-brutal scroll-mt-24"
                 >
                   <p className="text-base font-display font-bold leading-snug">
                     {t("room:punishment.must_do", {
@@ -1498,7 +1499,7 @@ export function RoomPage(): JSX.Element {
             ) : punishOutcome?.kind === "lucky" ? (
               <div
                 ref={luckyRef}
-                className="flex flex-col items-center gap-1 rounded-xl bg-brand-accent/15 border-[3px] border-ds-border px-4 py-3 text-center scroll-mt-24"
+                className="animate-pop-in flex flex-col items-center gap-1 rounded-xl bg-brand-accent/15 border-[3px] border-ds-border px-4 py-3 text-center scroll-mt-24"
               >
                 <HobaWord sizeClass="text-4xl" />
                 <p className="text-sm font-semibold text-ds-text">
